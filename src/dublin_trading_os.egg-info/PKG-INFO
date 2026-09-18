@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: dublin-trading-os
+Version: 0.2.0
+Summary: Paper-first crypto trading engine with strict risk controls
+Requires-Python: >=3.11
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: pandas<3,>=2.2
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: pydantic-settings<3,>=2.4
+Requires-Dist: requests<3,>=2.31
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: ruff<1,>=0.6; extra == "dev"

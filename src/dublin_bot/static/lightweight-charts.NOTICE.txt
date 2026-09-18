@@ -1,0 +1,7 @@
+TradingView Lightweight Charts v4.1.0
+Copyright (c) 2023 TradingView, Inc.
+Licensed under Apache License 2.0 (see lightweight-charts.LICENSE.txt).
+Source: https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js
+SHA-256: 78d2bcbd79556d4f67ae3e3f7776f74e3b46a499466615b1f99397c53cb4056f
+Verified byte-for-byte against the pinned distribution.
+https://www.tradingview.com/

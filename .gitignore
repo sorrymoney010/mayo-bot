@@ -1,0 +1,28 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+htmlcov/
+logs/*.jsonl
+logs/*.json
+logs/*.tmp
+logs/*.lock
+logs/*.sqlite3
+logs/*.sqlite3-shm
+logs/*.sqlite3-wal
+.DS_Store
+
+# acurast CEO SaaS (unrelated to Dublin trading bot)
+.acurast/
+_acurast_new/
+_acurast_deploy/
+src/acurast_ceo/
+acurast_data/
+tests/test_acurast_ceo.py
+
+# Runtime state and diagnostics stay on disk, never in source control.
+/logs/
