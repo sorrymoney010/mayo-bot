@@ -15,7 +15,7 @@ from dublin_bot.audit import AuditLog
 from dublin_bot.engine import TradingEngine
 from dublin_bot.errors import SafetyLockError
 from dublin_bot.kraken_gateway import KrakenGateway
-from dublin_bot.models import Action
+from dublin_bot.models import Action, Signal
 from dublin_bot.ratelimit import KrakenRateLimiter, RateLimitTier
 from dublin_bot.risk import SessionState
 from dublin_bot.state import StateStore
@@ -151,38 +151,69 @@ def test_gateway_reports_submission_disabled(settings, fake_session):
 # ── idempotency in the pipeline ─────────────────────────────────────
 
 def test_repeated_cycles_on_the_same_bar_do_not_duplicate(settings, fake_session):
-    """Two evaluations of one closed bar are one intent, not two orders."""
+    """Two evaluations of one closed bar are one intent, not two orders.
+
+    Forces a BUY on the first cycle (paper/dry-run) so the idempotency /
+    duplicate gate is actually exercised — not a vacuous pass when the
+    default strategy never fires.
+    """
     frozen = ohlc_payload(bars=250)
     fake_session.routes["OHLC"] = frozen
     engine = build_engine(settings, fake_session)
 
-    first = engine.run_cycle()
-    second = engine.run_cycle()
+    def force_buy(bars, in_position=False):
+        if in_position:
+            return Signal(Action.WAIT, 50, "already in position", price=50_000.0, atr=500.0)
+        price = 50_000.0
+        atr = 500.0
+        return Signal(
+            Action.BUY,
+            90,
+            "forced buy for idempotency test",
+            price=price,
+            atr=atr,
+            stop_price=price - atr * 1.5,
+        )
 
-    if first.executed:
-        # Same bar, same intent → the second attempt must be blocked. Once the
-        # first fill is reflected in aggregate bot-owned exposure, the risk
-        # gate may stop it before the idempotency gate is reached.
-        assert second.executed is False
-        duplicate_blocked = second.gates.get("idempotency", {}).get("blocked") is True
-        exposure_blocked = (
-            second.record is not None
-            and "exposure" in second.record.risk.reason.lower()
+    engine.strategy.evaluate = force_buy  # type: ignore[method-assign]
+
+    first = engine.run_cycle()
+    assert first.executed is True, {
+        "blocked_at": first.blocked_at,
+        "block_reason": first.block_reason,
+        "gates": first.gates,
+        "risk": repr(first.record.risk) if first.record else None,
+        "signal": repr(first.record.signal) if first.record else None,
+    }
+    assert first.record is not None and first.record.order_id
+
+    second = engine.run_cycle()
+    # Same bar, same intent → must NOT execute again.
+    assert second.executed is False
+    duplicate_blocked = second.gates.get("idempotency", {}).get("blocked") is True
+    exposure_blocked = (
+        second.record is not None
+        and "exposure" in second.record.risk.reason.lower()
+    )
+    position_held = (
+        second.record is not None
+        and second.record.signal.action is Action.WAIT
+        and (
+            "No entry" in second.record.risk.reason
+            or "position" in second.record.risk.reason.lower()
+            or second.record.risk.approved is False
         )
-        position_held = (
-            second.record is not None
-            and second.record.signal.action is Action.WAIT
-            and second.record.risk.reason == "No entry order requested"
-        )
-        assert duplicate_blocked or exposure_blocked or position_held, {
-            "gates": second.gates,
-            "risk": repr(second.record.risk) if second.record else None,
-            "blocked_at": second.blocked_at,
-            "block_reason": second.block_reason,
-        }
-    # Regardless of signal, at most one confirmed order exists for this bar.
+    )
+    assert duplicate_blocked or exposure_blocked or position_held, {
+        "gates": second.gates,
+        "risk": repr(second.record.risk) if second.record else None,
+        "blocked_at": second.blocked_at,
+        "block_reason": second.block_reason,
+        "signal": repr(second.record.signal) if second.record else None,
+    }
+    # Real idempotency evidence: at most one confirmed ledger row for this bar.
     confirmed = [r for r in engine.ledger._records.values() if r.status == "confirmed"]
-    assert len(confirmed) <= 1
+    assert len(confirmed) == 1
 
 
 def test_ledger_persists_across_engine_restart(settings, fake_session):

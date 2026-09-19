@@ -165,6 +165,38 @@ class RotationStrategy:
         current_volume = bars["volume"].iloc[-1]
         volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
 
+        # ATR for volatility-scaled stops. Prefer true-range EMA when OHLC
+        # columns exist; otherwise fall back to mean absolute close change.
+        atr_value = None
+        try:
+            period = int(self.settings.atr_period)
+            if {"high", "low", "close"}.issubset(getattr(bars, "columns", [])):
+                import pandas as pd
+                prev_close = bars["close"].shift(1)
+                tr = pd.concat(
+                    [
+                        (bars["high"] - bars["low"]).abs(),
+                        (bars["high"] - prev_close).abs(),
+                        (bars["low"] - prev_close).abs(),
+                    ],
+                    axis=1,
+                ).max(axis=1)
+                atr_series = tr.ewm(alpha=1 / period, adjust=False).mean()
+                atr_value = float(atr_series.iloc[-1])
+            if atr_value is None or atr_value <= 0:
+                atr_value = float(bars["close"].diff().abs().tail(period).mean())
+        except Exception:
+            atr_value = None
+
+        from dublin_bot.orders import atr_scaled_stop
+        stop_px, _ = atr_scaled_stop(
+            "buy",
+            current_price,
+            atr=atr_value,
+            atr_multiplier=float(self.settings.atr_stop_multiplier),
+            stop_loss_pct=float(self.settings.stop_loss_pct),
+        )
+
         # Determine action
         if in_position:
             # We hold this coin - check for exit signals
@@ -209,14 +241,14 @@ class RotationStrategy:
                 return Signal(Action.BUY, score,
                              ", ".join(reason_parts),
                              price=current_price,
-                             stop_price=round(current_price * (1 - self.settings.stop_loss_pct), 8))
+                             stop_price=round(stop_px, 8), atr=atr_value)
 
             # If momentum is slightly negative but RSI is low, might be a dip buy
             if current_rsi < 40 and price_change_pct > -0.02:
                 return Signal(Action.BUY, 35,
                              f"Oversold RSI {current_rsi:.1f}, slight dip",
                              price=current_price,
-                             stop_price=round(current_price * (1 - self.settings.stop_loss_pct), 8))
+                             stop_price=round(stop_px, 8), atr=atr_value)
 
             # No setup
             return Signal(Action.WAIT, 5,
