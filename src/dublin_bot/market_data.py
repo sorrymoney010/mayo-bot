@@ -10,7 +10,7 @@ from __future__ import annotations
 from copy import copy
 from typing import Optional
 
-from dublin_bot.kraken_gateway import KrakenGateway, SymbolMeta
+from dublin_bot.kraken_gateway import KrakenGateway
 from dublin_bot.config import Settings
 
 

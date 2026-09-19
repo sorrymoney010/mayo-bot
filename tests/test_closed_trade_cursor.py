@@ -8,7 +8,6 @@ Regression coverage for:
 
 from __future__ import annotations
 
-from dublin_bot.kraken_gateway import KrakenGateway
 from dublin_bot.learner import LearningAgent
 
 

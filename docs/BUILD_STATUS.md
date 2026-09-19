@@ -39,3 +39,10 @@ The coordinator running during this checkpoint remains on older code. Neither co
 Runtime logs are preserved on disk but removed from source tracking. Credentials, runtime databases, ledgers and Acurast deployment workspaces remain excluded. Obsolete launchers, a broken unused strategy draft, and an unsafe historical ledger-cleaner were archived outside the repository, not executed. Generated Python/test caches are disposable and may be recreated by tests.
 
 No live orders, risk-setting changes, ownership migration, or coordinator restart were performed as part of this commit operation.
+
+## Hardening pass 2026-09-18 (CT)
+
+Packaging hygiene + ruff cleanup on `fix/harden-packaging-lint`. Ruff is clean.
+Egg-info / build artifacts gitignored and untracked. Broken `acurast-ceo` entry
+removed. Dead `fallback_symbols` / `auto_cheaper_symbol` removed. **Paper/dry-run
+locks remain engaged — this is not live-trading approval.**

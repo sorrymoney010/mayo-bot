@@ -42,8 +42,8 @@ safety locks → market data → freshness → market quality → strategy
 ## Setup on macOS
 
 ```bash
-git clone https://github.com/sorrymoney010/Dublin-.git
-cd Dublin-
+git clone https://github.com/sorrymoney010/mayo-bot.git
+cd mayo-bot
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
@@ -81,7 +81,7 @@ ruff check .     # lint the complete project
 pytest -q        # run the complete offline test suite
 ```
 
-Current verified result: **225 tests passed**. The suite is fully offline — no
+Current verified result: **392 tests passed**. The suite is fully offline — no
 network calls, no real orders.
 `tests/test_safety_locks.py` fails loudly if the trading locks are relaxed.
 

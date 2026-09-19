@@ -39,6 +39,13 @@ from .engine import TradingEngine
 from .execution_store import ExecutionStore
 from .state import StateStore
 
+# Aliases used by the read-only Gunbot-inspired surface further below.
+from pathlib import Path as _Path
+from urllib.parse import parse_qs as _parse_qs
+from urllib.parse import urlparse as _urlparse
+import math as _math
+import threading
+
 HOST = os.environ.get("DUBLIN_HOST", "0.0.0.0")
 PORT = int(os.environ.get("DUBLIN_PORT", "8765"))
 
@@ -2004,11 +2011,6 @@ def serve_dashboard(settings: Settings, run: bool = True) -> int:
 
 # Read-only Gunbot-inspired surface. Legacy dashboard APIs above remain compatible.
 # This handler never constructs a TradingMonitor or TradingEngine.
-from pathlib import Path as _Path
-from urllib.parse import urlparse as _urlparse, parse_qs as _parse_qs
-import math as _math
-import threading
-from datetime import timezone
 
 _DASH_BASE = _Path(__file__).resolve().parents[2]
 _DASH_STATIC = _Path(__file__).resolve().parent / "static"
