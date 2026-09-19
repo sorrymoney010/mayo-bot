@@ -107,8 +107,14 @@ def analyze_filters(decisions: list[dict]) -> list[FilterAnalysis]:
 
 
 def classify_regime(decisions: list[dict], bars: list[float] | None = None) -> MarketRegime:
-    """Classify the current market regime from recent price action."""
-    if not decisions or not bars or len(bars) < 20:
+    """Classify the current market regime from recent price action.
+
+    ``decisions`` is optional context (used only for volume-trend flavor).
+    Classification itself is OHLC/close based: when ``bars`` has >= 20 closes,
+    a regime is returned even if the decisions list is empty so the learner can
+    update ``last_regime`` every engine cycle without requiring journal history.
+    """
+    if not bars or len(bars) < 20:
         return MarketRegime(
             regime="unknown",
             confidence=0.0,
@@ -116,6 +122,7 @@ def classify_regime(decisions: list[dict], bars: list[float] | None = None) -> M
             volatility=0.0,
             volume_trend="unknown",
         )
+    decisions = decisions or []
 
     # Price trend: compare recent avg to older avg
     recent = bars[-20:]
@@ -155,7 +162,7 @@ def classify_regime(decisions: list[dict], bars: list[float] | None = None) -> M
         confidence=round(confidence, 3),
         description=desc,
         volatility=round(volatility, 2),
-        volume_trend="recent" if len(decisions) > 10 else "unknown",
+        volume_trend=("recent" if len(decisions) > 10 else "unknown"),
     )
 
 

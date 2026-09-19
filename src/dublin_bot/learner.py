@@ -144,6 +144,21 @@ class LearningAgent:
         self.save()
 
     # ── bias for selection ────────────────────────────────────
+    def update_regime(self, regime: str, *, persist: bool = True) -> None:
+        """Persist the latest classified market regime for bias/penalty lookups.
+
+        Called once per engine cycle after ``classify_regime`` so ``last_regime``
+        is no longer stuck at ``"unknown"``. Empty/None inputs are ignored.
+        """
+        if not regime:
+            return
+        normalized = str(regime).strip().lower() or "unknown"
+        if self.last_regime == normalized:
+            return
+        self.last_regime = normalized
+        if persist and self.enabled:
+            self.save()
+
     def bias(self, symbol: str) -> float:
         """Selection multiplier in [0.5, 1.5].
 

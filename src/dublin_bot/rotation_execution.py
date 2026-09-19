@@ -278,7 +278,16 @@ class RotationExecutor:
         previous={tid:f for tid,f in self.state["fills"].items() if f["order_id"]==ev.order_id}
         if not set(previous).issubset(ids) or (record.get("terminal") and not ev.terminal):
             raise ValueError("Exchange order/trade history regression")
-        trades=self.gateway._private("QueryTrades",{"txid":",".join(ids)}) if ids else {}
+        # Kraken QueryTrades rejects oversized txid batches; chunk at 50.
+        trades={}
+        if ids:
+            chunk_size=50
+            for i in range(0,len(ids),chunk_size):
+                chunk=ids[i:i+chunk_size]
+                part=self.gateway._private("QueryTrades",{"txid":",".join(chunk)})
+                if not isinstance(part, dict):
+                    raise ValueError("Malformed QueryTrades response")
+                trades.update(part)
         if set(trades)!=set(ids):
             raise ValueError("Incomplete exact trade records")
         meta=self.gateway.resolve_symbol(record["symbol"])
@@ -325,7 +334,10 @@ class RotationExecutor:
             basis=decimal(lot["basis"])
             pnl=Decimal(0)
             if record["side"]=="buy":
-                lot.update(qty=str(old+qty),basis=str(basis+cost+fee),entry_price=str((basis+cost)/(old+qty)))
+                prev_entry=decimal(lot.get("entry_price") or 0)
+                # Fee-inclusive basis for P&L; entry_price is fee-exclusive avg fill.
+                fee_exclusive_entry=((prev_entry*old + cost)/(old+qty)) if (old+qty)>0 else (cost/qty if qty else Decimal(0))
+                lot.update(qty=str(old+qty),basis=str(basis+cost+fee),entry_price=str(fee_exclusive_entry))
             else:
                 if qty>old:
                     raise ValueError("Exit exceeds exact owned lot")
@@ -342,6 +354,30 @@ class RotationExecutor:
             record["children"].append(ev.child_id)
         self._save()
         return ev,raw
+
+    def _assert_protective_coverage(self, parent, children, parent_qty):
+        """Require exact protective-child volume for residual inventory.
+
+        Missing/canceled protection with leftover inventory is an explicit
+        hard error (and a durable ``protection_gap`` flag) — never silent.
+        """
+        covered = sum((decimal(c["params"]["volume"]) for c in children), Decimal(0))
+        if parent_qty > 0 and covered != parent_qty:
+            gap = {
+                "symbol": parent.get("symbol"),
+                "parent": parent.get("txid"),
+                "owned_qty": str(parent_qty),
+                "protected_qty": str(covered),
+                "child_ids": [c.get("txid") for c in children],
+            }
+            self.state["protection_gap"] = gap
+            self._save()
+            raise ValueError(
+                f"Protective child coverage incomplete or over-sized: {gap}"
+            )
+        if self.state.get("protection_gap") and self.state["protection_gap"].get("parent") == parent.get("txid"):
+            self.state.pop("protection_gap", None)
+            self._save()
 
     def _children(self, parent):
         # All pages, exact exchange parent linkage, never colliding userrefs.
@@ -361,8 +397,7 @@ class RotationExecutor:
                        params={"volume":raw["vol"]},terminal=False)
             children.append(child)
         parent_ev, _ = self._read(parent)
-        if sum((decimal(c["params"]["volume"]) for c in children), Decimal(0)) != parent_ev.quantity:
-            raise ValueError("Protective child coverage incomplete or over-sized")
+        self._assert_protective_coverage(parent, children, parent_ev.quantity)
         return children
 
     def _reconcile(self):

@@ -582,6 +582,22 @@ class TradingEngine:
             return CycleResult(None, "market_data", str(exc), gates)
         gates["bars"] = {"count": int(len(bars))}
 
+        # Gate 2b — regime classification → learner (offline, no network).
+        # Prefer closes from the just-fetched bars so last_regime moves off
+        # "unknown" even when the decision journal is still empty.
+        try:
+            from .learning import classify_regime
+            closes = [float(x) for x in bars["close"].tolist()] if "close" in bars else []
+            regime_info = classify_regime([], closes)
+            self.learner.update_regime(regime_info.regime)
+            gates["regime"] = {
+                "regime": regime_info.regime,
+                "confidence": regime_info.confidence,
+                "description": regime_info.description,
+            }
+        except Exception as exc:  # never block trading on learner/regime errors
+            gates["regime"] = {"regime": self.learner.last_regime, "error": str(exc)}
+
         # Gate 3 — freshness
         if hasattr(self.gateway, "check_freshness"):
             verdict = self.gateway.check_freshness(bars)
@@ -790,6 +806,8 @@ class TradingEngine:
                     bar_timestamp=bar_timestamp, state=state, gates=gates,
                     leverage=leverage, dca=getattr(self, "_dca_executed_this_cycle", False),
                     signal_price=signal.price,
+                    signal_atr=signal.atr,
+                    signal_stop=signal.stop_price,
                 )
             # If this BUY was a DCA accumulator entry and an order was actually
             # placed, update its counters. Symbol restoration happens below
@@ -1018,7 +1036,9 @@ class TradingEngine:
     def _execute_buy(self, *, notional: float, risk: RiskDecision,
                      bar_timestamp: str, state, gates: dict,
                      leverage: float | None, dca: bool,
-                     signal_price: float) -> tuple[str | None, RiskDecision]:
+                     signal_price: float,
+                     signal_atr: float | None = None,
+                     signal_stop: float | None = None) -> tuple[str | None, RiskDecision]:
         """Advanced BUY path: bracket (SL+TP) and/or limit entry.
 
         Falls back to the legacy ``buy_notional`` market order when neither
@@ -1064,9 +1084,23 @@ class TradingEngine:
                 )
         sl = None
         if use_bracket:
-            # Exchange-side protective stop. Use the config stop-loss percentage
-            # applied to the entry price (auditable, deterministic).
-            sl = (float(entry_price or touch)) * (1.0 - s.stop_loss_pct)
+            # Prefer ATR-scaled stop when signal ATR is present; else pct.
+            # Distance is clamped vs stop_loss_pct (see atr_scaled_stop).
+            from .orders import atr_scaled_stop
+            entry_px = float(entry_price or touch)
+            atr_val = signal_atr
+            if atr_val is None and signal_stop is not None and signal_stop > 0 and entry_px > 0:
+                atr_val = abs(entry_px - float(signal_stop)) / max(s.atr_stop_multiplier, 1e-9)
+            sl, stop_src = atr_scaled_stop(
+                "buy",
+                entry_px,
+                atr=atr_val,
+                atr_multiplier=s.atr_stop_multiplier,
+                stop_loss_pct=s.stop_loss_pct,
+            )
+            gates.setdefault("bracket", {})["stop_source"] = stop_src
+            gates["bracket"]["stop_loss"] = sl
+
         plan = BracketPlan(
             pair=meta.key,
             side="buy",

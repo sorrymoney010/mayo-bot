@@ -68,3 +68,30 @@ def test_adaptive_off_ignores_persisted_scale(tmp_path):
         60, "x", price=100.0, atr=2.0, stop_price=98.0)
     # With adaptive off, effective risk ignores the scale entirely.
     assert rm.effective_risk_per_trade(state) == s.risk_per_trade
+
+
+def test_corrupt_session_state_resets_scale_safely(tmp_path):
+    """Corrupt adaptive-risk state must not crash; scale falls back to 1.0."""
+    path = tmp_path / "session_state.json"
+    path.write_text("{not-json", encoding="utf-8")
+    store = StateStore(path)
+    state = store.load(1000.0)
+    assert state.risk_scale == 1.0
+    assert state.win_streak == 0
+    assert state.loss_streak == 0
+
+
+def test_partial_corrupt_scale_fields_are_clamped(tmp_path):
+    """Out-of-range persisted scale is clamped on load / evaluate."""
+    path = tmp_path / "session_state.json"
+    store = StateStore(path)
+    state = store.load(1000.0)
+    state.risk_scale = 99.0  # absurd
+    state.win_streak = -3
+    store.save(state)
+    s = _make_settings(max_risk_scale=2.0, min_risk_scale=0.5)
+    state2 = store.load(1000.0)
+    rm = RiskManager(s)
+    # effective risk must clamp even if raw state was wild
+    eff = rm.effective_risk_per_trade(state2)
+    assert s.min_risk_scale <= eff <= s.max_risk_scale

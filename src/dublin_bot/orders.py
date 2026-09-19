@@ -160,3 +160,51 @@ def bracket_prices(
         sl = entry * (1.0 + stop_loss_pct)
         tp = entry * (1.0 - take_profit_pct)
     return sl, tp
+
+
+# ATR stop clamps relative to the configured percentage stop.
+# Floor: ATR stop must not be tighter than 50% of stop_loss_pct.
+# Cap:   ATR stop must not be looser than 3x stop_loss_pct.
+ATR_STOP_MIN_PCT_FACTOR = 0.5
+ATR_STOP_MAX_PCT_FACTOR = 3.0
+
+
+def atr_scaled_stop(
+    side: str,
+    entry: float,
+    *,
+    atr: float | None = None,
+    atr_multiplier: float = 1.5,
+    stop_loss_pct: float = 0.04,
+    min_pct_factor: float = ATR_STOP_MIN_PCT_FACTOR,
+    max_pct_factor: float = ATR_STOP_MAX_PCT_FACTOR,
+) -> tuple[float, str]:
+    """Compute a stop price, preferring ATR when available.
+
+    Returns ``(stop_price, source)`` where ``source`` is ``"atr"`` or ``"pct"``.
+
+    When ``atr`` is present and positive, the raw ATR stop is
+    ``entry ± atr * atr_multiplier`` (minus for longs / ``buy``, plus for shorts).
+    That distance is then clamped into
+    ``[stop_loss_pct * min_pct_factor, stop_loss_pct * max_pct_factor]`` so an
+    ATR spike cannot place a stop absurdly far, and a tiny ATR cannot tighten
+    risk below half the configured percentage floor. Falls back to a pure
+    percentage stop when ATR is missing or non-positive.
+    """
+    if entry <= 0:
+        raise ValueError("entry must be positive")
+    if stop_loss_pct <= 0:
+        raise ValueError("stop_loss_pct must be positive")
+
+    floor_pct = stop_loss_pct * min_pct_factor
+    ceil_pct = stop_loss_pct * max_pct_factor
+    side_l = side.lower()
+    sign = -1.0 if side_l in {"buy", "long"} else 1.0
+
+    if atr is not None and atr > 0 and atr_multiplier > 0:
+        raw_distance = float(atr) * float(atr_multiplier)
+        distance = min(max(raw_distance, entry * floor_pct), entry * ceil_pct)
+        return entry + sign * distance, "atr"
+
+    return entry + sign * entry * stop_loss_pct, "pct"
+

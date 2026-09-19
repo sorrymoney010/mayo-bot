@@ -112,17 +112,17 @@ OHLC, with an in-sample / out-of-sample split.
 
 ## 3. Remaining issues NOT fixed (out of scope / need owner decision)
 
-- **E1 (residual):** `stop_loss_pct=4%` may be too tight for PUMP/USD; gap
+- **E1 (DONE 2026-09-18):** `stop_loss_pct=4%` may be too tight for PUMP/USD; gap
   risk. Consider a volatility-scaled stop (ATR-based) instead of fixed %.
 - **E2 (dead config):** `auto_cheaper_symbol` / `fallback_symbols` — **REMOVED**
   in the 2026-09-18 hardening pass (were never read by the selector).
-- **E3 (regime inert):** `learner.last_regime` is always "unknown" — no regime
+- **E3 (DONE 2026-09-18):** `learner.last_regime` is always "unknown" — no regime
   detector exists. `bias()`/`regime_penalty()` operate on a single regime, so
   per-regime expectancy never varies. Coin selection bias is effectively flat.
 - **E4 (periodic, not event-driven):** execution is one decision per
   `MONITOR_INTERVAL_SECONDS`; no intrabar reaction except the optional WS
   realtime-stop check (`check_realtime_stop`). Fine for 15m bars; not HFT.
-- **E5 (tests false-green, from original audit, still present):** `test_repeated_cycles_on_the_same_bar_do_not_duplicate` only asserts the
+- **E5 (DONE 2026-09-18; was false-green, from original audit, still present):** `test_repeated_cycles_on_the_same_bar_do_not_duplicate` only asserts the
   duplicate-block branch *inside* `if first.executed:` and otherwise falls back
   to a vacuous `len(confirmed) <= 1`; the default strategy on the uptrend
   fixture never executes, so the real branch is unverified. Recommend a
@@ -169,7 +169,43 @@ Packaging/lint hygiene only (branch `fix/harden-packaging-lint`):
 - Ignored/removed tracked `*.egg-info/` and other build artifacts.
 - `ruff check .` cleaned (was 192 findings).
 - Removed dead config: `auto_cheaper_symbol` / `fallback_symbols` (E2).
-- **Still deferred:** ATR/volatility-scaled stops (E1); regime detector (E3);
-  strengthen duplicate-prevention test (E5).
+- **Completed this pass:** ATR stops (E1); regime detector (E3); duplicate test (E5).
 - Safety locks unchanged: paper/dry-run; **do NOT enable live trading**.
 
+
+
+## Deferred-work pass — 2026-09-18 (CT)
+
+Branch: `feat/deferred-atr-regime-gates`. Paper/dry-run locks remain ON
+(`paper_trading=True`, `dry_run=True`, `allow_live_trading=False`). No live
+orders, no LIVE risk acknowledgement defaults.
+
+### Done this pass
+- **E1 ATR / volatility-scaled stops:** `orders.atr_scaled_stop` helper with
+  documented clamps (ATR stop cannot be tighter than 0.5× `stop_loss_pct` or
+  looser than 3×). Wired into engine bracket construction and rotation
+  strategy `stop_price` (ATR preferred when present; pct fallback otherwise).
+  Unit tests cover ATR path, pct fallback, and both clamps.
+- **E3 Regime detector updates learner:** `classify_regime` now classifies from
+  closes alone (decisions optional). Engine Gate 2b calls
+  `learner.update_regime` every cycle so `last_regime` leaves `"unknown"`.
+  `regime_penalty` differs across regimes when `regime_pnl` history exists;
+  covered by offline tests.
+- **E5 Duplicate-prevention test:**
+  `test_repeated_cycles_on_the_same_bar_do_not_duplicate` now forces a paper
+  BUY on cycle 1 and asserts cycle 2 is blocked via the real
+  idempotency/exposure/position gate (no vacuous `len<=1` pass).
+
+### Live-gate items
+| # | Item | Status |
+|---|------|--------|
+| 1 | Protective-child coverage after entry / reconcile | **Done offline:** missing/canceled protection with residual inventory raises and persists `protection_gap` (tested with mocks). |
+| 2 | Entry-price projection across partial buys (fee-exclusive) | **Done:** lot `entry_price` is fee-exclusive avg fill; basis stays fee-inclusive (tested). |
+| 3 | Persisted adaptive-risk + corrupt-state acceptance | **Extended:** corrupt JSON resets to scale 1.0; wild scale clamped on `effective_risk_per_trade`. |
+| 4 | Chunk large exact-trade QueryTrades | **Done:** chunk size 50 with mock coverage. |
+| 5–8 | Ambiguous cancel / disk / precision E2E; real exchange schema; historical protection adoption; adapter review | **Still owner-gated** — need real exchange/schema or owner approval. Documented only; not half-enabled. |
+
+### Explicit non-goals (honored)
+- Did not set `allow_live_trading=True` defaults.
+- Did not place real orders or call live Kraken with keys.
+- Did not weaken safety-lock tests.

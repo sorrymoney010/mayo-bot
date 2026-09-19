@@ -46,3 +46,27 @@ Packaging hygiene + ruff cleanup on `fix/harden-packaging-lint`. Ruff is clean.
 Egg-info / build artifacts gitignored and untracked. Broken `acurast-ceo` entry
 removed. Dead `fallback_symbols` / `auto_cheaper_symbol` removed. **Paper/dry-run
 locks remain engaged — this is not live-trading approval.**
+
+
+## Deferred ATR / regime / live-gate pass — 2026-09-18 (CT)
+
+Branch `feat/deferred-atr-regime-gates` (local only — not pushed).
+
+**Safety locks still engaged:** `paper_trading=True`, `dry_run=True`,
+`allow_live_trading=False`. This pass is not live-trading approval.
+
+### Deferred items closed
+- E1 ATR/volatility-scaled stops — helper + engine/rotation wiring + tests
+- E3 Regime detector updates `learner.last_regime` each cycle + tests
+- E5 Duplicate-prevention test forces BUY then asserts real block
+
+### Live-gate progress
+1. Protective-child gap explicit (`protection_gap`) — done offline
+2. Fee-exclusive entry_price across partial buys — done
+3. Adaptive-risk corrupt-state coverage — extended
+4. QueryTrades chunking (50) — done
+5–8. Still owner-gated (real exchange schema, historical protection adoption,
+   independent adapter review, precision/disk E2E on live account)
+
+Do **not** restart the live coordinator from this branch without an explicit
+owner go-live decision.
