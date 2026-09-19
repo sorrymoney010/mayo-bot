@@ -23,7 +23,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Callable
 
-from dublin_bot.config import Settings
 from dublin_bot.agents.trading_agent import TradingAgent
 
 logger = logging.getLogger(__name__)

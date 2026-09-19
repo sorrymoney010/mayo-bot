@@ -20,7 +20,6 @@ dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
 
 [project.scripts]
 dublin-bot = "dublin_bot.cli:main"
-acurast-ceo = "acurast_ceo.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -137,7 +137,6 @@ class RotationStrategy:
         Returns:
             Signal with BUY/SELL/WAIT action
         """
-        import pandas as pd
         from dublin_bot.models import Action
 
         if bars is None or len(bars) < 20:

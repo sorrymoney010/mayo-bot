@@ -23,7 +23,7 @@ from typing import Optional
 from dublin_bot.config import Settings
 from dublin_bot.gateway import BrokerGateway
 from dublin_bot.strategies.rotation_strategy import RotationStrategy
-from dublin_bot.models import Action, Signal, RiskDecision
+from dublin_bot.models import Action, Signal
 from dublin_bot.paper import PaperPortfolio
 from dublin_bot.risk import RiskManager
 from dublin_bot.state import StateStore
@@ -117,7 +117,7 @@ class TradingAgent:
     def _sync_live_strategy(self):
         """Strategy is a projection of the single durable live transaction."""
         state = self.live_executor.snapshot()
-        lots = [(s,l) for s,l in state["lots"].items() if float(l["qty"]) > 0]
+        lots = [(s, lot) for s, lot in state["lots"].items() if float(lot["qty"]) > 0]
         if len(lots) > 1:
             raise ValueError("Multiple live rotation lots require reconciliation")
         symbol, lot = lots[0] if lots else (None, {})
@@ -150,9 +150,9 @@ class TradingAgent:
             from dublin_bot.rotation_execution import read_account_evidence
             account = read_account_evidence(self._base_gateway)
             state = self.live_executor.snapshot()
-            positions = [{"symbol": s, "quantity": float(l["qty"]),
-                          "average_entry": float(l["entry_price"])}
-                         for s,l in state["lots"].items() if float(l["qty"]) > 0]
+            positions = [{"symbol": s, "quantity": float(lot["qty"]),
+                          "average_entry": float(lot["entry_price"])}
+                         for s, lot in state["lots"].items() if float(lot["qty"]) > 0]
             return {"has_position": bool(positions), "positions": positions,
                     "equity": float(account.equity), "open_orders": account.open_orders,
                     "realized_pnl_today": None, "execution_recovery": state["blocked"]}

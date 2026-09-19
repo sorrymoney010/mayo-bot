@@ -26,3 +26,9 @@ tests/test_acurast_ceo.py
 
 # Runtime state and diagnostics stay on disk, never in source control.
 /logs/
+
+# Packaging / build artifacts
+*.egg-info/
+dist/
+build/
+.eggs/

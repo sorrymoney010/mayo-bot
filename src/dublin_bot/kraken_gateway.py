@@ -311,13 +311,18 @@ class KrakenGateway:
                 fd, name = tempfile.mkstemp(dir=highwater.parent, prefix=".nonce-")
                 try:
                     with os.fdopen(fd, "w") as out:
-                        out.write(str(nonce)); out.flush(); os.fsync(out.fileno())
+                        out.write(str(nonce))
+                        out.flush()
+                        os.fsync(out.fileno())
                     os.replace(name, highwater)
                     directory = os.open(highwater.parent, os.O_RDONLY)
-                    try: os.fsync(directory)
-                    finally: os.close(directory)
+                    try:
+                        os.fsync(directory)
+                    finally:
+                        os.close(directory)
                 finally:
-                    if os.path.exists(name): os.unlink(name)
+                    if os.path.exists(name):
+                        os.unlink(name)
                 body["nonce"] = str(nonce)
                 headers = {
                     "API-Key": self._api_key,

@@ -7,7 +7,20 @@ sizing/last_fill fallbacks are intentionally NOT reused as ownership evidence.
 """
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+import copy
+import fcntl
+import json
 import math
+import os
+import tempfile
+import time
+import uuid
+
+from .precision import size_order
+from .risk import RiskManager, SessionState
 
 
 @dataclass(frozen=True)
@@ -99,18 +112,6 @@ def read_account_evidence(gateway) -> AccountEvidence:
 
 # Execution state is one atomically committed document: intents, fills, cost
 # basis, strategy projection, risk high water and cooldown cannot tear apart.
-import copy
-import fcntl
-import json
-import os
-from pathlib import Path
-import tempfile
-import time
-import uuid
-from contextlib import contextmanager
-from datetime import datetime, timezone
-from .risk import RiskManager, SessionState
-from .precision import size_order
 
 
 def decimal(value):
@@ -122,13 +123,15 @@ def decimal(value):
 
 def complete_history(gateway, endpoint, key):
     """Fail on changing totals, duplicate pages or truncated history."""
-    rows = {}; total = None
+    rows = {}
+    total = None
     while True:
         page = gateway._private(endpoint, {"ofs": len(rows)})
         count = page["count"]
         if not isinstance(count, int) or count < 0 or (total is not None and count != total):
             raise ValueError("Unstable history count")
-        total = count; batch = page[key]
+        total = count
+        batch = page[key]
         if not isinstance(batch, dict) or set(batch) & set(rows):
             raise ValueError("Duplicate/malformed history page")
         rows.update(batch)
@@ -146,7 +149,8 @@ class RotationExecutor:
     explicit historical migration is required. Ambiguous writes never resend.
     """
     def __init__(self, gateway, settings, path=None, risk_manager=None):
-        self.gateway = gateway; self.settings = settings
+        self.gateway = gateway
+        self.settings = settings
         self.path = Path(path or Path(settings.session_state_path).with_name("rotation_live_state.json"))
         self.risk = risk_manager or RiskManager(settings)
 
@@ -159,7 +163,8 @@ class RotationExecutor:
             self.state = self.snapshot()
             yield
         finally:
-            fcntl.flock(fd, fcntl.LOCK_UN); os.close(fd)
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
 
     def snapshot(self):
         if not self.path.exists():
@@ -199,20 +204,26 @@ class RotationExecutor:
         fd, name = tempfile.mkstemp(dir=self.path.parent, prefix=".rotation-live-")
         try:
             with os.fdopen(fd,"w") as out:
-                json.dump(self.state,out,allow_nan=False); out.flush(); os.fsync(out.fileno())
+                json.dump(self.state,out,allow_nan=False)
+                out.flush()
+                os.fsync(out.fileno())
             os.replace(name,self.path)
             directory = os.open(self.path.parent,os.O_RDONLY)
-            try: os.fsync(directory)
-            finally: os.close(directory)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
         finally:
-            if os.path.exists(name): os.unlink(name)
+            if os.path.exists(name):
+                os.unlink(name)
 
     def holdings(self):
-        return {s:float(decimal(l["qty"])) for s,l in self.snapshot()["lots"].items()
-                if decimal(l["qty"]) > 0}
+        return {s: float(decimal(lot["qty"])) for s, lot in self.snapshot()["lots"].items()
+                if decimal(lot["qty"]) > 0}
 
     def _initialize(self, account):
-        if self.state["initialized"]: return
+        if self.state["initialized"]:
+            return
         history = complete_history(self.gateway,"TradesHistory","trades")
         ledger = complete_history(self.gateway,"Ledgers","ledger")
         balances = self.gateway._private("BalanceEx",{})
@@ -240,12 +251,14 @@ class RotationExecutor:
         ids=response.get("txid")
         if not isinstance(ids,list) or len(ids)!=1 or not isinstance(ids[0],str) or not ids[0]:
             raise ValueError("Ambiguous AddOrder response; intent retained")
-        record["txid"]=ids[0]; self._save()
+        record["txid"]=ids[0]
+        self._save()
         return record
 
     def _read(self, record):
         oid=record["txid"]
-        if not oid: raise ValueError("Pending ambiguous submission; recovery required (never resubmit)")
+        if not oid:
+            raise ValueError("Pending ambiguous submission; recovery required (never resubmit)")
         raw=self.gateway._private("QueryOrders",{"txid":oid,"trades":True})
         # Reuse the strict exact-ID validator without a second exchange read.
         class Snapshot:
@@ -266,7 +279,8 @@ class RotationExecutor:
         if not set(previous).issubset(ids) or (record.get("terminal") and not ev.terminal):
             raise ValueError("Exchange order/trade history regression")
         trades=self.gateway._private("QueryTrades",{"txid":",".join(ids)}) if ids else {}
-        if set(trades)!=set(ids): raise ValueError("Incomplete exact trade records")
+        if set(trades)!=set(ids):
+            raise ValueError("Incomplete exact trade records")
         meta=self.gateway.resolve_symbol(record["symbol"])
         sums=[Decimal(0),Decimal(0),Decimal(0)]
         ledger=complete_history(self.gateway,"Ledgers","ledger") if ids else {}
@@ -283,7 +297,8 @@ class RotationExecutor:
             quote=[v for v in entries if v["asset"]==meta.quote]
             if len(base)!=1 or len(quote)!=1 or len(entries)!=2:
                 raise ValueError("Fee currency/ledger evidence incomplete")
-            b,q=base[0],quote[0]; sign=1 if record["side"]=="buy" else -1
+            b,q=base[0],quote[0]
+            sign=1 if record["side"]=="buy" else -1
             if decimal(b["amount"])!=sign*qty or decimal(q["amount"])!=-sign*cost:
                 raise ValueError("Trade/ledger amount mismatch")
             bf,qf=decimal(b["fee"]),decimal(q["fee"])
@@ -291,7 +306,7 @@ class RotationExecutor:
             # require separate valuation; never overstate sellable ownership.
             if bf != 0 or qf != fee:
                 raise ValueError("Non-quote fee requires explicit reconciliation")
-            sums=[a+b for a,b in zip(sums,(qty,cost,fee))]
+            sums=[a+b for a,b in zip(sums,(qty,cost,fee), strict=False)]
             if tid in self.state["fills"]:
                 prior=self.state["fills"][tid]
                 if (prior["order_id"],prior["symbol"],prior["side"],decimal(prior["quantity"]),
@@ -303,14 +318,17 @@ class RotationExecutor:
             raise ValueError("Cumulative order/trade totals disagree")
         symbol=record["symbol"]
         for tid,qty,cost,fee,stamp in validated:
-            if tid in self.state["fills"]: continue
+            if tid in self.state["fills"]:
+                continue
             lot=self.state["lots"].setdefault(symbol,{"qty":"0","basis":"0","entry_price":"0"})
-            old=decimal(lot["qty"]); basis=decimal(lot["basis"])
+            old=decimal(lot["qty"])
+            basis=decimal(lot["basis"])
             pnl=Decimal(0)
             if record["side"]=="buy":
                 lot.update(qty=str(old+qty),basis=str(basis+cost+fee),entry_price=str((basis+cost)/(old+qty)))
             else:
-                if qty>old: raise ValueError("Exit exceeds exact owned lot")
+                if qty>old:
+                    raise ValueError("Exit exceeds exact owned lot")
                 allocated=basis*qty/old
                 pnl=cost-fee-allocated
                 lot.update(qty=str(old-qty),basis=str(basis-allocated))
@@ -351,7 +369,8 @@ class RotationExecutor:
         for r in list(self.state["orders"].values()):
             self._reconcile_order(r)
             if r["side"]=="buy":
-                for c in self._children(r): self._reconcile_order(c)
+                for c in self._children(r):
+                    self._reconcile_order(c)
         # A later poll can finish a partial exit just as sell() can. Clear its
         # durable resume flag in the same reconciliation transaction, otherwise
         # a subsequent re-entry would inherit the old request to liquidate.
@@ -365,10 +384,14 @@ class RotationExecutor:
     def reconcile(self):
         with self._transaction():
             try:
-                self._reconcile(); self.state["blocked"]=None; self._save()
+                self._reconcile()
+                self.state["blocked"]=None
+                self._save()
                 return self.snapshot()
             except Exception as exc:
-                self.state=self.snapshot(); self.state["blocked"]=str(exc); self._save()
+                self.state=self.snapshot()
+                self.state["blocked"]=str(exc)
+                self._save()
                 raise
 
     def recover_pending(self):
@@ -388,7 +411,8 @@ class RotationExecutor:
                         raise ValueError("Pending recovery ambiguous: reference absent or colliding")
                     oid,raw=matches[0]
                     meta=self.gateway.resolve_symbol(r["symbol"])
-                    descr=raw["descr"];stamp=float(raw["opentm"])
+                    descr=raw["descr"]
+                    stamp=float(raw["opentm"])
                     if (descr["pair"] not in {meta.key,meta.altname,meta.wsname,r["symbol"]}
                         or descr["type"]!=r["side"] or descr["ordertype"]!=r["params"]["ordertype"]
                         or decimal(raw["vol"])!=decimal(r["params"]["volume"])
@@ -398,7 +422,8 @@ class RotationExecutor:
                         raise ValueError("Pending recovery price mismatch")
                     if any(other["txid"]==oid for other in self.state["orders"].values()):
                         raise ValueError("Pending recovery order already attributed")
-                    r["txid"]=oid;self._save()
+                    r["txid"]=oid
+                    self._save()
             self._reconcile()
         return self._run(action)
 
@@ -406,11 +431,15 @@ class RotationExecutor:
         with self._transaction():
             before=set(self.state["fills"])
             try:
-                action(); self.state["blocked"]=None; self._save()
+                action()
+                self.state["blocked"]=None
+                self._save()
                 return self._result(before)
             except Exception as exc:
                 # Reload last durable transaction, not partially mutated memory.
-                self.state=self.snapshot(); self.state["blocked"]=str(exc); self._save()
+                self.state=self.snapshot()
+                self.state["blocked"]=str(exc)
+                self._save()
                 return dict(self._result(before), error=str(exc), pending=True)
 
     def _result(self, previous_ids):
@@ -432,11 +461,13 @@ class RotationExecutor:
                 raise ValueError("Existing owned lot or pending order blocks new entry")
             if time.time()-self.state["last_exit"].get(symbol,0)<180:
                 raise ValueError("Per-symbol 3-minute confirmed-exit cooldown")
-            account=read_account_evidence(self.gateway); self._initialize(account)
+            account=read_account_evidence(self.gateway)
+            self._initialize(account)
             history=complete_history(self.gateway,"TradesHistory","trades")
             if set(history)!=set(self.state["fills"]):
                 raise ValueError("Unattributed exchange history; realized PnL unavailable")
-            if account.open_orders: raise ValueError("Unreconciled account open exposure")
+            if account.open_orders:
+                raise ValueError("Unreconciled account open exposure")
             today=datetime.now(timezone.utc).date()
             fills=[f for f in self.state["fills"].values() if datetime.fromtimestamp(f["time"],timezone.utc).date()==today]
             self.state["peak_equity"]=str(max(account.equity,decimal(self.state["peak_equity"])))
@@ -446,28 +477,36 @@ class RotationExecutor:
                 float(sum((decimal(f["pnl"]) for f in fills),Decimal(0))),
                 len({f["order_id"] for f in fills}),datetime.fromtimestamp(last,timezone.utc) if last else None)
             decision=self.risk.evaluate(signal,session,open_exposure_usd=float(max(Decimal(0),account.equity-account.cash_available)))
-            if not decision.approved: raise ValueError(decision.reason)
+            if not decision.approved:
+                raise ValueError(decision.reason)
             meta=self.gateway.resolve_symbol(symbol)
-            if not meta.tradable or meta.quote not in {"USD","ZUSD"}: raise ValueError("Not a tradable USD spot pair")
+            if not meta.tradable or meta.quote not in {"USD","ZUSD"}:
+                raise ValueError("Not a tradable USD spot pair")
             fees=self.gateway.fee_schedule(meta.key)
-            if not fees: raise ValueError("Authoritative fee schedule unavailable")
+            if not fees:
+                raise ValueError("Authoritative fee schedule unavailable")
             fee=decimal(fees["taker_bps"])/10000
-            if fee<0: raise ValueError("Invalid fee schedule")
+            if fee<0:
+                raise ValueError("Invalid fee schedule")
             notional=min(decimal(decision.notional_usd),account.cash_available/(1+fee))
             ticker=self.gateway.get_ticker_for(symbol)
             price=decimal(ticker["ask"])
             sized=size_order(float(notional),float(price),meta.to_precision(),min_notional_usd=self.settings.min_order_notional_usd)
             stop=decimal(signal.stop_price).quantize(Decimal(1).scaleb(-meta.pair_decimals))
-            if stop<=0 or stop>=price: raise ValueError("Invalid rounded protective stop")
+            if stop<=0 or stop>=price:
+                raise ValueError("Invalid rounded protective stop")
             params=dict(pair=meta.key,type="buy",ordertype="market",volume=sized.volume_str)
             if self.settings.order_type=="limit":
                 from decimal import ROUND_DOWN
                 entry=(price*(1-decimal(self.settings.limit_offset_pct))).quantize(Decimal(1).scaleb(-meta.pair_decimals),rounding=ROUND_DOWN)
-                if entry>=price: entry-=Decimal(1).scaleb(-meta.pair_decimals)
-                if entry<=stop: raise ValueError("Limit entry must exceed stop")
+                if entry>=price:
+                    entry-=Decimal(1).scaleb(-meta.pair_decimals)
+                if entry<=stop:
+                    raise ValueError("Limit entry must exceed stop")
                 params.update(ordertype="limit",price=str(entry))
             params.update({"close[ordertype]":"stop-loss","close[price]":str(stop)})
-            record=self._submit(symbol,"buy",params); self._reconcile_order(record)
+            record=self._submit(symbol,"buy",params)
+            self._reconcile_order(record)
         return self._run(action)
 
     def preview_migration(self, local_journal, risk_state):
@@ -537,14 +576,16 @@ class RotationExecutor:
         unprotected=[]
         for symbol,lot in preview.state["lots"].items():
             qty=decimal(lot["qty"])
-            if qty<=0: continue
+            if qty<=0:
+                continue
             meta=self.gateway.resolve_symbol(symbol)
             if qty!=decimal(balances[meta.base]["balance"]):
                 raise ValueError("Owned historical lot/current balance mismatch")
             protected=sum((decimal(o["vol"])-decimal(o["vol_exec"]) for oid,o in account.open_orders.items()
                            if records[oid]["symbol"]==symbol and o["descr"]["type"]=="sell"
                            and o["descr"]["ordertype"]=="stop-loss"),Decimal(0))
-            if protected!=qty: unprotected.append(symbol)
+            if protected!=qty:
+                unprotected.append(symbol)
         return {"dry_run":True,"state":preview.state,"protection_required":unprotected,
                 "local_journal_ids":ids,"trade_count":len(trades),"ledger_count":len(ledger),
                 "deployment_ready":False}
@@ -588,13 +629,16 @@ class RotationExecutor:
             self.state.setdefault("exit_requested",{})[symbol]=True
             self._save()  # durable exit intent before cancelling any protection
             for r in self.state["orders"].values():
-                if r["symbol"]!=symbol: continue
+                if r["symbol"]!=symbol:
+                    continue
                 if not r["terminal"]:
-                    if r["side"]=="sell": raise ValueError("Pending exit blocks duplicate sale")
+                    if r["side"]=="sell":
+                        raise ValueError("Pending exit blocks duplicate sale")
                     self._cancel_final(r)
                 if r["side"]=="buy":
                     ev,_=self._reconcile_order(r)
-                    if ev.quantity and not r["children"]: raise ValueError("Protective child identity unresolved")
+                    if ev.quantity and not r["children"]:
+                        raise ValueError("Protective child identity unresolved")
                     for c in self._children(r):
                         child,_=self._reconcile_order(c)
                         if not child.terminal:

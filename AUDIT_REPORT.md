@@ -114,10 +114,8 @@ OHLC, with an in-sample / out-of-sample split.
 
 - **E1 (residual):** `stop_loss_pct=4%` may be too tight for PUMP/USD; gap
   risk. Consider a volatility-scaled stop (ATR-based) instead of fixed %.
-- **E2 (dead config):** `auto_cheaper_symbol` / `fallback_symbols`
-  (`config.py`) are never read; the autonomous selector ignores them. The bot
-  simply excludes unaffordable coins rather than "falling back" to a cheaper
-  one. Either wire it or remove it. (Low risk, cosmetic.)
+- **E2 (dead config):** `auto_cheaper_symbol` / `fallback_symbols` — **REMOVED**
+  in the 2026-09-18 hardening pass (were never read by the selector).
 - **E3 (regime inert):** `learner.last_regime` is always "unknown" — no regime
   detector exists. `bias()`/`regime_penalty()` operate on a single regime, so
   per-regime expectancy never varies. Coin selection bias is effectively flat.
@@ -148,7 +146,7 @@ OHLC, with an in-sample / out-of-sample split.
 - [ ] Owner decision: do NOT go live — evidence is not robust (≤7 MR trades;
       momentum OOS negative; BTC/USD MR negative despite being allowlisted).
 - [ ] Follow-up (optional): volatility-scaled stop (E1); wire or remove
-      dead `fallback_symbols` (E2); add regime detector (E3); strengthen
+      ~~dead fallback_symbols (E2, done)~~; add regime detector (E3); strengthen
       duplicate-prevention test (E5).
 
 ## 5. Files changed in this pass
@@ -161,3 +159,17 @@ OHLC, with an in-sample / out-of-sample split.
 - `tests/test_closed_trade_cursor.py` — NEW.
 - `tests/test_adaptive_risk_persistence.py` — NEW.
 - (B1 was already present in the working tree; no change needed.)
+
+---
+
+## Hardening pass — 2026-09-18 (CT)
+
+Packaging/lint hygiene only (branch `fix/harden-packaging-lint`):
+- Removed broken `acurast-ceo` console script; kept `dublin-bot`.
+- Ignored/removed tracked `*.egg-info/` and other build artifacts.
+- `ruff check .` cleaned (was 192 findings).
+- Removed dead config: `auto_cheaper_symbol` / `fallback_symbols` (E2).
+- **Still deferred:** ATR/volatility-scaled stops (E1); regime detector (E3);
+  strengthen duplicate-prevention test (E5).
+- Safety locks unchanged: paper/dry-run; **do NOT enable live trading**.
+

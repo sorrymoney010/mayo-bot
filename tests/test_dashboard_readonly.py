@@ -2,8 +2,10 @@ from dublin_bot import dashboard as d
 
 class Gateway:
     def _private(self, name, params=None):
-        if name == 'Balance': return {'XXBT': '0.00023', 'ZUSD': '3.5', 'PUMP': '0'}
-        if name == 'TradeBalance': raise RuntimeError('permission denied')
+        if name == 'Balance':
+            return {'XXBT': '0.00023', 'ZUSD': '3.5', 'PUMP': '0'}
+        if name == 'TradeBalance':
+            raise RuntimeError('permission denied')
         raise AssertionError(name)
 
 def test_account_failure_is_null_not_budget_and_holdings_survive():
@@ -21,7 +23,8 @@ class HistoryGateway:
             return {'count': 51, 'trades': {'T1': {'ordertxid': 'O1', 'pair': 'XXBTZUSD', 'type': 'buy', 'time': 100, 'vol': '0.1', 'price': '20', 'cost': '2', 'fee': '.01'}}}
         if name == 'OpenOrders':
             return {'open': {'O2': {'status': 'open', 'vol': '4', 'vol_exec': '0', 'descr': {'pair': 'XRPUSD', 'type': 'buy'}}}}
-        if name == 'ClosedOrders': raise RuntimeError('history unavailable')
+        if name == 'ClosedOrders':
+            raise RuntimeError('history unavailable')
         raise AssertionError(name)
 
 def test_history_partial_and_submitted_not_filled():
@@ -47,7 +50,9 @@ def test_ohlc_normalized_for_local_chart():
 
 
 def test_readonly_http_surface_and_local_assets():
-    import threading, urllib.request, urllib.error
+    import threading
+    import urllib.request
+    import urllib.error
     server = d.BoundedDashboardHTTPServer(('127.0.0.1', 0), d.SimpleDashboardHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -68,7 +73,8 @@ def test_readonly_http_surface_and_local_assets():
             urllib.request.urlopen(base+'/static/../config.py')
         assert e.value.code == 404
     finally:
-        server.shutdown(); server.server_close()
+        server.shutdown()
+        server.server_close()
 
 
 def test_private_collector_cooldown_and_stale_evidence():
@@ -76,7 +82,8 @@ def test_private_collector_cooldown_and_stale_evidence():
         calls = 0
         def _private(self, name, params=None):
             self.calls += 1
-            if self.calls == 1: return {'ZUSD': '3'}
+            if self.calls == 1:
+                return {'ZUSD': '3'}
             raise RuntimeError('EAPI:Rate limit exceeded')
     raw = Private()
     clock = [0.0]
@@ -286,7 +293,8 @@ def test_cli_dashboard_run_false_preserves_learner_initialization(monkeypatch, t
 
 
 def test_legacy_redirect_does_not_collect_or_accept_posts():
-    import http.client, threading
+    import http.client
+    import threading
     server = d.BoundedDashboardHTTPServer(('127.0.0.1', 0), d.DashboardRedirectHandler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
@@ -299,6 +307,8 @@ def test_legacy_redirect_does_not_collect_or_accept_posts():
         conn.request('POST', '/api/monitor/start', body='')
         response = conn.getresponse()
         assert response.status == 405
-        response.read(); conn.close()
+        response.read()
+        conn.close()
     finally:
-        server.shutdown(); server.server_close()
+        server.shutdown()
+        server.server_close()

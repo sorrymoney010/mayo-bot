@@ -89,16 +89,16 @@ def _gateway_with_meta(settings: Settings, meta: dict[str, SymbolMeta]) -> Krake
 def test_btc_is_primary_symbol_and_full_basket_enabled():
     s = make_settings()
     assert s.symbol == "BTC/USD"
-    # Small-cap rotation preserved; BTC is master, retained alts only.
-    assert "BTC/USD" in s.fallback_symbols
-    assert "UNI/USD" in s.fallback_symbols
-    assert "XRP/USD" in s.fallback_symbols
-    assert "PUMP/USD" in s.fallback_symbols
-    assert "TRX/USD" not in s.fallback_symbols
-    assert "DOGE/USD" not in s.fallback_symbols
-    assert "KAITO/USD" not in s.fallback_symbols
-    assert "JTO/USD" not in s.fallback_symbols
-    assert "HYPE/USD" not in s.fallback_symbols
+    # Canonical basket is the allowlist surface (fallback_symbols was dead config).
+    assert "BTC/USD" in s.coin_basket
+    assert "UNI/USD" in s.coin_basket
+    assert "XRP/USD" in s.coin_basket
+    assert "PUMP/USD" in s.coin_basket
+    assert "TRX/USD" not in s.coin_basket
+    assert "DOGE/USD" not in s.coin_basket
+    assert "KAITO/USD" not in s.coin_basket
+    assert "JTO/USD" not in s.coin_basket
+    assert "HYPE/USD" not in s.coin_basket
 
 
 # ── symbol resolution (BTC via alias, SOL/XRP direct) ────────────
@@ -228,7 +228,7 @@ def test_risk_manager_is_symbol_agnostic_single_budget():
     assert decisions["BTC/USD"].approved is True
 
 
-def test_fallback_symbols_share_aggregate_risk_limits():
+def test_coin_basket_share_aggregate_risk_limits():
     """Enabling additional symbols only grows the candidate basket; the
     aggregate per-cycle, daily-loss, drawdown, and order caps are unchanged."""
     base = make_settings()
@@ -240,7 +240,7 @@ def test_fallback_symbols_share_aggregate_risk_limits():
         "max_drawdown_fraction": base.max_drawdown_fraction,
         "max_orders_per_day": base.max_orders_per_day,
     }
-    # Adding a symbol is purely a config.fallback_symbols change; no limit
+    # Expanding the candidate basket (coin_basket) must not grow scalar limits;
     # field grows. Assert the limit fields are scalar (not per-symbol maps).
     for value in limits.values():
         assert isinstance(value, (int, float))

@@ -18,8 +18,6 @@ import logging
 import signal
 import sys
 import time
-from datetime import datetime, timezone
-from pathlib import Path
 
 from dublin_bot.config import Settings
 from dublin_bot.agents.trading_agent import TradingAgent
@@ -101,7 +99,7 @@ class TradingSystem:
         
         if report.get("last_confirmed_trade"):
             trade = report["last_confirmed_trade"]
-            print(f"\n>>> LAST TRADE CONFIRMED:")
+            print("\n>>> LAST TRADE CONFIRMED:")
             print(f"    Action:     {trade.get('action')}")
             print(f"    Symbol:     {trade.get('symbol')}")
             print(f"    Price:      {trade.get('price')}")
@@ -118,7 +116,7 @@ class TradingSystem:
         
         if report.get("stats"):
             stats = report["stats"]
-            print(f"\n--- STATISTICS ---")
+            print("\n--- STATISTICS ---")
             print(f"    Total trades:  {stats.get('total_confirmed_trades')}")
             print(f"    Wins:          {stats.get('wins')}")
             print(f"    Losses:        {stats.get('losses')}")
@@ -139,7 +137,7 @@ class TradingSystem:
         self.monitoring_agent.start_monitoring()
         
         print(f"\n{'#'*60}")
-        print(f"# TRADING SYSTEM STARTED")
+        print("# TRADING SYSTEM STARTED")
         print(f"# Mode: {'PAPER TRADING' if self.paper_trading else 'LIVE TRADING'}")
         print(f"# Strategy: {self.strategy_name}")
         print(f"# Check interval: {self.check_interval}s")
@@ -199,8 +197,8 @@ class TradingSystem:
         self._print_issues(report)
         mode = "PAPER" if report.get("paper_trading") else "LIVE"
         last_trade = report.get("last_trade") or {}
-        position = last_trade.get("symbol", "NONE")
-        action = last_trade.get("action", "-")
+        last_trade.get("symbol", "NONE")
+        last_trade.get("action", "-")
         
         # Only print if something happened
         if report.get("last_confirmed_trade"):
@@ -281,7 +279,7 @@ if __name__ == "__main__":
         monitor_interval_seconds=args.monitor,
     )
     
-    print(f"\nStarting with config:")
+    print("\nStarting with config:")
     print(f"  Paper trading: {paper}")
     print(f"  Strategy: {args.strategy}")
     print(f"  Check interval: {args.interval}s")

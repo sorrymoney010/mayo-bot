@@ -9,7 +9,7 @@ scale is written and re-read by a brand-new manager.
 from __future__ import annotations
 
 from dublin_bot.config import Settings
-from dublin_bot.risk import RiskManager, SessionState
+from dublin_bot.risk import RiskManager
 from dublin_bot.state import StateStore
 
 
@@ -63,7 +63,7 @@ def test_adaptive_off_ignores_persisted_scale(tmp_path):
     state = store.load(1000.0)
     state.risk_scale = 2.0
     rm = RiskManager(s)
-    sig = __import__("dublin_bot.models", fromlist=["Signal"]).Signal(
+    __import__("dublin_bot.models", fromlist=["Signal"]).Signal(
         __import__("dublin_bot.models", fromlist=["Action"]).Action.BUY,
         60, "x", price=100.0, atr=2.0, stop_price=98.0)
     # With adaptive off, effective risk ignores the scale entirely.

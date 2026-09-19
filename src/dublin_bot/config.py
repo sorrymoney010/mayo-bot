@@ -87,10 +87,6 @@ class Settings(BaseSettings):
     min_risk_scale: float = Field(default=0.5, gt=0, le=1.0)
     max_risk_scale: float = Field(default=2.0, gt=1.0)
     risk_step: float = Field(default=0.15, gt=0, le=0.5)
-    # When the real account balance is too small to trade the configured symbol
-    # at the minimum notional, automatically fall back to a cheaper allowed coin.
-    auto_cheaper_symbol: bool = Field(default=True)
-    fallback_symbols: list[str] = Field(default_factory=lambda: ["PUMP/USD", "XRP/USD", "UNI/USD", "BTC/USD"])
     # Canonical, always-allowed basket. Defaults to DEFAULT_COIN_BASKET and is
     # intentionally independent of the mutable ``symbol`` selection, so BTC/USD
     # (and the rest of the basket) is never lost when a different coin is pinned.
