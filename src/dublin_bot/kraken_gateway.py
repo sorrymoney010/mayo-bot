@@ -949,19 +949,34 @@ class KrakenGateway:
         If ``quantity`` is given it is an explicit cap (the bot's own acquired
         lot) so the order never liquidates holdings the bot did not purchase.
         Otherwise the full balance is sold (legacy behaviour).
+
+        In paper/dry-run (``order_submission_enabled`` False), paper lots live
+        only in ``paper_portfolio`` / ``paper_bot_positions.json`` — never call
+        live ``positions()``; require an explicit positive quantity and return
+        a synthetic order id.
         """
+        # Hard no-sweep defense: a None/non-positive quantity would liquidate
+        # the ENTIRE balance. Only sell an explicit lot the caller authorized.
+        if quantity is None or quantity <= 0:
+            raise BrokerError(
+                "Refusing to close position with quantity=None (would sweep full balance)"
+            )
+
+        # Paper/dry-run short-circuit: do not consult live Kraken balances.
+        if not self.order_submission_enabled:
+            meta = self.resolve_symbol()
+            self._log(AuditEvent.ORDER_INTENT, {
+                "mode": "dry_run", "pair": meta.key, "side": "sell",
+                "volume": format(float(quantity), "f"), "userref": userref,
+            })
+            return f"kraken-dry-close-{userref or int(time.time())}"
+
         positions = self.positions()
         if not positions:
             raise BrokerError("No position to close")
         meta = self.resolve_symbol()
         full = float(positions[0]["quantity"])
-        # Hard no-sweep defense: a None quantity would liquidate the ENTIRE
-        # balance. Only sell an explicit, positive lot the caller authorized.
-        if quantity is None or quantity <= 0:
-            raise BrokerError(
-                "Refusing to close position with quantity=None (would sweep full balance)"
-            )
-        target = min(quantity, full) if quantity is not None else full
+        target = min(quantity, full)
         precision = meta.to_precision()
         from .precision import round_volume
 
@@ -970,13 +985,6 @@ class KrakenGateway:
             raise BrokerError(
                 f"Position {target} rounds to zero volume for {meta.key}"
             )
-
-        if not self.order_submission_enabled:
-            self._log(AuditEvent.ORDER_INTENT, {
-                "mode": "dry_run", "pair": meta.key, "side": "sell",
-                "volume": format(volume, "f"), "userref": userref,
-            })
-            return f"kraken-dry-close-{userref or int(time.time())}"
 
         self._assert_can_submit()
         params = {
