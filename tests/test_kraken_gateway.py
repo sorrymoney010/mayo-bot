@@ -466,14 +466,23 @@ def test_buy_notional_dry_run_returns_synthetic_id():
     assert "dry" in order_id.lower()
 
 
-def test_close_position_dry_run_with_no_position_raises():
+def test_close_position_dry_run_succeeds_without_live_positions():
+    """Paper/dry-run SELLs must not require live Kraken balances.
+
+    Paper lots exist only in paper_portfolio / paper_bot_positions.json, so
+    close_position must short-circuit before positions() when submission is off.
+    """
     settings = make_settings()
     gw = _make_gateway_with_creds(settings)
     _prime_metadata(gw)
+    assert gw.order_submission_enabled is False
 
-    with patch.object(gw, "positions", return_value=[]):
-        with pytest.raises(BrokerError, match="No position"):
-            gw.close_position()
+    with patch.object(gw, "positions", side_effect=AssertionError(
+        "positions() must not be called in dry-run close_position"
+    )):
+        order_id = gw.close_position(quantity=0.5, userref=77)
+    assert order_id == "kraken-dry-close-77"
+    assert "dry" in order_id.lower()
 
 
 def test_close_position_dry_run_returns_synthetic_id():
@@ -481,28 +490,49 @@ def test_close_position_dry_run_returns_synthetic_id():
     gw = _make_gateway_with_creds(settings)
     _prime_metadata(gw)
 
-    with patch.object(gw, "positions", return_value=[{
-        "quantity": 0.5, "symbol": "XBTUSD"
-    }]):
+    # Empty live balances must not block a paper close with explicit qty.
+    with patch.object(gw, "positions", return_value=[]):
         order_id = gw.close_position(quantity=0.5)
     assert "dry" in order_id.lower()
+    assert order_id.startswith("kraken-dry-close-")
 
 
 def test_close_position_refuses_none_quantity_no_sweep():
     """A None quantity would liquidate the ENTIRE balance — hard-refuse it.
 
     This is the no-sweep safeguard: an empty bot-owned ledger must never
-    produce a full-balance sell of external/legacy holdings.
+    produce a full-balance sell of external/legacy holdings. Applies in both
+    dry-run and live paths before any balance lookup.
     """
     settings = make_settings()
     gw = _make_gateway_with_creds(settings)
     _prime_metadata(gw)
 
-    with patch.object(gw, "positions", return_value=[{
-        "quantity": 0.5, "symbol": "XBTUSD"
-    }]):
+    with patch.object(gw, "positions", side_effect=AssertionError(
+        "positions() must not be reached when quantity is None"
+    )):
         with pytest.raises(BrokerError, match="quantity=None"):
             gw.close_position(quantity=None)
+        with pytest.raises(BrokerError, match="quantity=None"):
+            gw.close_position(quantity=0)
+
+
+def test_close_position_live_empty_positions_raises():
+    """Live path still requires a real exchange position to close."""
+    settings = make_settings(
+        dry_run=False,
+        paper_trading=False,
+        allow_live_trading=True,
+        live_risk_acknowledgement="I_ACCEPT_LIVE_TRADING_RISK",
+    )
+    gw = _make_gateway_with_creds(settings)
+    gw._allow_order_submission = True
+    _prime_metadata(gw)
+    assert gw.order_submission_enabled is True
+
+    with patch.object(gw, "positions", return_value=[]):
+        with pytest.raises(BrokerError, match="No position to close"):
+            gw.close_position(quantity=0.5)
 
 
 def test_order_submission_blocked_by_safety_locks():

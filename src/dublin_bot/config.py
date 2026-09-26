@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Canonical tradeable basket. Fixed and independent of the *currently selected*
@@ -122,19 +122,64 @@ class Settings(BaseSettings):
     # bias selection (avoids over-fitting to a single lucky/unlucky fill).
     learner_min_trades: int = Field(default=3, ge=1)
     learner_path: Path = Path("logs/learner.json")
+    # Adaptive gate (learner.gate): per-symbol / per-regime rolling expectancy
+    # (net bps after fees) blended with walk-forward OOS priors. A symbol or
+    # regime with negative live expectancy over >= learner_min_sample closed
+    # trades is benched for learner_bench_hours, then gets one probation trade
+    # at reduced size. Weak/negative-but-unproven names trade at reduced size.
+    learner_priors_path: Path = Path("data/walkforward_results.json")
+    learner_min_sample: int = Field(default=8, ge=2)
+    learner_bench_hours: float = Field(default=72.0, gt=0)
+    learner_gate_enabled: bool = Field(default=True)
+    # Paper/dry-run sizing from the paper ledger (cash + open cost basis,
+    # seeded at STRATEGY_EQUITY_USD) instead of the real Kraken balance.
+    paper_use_ledger_equity: bool = Field(default=False)
+    # ── Regime-switch trend sleeve (STRATEGY=regime_trend) ─────
+    regime_lookback: int = Field(default=20, ge=2)
+    regime_atr_mult: float = Field(default=3.0, gt=0)
+    regime_min_atr_rank: float = Field(default=0.0, ge=0.0, le=1.0)
     # ── Sentiment agent (Stage 1) ──────────────────────────────
     # When enabled, live news/Reddit sentiment acts as a confirmation filter:
     # bearish mood blocks fresh BUYs, a collapse forces a protective SELL. It
     # never originates a trade on its own.
     sentiment_enabled: bool = Field(default=True)
     # ── Active signal strategy ─────────────────────────────────
-    # "momentum" (default, RSI band gate) or "mean_reversion" (oversold
-    # stretch + reversion exit). momentum is the more active engine — it takes
-    # setups whenever RSI is inside the tradable band, so the bot trades far
-    # more often (aggressive) rather than waiting for a washed-out dip.
+    # "momentum" (default): RSI band + HARD regime EMA gate (no counter-trend
+    #   BUYs). In-position exits (sell below slow EMA) unchanged.
+    # "mean_reversion": oversold stretch + reversion exit.
+    # "sr_flip": resistance→support (and reverse) pivot-flip sleeve.
+    # "pattern" / "elliott_lite": rule-based double-bottom / bullish-flag.
+    # "breakout" / "momentum_breakout": N-bar high + volume > avg (defined-risk
+    #   2% stop / 4% TP; ADX sit-out soft-disabled — volume+high break is the
+    #   gate; fee min-edge still applies and 4% TP clears MIN_EDGE_BPS=100).
     # Safety (budget cap, exchange stop, drawdown/daily-loss breakers) is
     # unchanged — aggression is in entry frequency, not in risk.
+    # Switch paper: STRATEGY=breakout|sr_flip|pattern|momentum|mean_reversion
     strategy: str = Field(default="momentum")
+    # ── Momentum breakout sleeve knobs (STRATEGY=breakout) ─────
+    # Universe scanned when strategy is breakout / momentum_breakout.
+    # Map BTC/USD→XXBTZUSD etc. via the Kraken gateway (canonical form here).
+    breakout_symbols: list[str] = Field(
+        default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"]
+    )
+    # Volume average window (env BREAKOUT_VOL_AVG); lookback uses BREAKOUT_LOOKBACK.
+    breakout_vol_avg: int = Field(default=20, ge=2)
+    # Max open lots across the breakout universe (1 per symbol still enforced).
+    max_concurrent_positions: int = Field(default=3, ge=1, le=10)
+    # ── S/R flip knobs (strategy=sr_flip) ───────────────────────
+    sr_lookback: int = Field(default=120, ge=40)
+    sr_pivot_strength: int = Field(default=3, ge=1, le=10)
+    sr_min_break_atr: float = Field(default=0.25, ge=0.0)
+    sr_min_break_pct: float = Field(default=0.002, ge=0.0)  # 0.2%
+    # ── Pattern / elliott_lite knobs ───────────────────────────
+    pattern_pivot_strength: int = Field(default=2, ge=1, le=8)
+    pattern_dbl_tol_pct: float = Field(default=0.02, gt=0, le=0.1)  # bottoms within 2%
+    pattern_min_break_atr: float = Field(default=0.0, ge=0.0)
+    pattern_min_break_pct: float = Field(default=0.001, ge=0.0)  # 0.1%
+    pattern_flag_pole_pct: float = Field(default=0.03, gt=0)  # 3% pole
+    pattern_flag_pole_bars: int = Field(default=8, ge=3)
+    pattern_flag_bars: int = Field(default=6, ge=3)
+    pattern_flag_max_range_pct: float = Field(default=0.025, gt=0)  # tight flag
     # ── Position rotation (aggressive, single-position) ────────
     # When the bot holds a position on one coin but a DIFFERENT allowed coin
     # shows a clearly stronger momentum setup, it rotates: sells the weaker
@@ -158,7 +203,12 @@ class Settings(BaseSettings):
     margin_enabled: bool = Field(default=False)
     max_leverage: float = Field(default=2.0, gt=0, le=5.0)
     margin_exposure_fraction: float = Field(default=0.25, gt=0, le=0.5)
-    risk_per_trade: float = Field(default=0.02, gt=0, le=0.02)
+    risk_per_trade: float = Field(
+        default=0.02,
+        gt=0,
+        le=0.02,
+        validation_alias=AliasChoices("RISK_PER_TRADE", "RISK_PCT"),
+    )
     max_position_fraction: float = Field(default=0.40, gt=0, le=0.5)
     # Vol-target / fractional-Kelly sizing (see dublin_bot.sizing).
     target_vol: float = Field(default=0.12, gt=0, le=1.0)
@@ -189,6 +239,20 @@ class Settings(BaseSettings):
     rsi_exit: float = 55.0       # mean-reversion exit threshold (recovered)
     atr_period: int = Field(default=14, ge=2)
     atr_stop_multiplier: float = Field(default=1.5, gt=0)
+    # ── ADX regime sit-out (momentum) ──────────────────────
+    # Wilder ADX on engine OHLCV bars. HARD gate for momentum BUYs:
+    # trade only when ADX > adx_enter_above (~25); sit out when ADX <
+    # adx_exit_below (~20); hysteresis keeps prior allow/deny between.
+    adx_period: int = Field(default=14, ge=2)
+    adx_enter_above: float = Field(default=25.0, gt=0)
+    adx_exit_below: float = Field(default=20.0, gt=0)
+    adx_gate_enabled: bool = Field(default=True)
+    # ── Fee-aware minimum edge ─────────────────────────────
+    # Kraken Tier 1 ~40 bps maker / 80 bps taker → RT taker ~160 bps.
+    # Block new BUYs whose TP / expected move is below this floor
+    # (100–150 bps recommended) so micro targets cannot clear fees.
+    min_edge_bps: float = Field(default=100.0, ge=0.0)
+    min_edge_gate_enabled: bool = Field(default=True)
     breakout_lookback: int = Field(default=20, ge=2)
     volume_lookback: int = Field(default=20, ge=2)
     min_volume_ratio: float = Field(default=1.10, gt=0)
@@ -213,8 +277,20 @@ class Settings(BaseSettings):
     # spread. 0.001 = 0.1% better than touch. Only used when order_type="limit".
     limit_offset_pct: float = Field(default=0.001, gt=0, le=0.02)
     use_bracket: bool = Field(default=True)  # attach SL+TP on entry
-    stop_loss_pct: float = Field(default=0.04, gt=0, le=0.50)   # 4% below entry
-    take_profit_pct: float = Field(default=0.08, gt=0, le=1.0)  # 8% above entry
+    # Paper/live protective stop & TP fractions. Breakout sleeve: set
+    # STOP_LOSS_PCT=0.02 (or STOP_PCT) and TAKE_PROFIT_PCT=0.04 for 2R.
+    stop_loss_pct: float = Field(
+        default=0.04,
+        gt=0,
+        le=0.50,
+        validation_alias=AliasChoices("STOP_LOSS_PCT", "STOP_PCT"),
+    )
+    take_profit_pct: float = Field(
+        default=0.08,
+        gt=0,
+        le=1.0,
+        validation_alias=AliasChoices("TAKE_PROFIT_PCT", "TP_PCT"),
+    )
     trailing_stop: bool = Field(default=False)                 # trail SL to peak
     journal_path: Path = Path("logs/decisions.jsonl")
 
@@ -229,6 +305,8 @@ class Settings(BaseSettings):
             raise ValueError("EMA periods must satisfy fast < slow < regime")
         if self.rsi_min >= self.rsi_max:
             raise ValueError("RSI_MIN must be below RSI_MAX")
+        if self.adx_enter_above <= self.adx_exit_below:
+            raise ValueError("ADX_ENTER_ABOVE must be greater than ADX_EXIT_BELOW")
         return self
 
     @property

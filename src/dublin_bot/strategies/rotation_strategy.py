@@ -197,6 +197,12 @@ class RotationStrategy:
             stop_loss_pct=float(self.settings.stop_loss_pct),
         )
 
+        # Regime EMA hard gate: never BUY against the trend (price <= regime EMA).
+        regime_span = max(10, int(getattr(self.settings, "regime_ema", 200)))
+        ema_regime_series = bars["close"].astype(float).ewm(span=regime_span, adjust=False).mean()
+        ema_regime = float(ema_regime_series.iloc[-1])
+        above_regime = current_price > ema_regime
+
         # Determine action
         if in_position:
             # We hold this coin - check for exit signals
@@ -225,30 +231,43 @@ class RotationStrategy:
             # Entry: momentum-based rotation entry
             # Buy when momentum is positive (price moving up), regardless of RSI level
             # This is for "boom boom boom" - chase the momentum
+            would_buy = False
+            buy_score = 0
+            buy_reason = ""
+
             if price_change_pct > 0.005:  # At least 0.5% up over lookback
                 volume_boost = min(20, (volume_ratio - 1.0) * 10)  # Volume surge bonus
                 momentum_score = min(50, price_change_pct * 100 * 2)  # Up to 50 points for momentum
                 rsi_score = max(0, 30 - abs(current_rsi - 55))  # Best around RSI 55
-                score = int(momentum_score + volume_boost + rsi_score + 30)  # Base 30
-                score = min(95, score)  # Cap at 95
+                buy_score = int(momentum_score + volume_boost + rsi_score + 30)  # Base 30
+                buy_score = min(95, buy_score)  # Cap at 95
 
                 reason_parts = [f"Momentum: +{price_change_pct*100:.2f}%"]
                 if volume_ratio > 1.5:
                     reason_parts.append(f"vol {volume_ratio:.2f}x")
                 if current_rsi < 70:
                     reason_parts.append(f"RSI {current_rsi:.1f}")
+                buy_reason = ", ".join(reason_parts)
+                would_buy = True
+            elif current_rsi < 40 and price_change_pct > -0.02:
+                buy_score = 35
+                buy_reason = f"Oversold RSI {current_rsi:.1f}, slight dip"
+                would_buy = True
 
-                return Signal(Action.BUY, score,
-                             ", ".join(reason_parts),
-                             price=current_price,
-                             stop_price=round(stop_px, 8), atr=atr_value)
-
-            # If momentum is slightly negative but RSI is low, might be a dip buy
-            if current_rsi < 40 and price_change_pct > -0.02:
-                return Signal(Action.BUY, 35,
-                             f"Oversold RSI {current_rsi:.1f}, slight dip",
-                             price=current_price,
-                             stop_price=round(stop_px, 8), atr=atr_value)
+            if would_buy:
+                # Hard regime gate: same policy as momentum strategy.
+                if not above_regime:
+                    return Signal(
+                        Action.WAIT, 15,
+                        "Momentum blocked: counter-trend",
+                        price=current_price,
+                        atr=atr_value,
+                    )
+                return Signal(
+                    Action.BUY, buy_score, buy_reason,
+                    price=current_price,
+                    stop_price=round(stop_px, 8), atr=atr_value,
+                )
 
             # No setup
             return Signal(Action.WAIT, 5,

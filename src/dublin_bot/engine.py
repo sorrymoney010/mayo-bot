@@ -142,11 +142,19 @@ class TradingEngine:
         self._dca_notional = 0.0
         # Bot-owned lot ledger: symbol -> quantity the bot actually acquired,
         # so a SELL never liquidates holdings the bot did not purchase.
-        self._bot_qty_path = Path("logs/bot_positions.json")
+        # Paper/dry-run use a separate file so live never reads paper lots.
+        if settings.paper_trading or settings.dry_run:
+            self._bot_qty_path = Path("logs/paper_bot_positions.json")
+        else:
+            self._bot_qty_path = Path("logs/bot_positions.json")
         self._bot_qty: dict[str, float] = self._load_bot_qty()
         # Drop lots the exchange no longer holds before any strategy call, so a
         # stale phantom lot can never freeze the bot into exit-only WAIT.
         self._reconcile_bot_qty()
+        # Paper loop creates a fresh engine each cycle; hydrate from the paper
+        # portfolio when the paper ledger is empty so open lots can still exit.
+        if (settings.paper_trading or settings.dry_run) and not self._bot_qty:
+            self._hydrate_bot_qty_from_paper_portfolio()
         # Bracket parent userrefs by bot-owned symbol. A later exit can then
         # cancel only the stop/target created for that exact bot-owned lot.
         self._bracket_refs_path = Path("logs/bot_brackets.json")
@@ -163,7 +171,13 @@ class TradingEngine:
             settings.learner_path,
             min_trades=settings.learner_min_trades,
             enabled=settings.learner_enabled,
+            strategy_key=self.strategy_key(),
+            priors_path=getattr(settings, "learner_priors_path", None),
+            min_sample=int(getattr(settings, "learner_min_sample", 8)),
+            bench_hours=float(getattr(settings, "learner_bench_hours", 72.0)),
         )
+        self._learner_size_mult = 1.0
+        self._entry_regime = "unknown"
         # Day-trade mode: tighten data resolution + monitor cadence so the bot
         # reacts intraday. Strategy gates are NOT loosened — only speed.
         self._apply_performance_profile()
@@ -255,6 +269,219 @@ class TradingEngine:
         finally:
             self.settings.symbol = saved
 
+
+    def _is_breakout_sleeve(self) -> bool:
+        """Multi-symbol defined-risk sleeves (breakout + regime-switch trend)."""
+        name = str(getattr(self.settings, "strategy", "") or "").lower()
+        return name in ("breakout", "momentum_breakout", "regime_trend", "regime")
+
+    def _is_regime_sleeve(self) -> bool:
+        name = str(getattr(self.settings, "strategy", "") or "").lower()
+        return name in ("regime_trend", "regime")
+
+    def strategy_key(self) -> str:
+        """Learner/backtest key, e.g. 'regime@60m' (matches walkforward JSON)."""
+        name = str(getattr(self.settings, "strategy", "momentum") or "momentum").lower()
+        family = {
+            "breakout": "breakout", "momentum_breakout": "breakout",
+            "regime_trend": "regime", "regime": "regime", "momentum": "momentum",
+        }.get(name, name)
+        return f"{family}@{int(self.settings.timeframe_minutes)}m"
+
+    def _adx_regime(self, bars) -> str:
+        try:
+            from .backtest_core import classify_adx_regime
+            return classify_adx_regime(
+                bars,
+                float(getattr(self.settings, "adx_enter_above", 25.0)),
+                float(getattr(self.settings, "adx_exit_below", 20.0)),
+            )
+        except Exception:
+            return "unknown"
+
+    def _account_equity(self) -> float:
+        """Sizing equity. Paper + PAPER_USE_LEDGER_EQUITY → paper ledger book
+        (cash + open cost basis, seeded at STRATEGY_EQUITY_USD) so paper runs
+        on its own budget instead of the real Kraken balance."""
+        s = self.settings
+        if getattr(s, "paper_use_ledger_equity", False) and (s.paper_trading or s.dry_run):
+            path = Path(self.paper_portfolio.path)
+            if not path.exists():
+                return float(s.strategy_equity_usd)
+            try:
+                import json as _json
+                data = _json.loads(path.read_text(encoding="utf-8"))
+                cash = float(data.get("cash", s.strategy_equity_usd))
+                basis = sum(
+                    float(p.get("quantity", 0.0)) * float(p.get("entry_price", 0.0))
+                    for p in data.get("positions", [])
+                )
+                return max(cash + basis, 0.0)
+            except (OSError, ValueError, TypeError):
+                return float(s.strategy_equity_usd)
+        return self.gateway.account_equity()
+
+    def _open_bot_position_count(self) -> int:
+        return sum(1 for qty in self._bot_qty.values() if float(qty) > 1e-9)
+
+    def _breakout_universe(self) -> list[str]:
+        """Canonical BTC/ETH/SOL (or configured) list for the breakout sleeve."""
+        s = self.settings
+        raw = list(getattr(s, "breakout_symbols", None) or [])
+        if not raw:
+            raw = ["BTC/USD", "ETH/USD", "SOL/USD"]
+        ordered: list[str] = []
+        for sym in raw:
+            sym = str(sym).strip().upper()
+            if sym and sym not in ordered:
+                ordered.append(sym)
+        if s.universe_allowlist:
+            allow = {x.upper() for x in s.universe_allowlist}
+            ordered = [c for c in ordered if c in allow]
+        return ordered
+
+    def _paper_protective_would_exit(self, symbol: str, bars) -> str | None:
+        """Return 'stop' / 'tp' if paper sleeve levels are hit, else None."""
+        if not (self.settings.paper_trading or self.settings.dry_run):
+            return None
+        try:
+            snap = self.paper_portfolio.snapshot()
+            pos = snap.positions.get(symbol)
+        except Exception:
+            return None
+        if pos is None or float(pos.quantity) <= 1e-9 or float(pos.entry_price) <= 0:
+            return None
+        entry = float(pos.entry_price)
+        last = None
+        try:
+            if bars is not None and len(bars) and "close" in bars:
+                last = float(bars["close"].iloc[-1])
+        except Exception:
+            last = None
+        if last is None:
+            try:
+                saved = self.settings.symbol
+                self.settings.symbol = symbol
+                try:
+                    last = float(self.gateway.get_ticker()["last"])
+                finally:
+                    self.settings.symbol = saved
+            except Exception:
+                return None
+        stop_pct = float(self.settings.stop_loss_pct)
+        tp_pct = float(self.settings.take_profit_pct)
+        if last <= entry * (1.0 - stop_pct):
+            return "stop"
+        if last >= entry * (1.0 + tp_pct):
+            return "tp"
+        return None
+
+    def _select_symbol_breakout(self) -> None:
+        """Multi-symbol scan for the defined-risk breakout sleeve.
+
+        - Max 1 position per symbol (bot-qty ledger).
+        - Max ``max_concurrent_positions`` open lots (default 3).
+        - Prefer a held symbol that already hit paper stop/TP.
+        - Else, if under the concurrent cap, pick the strongest fresh BUY
+          among non-held symbols in ``breakout_symbols``.
+        - Else monitor a held lot (round-robin by symbol name).
+        Does not use rotate-out-to-enter; concurrent holdings are intentional.
+        """
+        s = self.settings
+        universe = self._breakout_universe()
+        if not universe:
+            return
+        held = [sym for sym, qty in self._bot_qty.items() if float(qty) > 1e-9]
+        # 1) Exit priority: any held name that hit stop/TP.
+        for sym in held:
+            saved = s.symbol
+            try:
+                s.symbol = sym
+                bars = self.gateway.get_bars()
+            except Exception:
+                s.symbol = saved
+                continue
+            hit = self._paper_protective_would_exit(sym, bars)
+            if not hit and self._is_regime_sleeve():
+                try:
+                    if self.strategy.evaluate(bars, in_position=True).action is Action.SELL:
+                        hit = "strategy_exit"
+                except Exception:
+                    hit = None
+            if hit:
+                self.audit.record(
+                    AuditEvent.SIGNAL,
+                    {"event": "breakout_exit_priority", "symbol": sym, "hit": hit},
+                )
+                return  # s.symbol already set to sym
+            s.symbol = saved
+
+        open_n = len(held)
+        max_n = int(getattr(s, "max_concurrent_positions", 3) or 3)
+
+        # 2) Room for a new entry — scan non-held names for BUY breakouts.
+        if open_n < max_n:
+            equity = self._account_equity()
+            cap = equity * s.max_position_fraction
+            candidates = [
+                sym for sym in universe
+                if sym not in held and self._can_size(sym, cap)
+            ]
+            if not candidates:
+                candidates = [sym for sym in universe if sym not in held]
+            best_sym: str | None = None
+            best_score = -1.0
+            saved = s.symbol
+            try:
+                for sym in candidates:
+                    if self.settings.sentiment_enabled and self.sentiment.should_block_buy(sym):
+                        continue
+                    try:
+                        s.symbol = sym
+                        bars = self.gateway.get_bars()
+                        sig = self.strategy.evaluate(bars, in_position=False)
+                    except Exception:
+                        continue
+                    if sig.action is Action.BUY and getattr(s, "learner_gate_enabled", True):
+                        verdict = self.learner.gate(sym, self._adx_regime(bars))
+                        if not verdict.allow:
+                            self.audit.record(AuditEvent.SIGNAL, {
+                                "event": "learner_bench_skip", "symbol": sym,
+                                **verdict.to_dict(),
+                            })
+                            continue
+                    if sig.action is Action.BUY and float(sig.score) > best_score:
+                        best_score = float(sig.score)
+                        best_sym = sym
+            finally:
+                s.symbol = saved
+            if best_sym is not None:
+                s.symbol = best_sym
+                self.audit.record(
+                    AuditEvent.SIGNAL,
+                    {
+                        "event": "breakout_symbol_select",
+                        "symbol": best_sym,
+                        "score": best_score,
+                        "open_positions": open_n,
+                        "max_concurrent": max_n,
+                    },
+                )
+                return
+
+        # 3) At cap or no fresh BUY — monitor a held lot (stable sort).
+        if held:
+            held_sorted = sorted(held)
+            # Prefer current symbol if still held; else first held.
+            if s.symbol in held_sorted:
+                return
+            s.symbol = held_sorted[0]
+            return
+
+        # 4) Flat — default to first universe symbol so bars/gates still run.
+        if s.symbol not in universe:
+            s.symbol = universe[0]
+
     def _select_symbol(self) -> None:
         """Autonomously pick the best tradeable coin for THIS cycle.
 
@@ -272,13 +499,28 @@ class TradingEngine:
         coin so the cycle exits the current bot-owned lot and enters it.
         Deposits/external holdings the bot did not buy never count as a
         position, so they can't freeze the bot into exit-only mode.
+
+        Breakout / momentum_breakout uses ``_select_symbol_breakout`` (multi-symbol
+        scan with max concurrent positions) instead of single-lot rotation.
         """
+        if self._is_breakout_sleeve():
+            self._select_symbol_breakout()
+            return
         s = self.settings
         # Position awareness is per-symbol and bot-owned only. Raw
         # gateway.has_position() sees ALL balances (incl. pre-existing PUMP),
         # which would falsely lock the bot into exit-only forever.
         held_sym = s.symbol if self._bot_qty.get(s.symbol, 0.0) > 1e-9 else None
         in_position = held_sym is not None
+        # Prefer exiting an existing bot lot before hunting a new entry. The
+        # paper loop recreates the engine each cycle and may land on a fresh
+        # symbol while open lots still sit in the paper ledger.
+        if not in_position:
+            held_others = [sym for sym, qty in self._bot_qty.items() if float(qty) > 1e-9]
+            if held_others:
+                s.symbol = held_others[0]
+                held_sym = s.symbol
+                in_position = True
 
         # Never abandon an open BOT-OWNED position without a reason — but if a
         # stronger setup exists elsewhere, rotate into it.
@@ -287,7 +529,7 @@ class TradingEngine:
                 self._maybe_rotate(held_sym)
             return
 
-        equity = self.gateway.account_equity()
+        equity = self._account_equity()
         cap = equity * s.max_position_fraction
 
         # 1) Build the candidate pool.
@@ -373,7 +615,7 @@ class TradingEngine:
         s = self.settings
         if not s.rotate_positions:
             return
-        equity = self.gateway.account_equity()
+        equity = self._account_equity()
         cap = equity * s.max_position_fraction
         candidates = list(s.coin_basket) + [s.dca_symbol]
         if s.universe_allowlist:
@@ -514,8 +756,88 @@ class TradingEngine:
         cost_min = float(meta.cost_min) if meta.cost_min else 0.0
         return cost_min if cost_min > 0 else float("inf")
 
+    def _apply_adx_and_fee_gates(self, signal: Signal, bars) -> Signal:
+        """HARD sit-out / fee floor for new BUY entries (momentum + shared).
+
+        - ADX chop sit-out when strategy is momentum and ADX gate is enabled.
+        - Fee-aware min edge: TP distance must clear ``min_edge_bps``.
+        Does not alter SELLs or in-position handling. Prefer maker/limit path
+        elsewhere — this only blocks micro / no-trend entries.
+        """
+        if signal.action is not Action.BUY:
+            return signal
+        s = self.settings
+        # Fee / min-edge gate (all strategies): block micro targets vs Kraken fees.
+        if getattr(s, "min_edge_gate_enabled", True):
+            from .indicators import fee_edge_ok
+            ok, reason = fee_edge_ok(
+                float(getattr(s, "take_profit_pct", 0.0)),
+                float(getattr(s, "min_edge_bps", 100.0)),
+            )
+            if not ok:
+                self.audit.record(AuditEvent.SIGNAL, {
+                    "event": "fee_edge_block",
+                    "reason": reason,
+                    "take_profit_pct": float(getattr(s, "take_profit_pct", 0.0)),
+                    "min_edge_bps": float(getattr(s, "min_edge_bps", 100.0)),
+                })
+                return Signal(
+                    Action.WAIT, signal.score, reason,
+                    signal.price, signal.atr, signal.stop_price,
+                )
+
+        # ADX sit-out: momentum only. Breakout soft-disables ADX (volume+high
+        # break is the gate); mean-reversion may want chop.
+        strat = str(getattr(s, "strategy", "momentum") or "momentum")
+        if getattr(s, "adx_gate_enabled", True) and strat == "momentum":
+            from .indicators import adx_trend_allowed, enrich
+            try:
+                frame = enrich(
+                    bars,
+                    fast_ema=s.fast_ema,
+                    slow_ema=s.slow_ema,
+                    regime_ema=s.regime_ema,
+                    rsi_period=s.rsi_period,
+                    atr_period=s.atr_period,
+                    breakout_lookback=s.breakout_lookback,
+                    volume_lookback=s.volume_lookback,
+                    adx_period=getattr(s, "adx_period", 14),
+                )
+                adx_series = frame["adx"].dropna()
+                allowed = adx_trend_allowed(
+                    adx_series.tolist(),
+                    enter_above=float(getattr(s, "adx_enter_above", 25.0)),
+                    exit_below=float(getattr(s, "adx_exit_below", 20.0)),
+                    initial=False,
+                )
+            except Exception as exc:
+                self.audit.record(AuditEvent.SIGNAL, {
+                    "event": "adx_gate_error", "error": str(exc),
+                }, severity="warning")
+                return signal
+            if not allowed:
+                adx_now = float("nan")
+                if len(adx_series):
+                    adx_now = float(adx_series.iloc[-1])
+                adx_txt = f"{adx_now:.1f}" if adx_now == adx_now else "n/a"
+                reason = f"ADX sit-out: chop (adx={adx_txt})"
+                self.audit.record(AuditEvent.SIGNAL, {
+                    "event": "adx_sit_out",
+                    "reason": reason,
+                    "adx": adx_now if adx_now == adx_now else None,
+                    "enter_above": float(getattr(s, "adx_enter_above", 25.0)),
+                    "exit_below": float(getattr(s, "adx_exit_below", 20.0)),
+                })
+                return Signal(
+                    Action.WAIT, signal.score, reason,
+                    signal.price, signal.atr, signal.stop_price,
+                )
+        return signal
+
     def run_cycle(self) -> CycleResult:
+
         gates: dict[str, object] = {}
+        self.last_cycle_gates = gates  # exposed for the paper loop's log line
         # Snapshot the active symbol at cycle start so any temporary swap (e.g.
         # the DCA sleeve pointing one execution at PUMP/USD) is fully undone by
         # the end of the cycle, independent of in-cycle rotation.
@@ -566,7 +888,7 @@ class TradingEngine:
         gates["recovery"] = self.recover()
 
         # Paper portfolio sync for display and realistic accounting.
-        equity = self.gateway.account_equity()
+        equity = self._account_equity()
         state = self.state_store.load(equity)
         state.current_equity = equity
         state.peak_equity = max(state.peak_equity, equity)
@@ -642,6 +964,10 @@ class TradingEngine:
                 "stop_price": signal.stop_price,
             })
 
+            # Paper/dry-run protective stop & take-profit (no live brackets).
+            if in_position and (self.settings.paper_trading or self.settings.dry_run):
+                signal = self._apply_paper_protective_exit(signal, bars)
+
             # Gate 5.5 — sentiment confirmation filter (Stage 1).
             # Sentiment never originates a trade; it only (a) blocks a fresh BUY when
             # the coin's mood is bearish, and (b) forces a protective SELL when mood
@@ -671,6 +997,47 @@ class TradingEngine:
                         "event": "sentiment_force_sell", "coin": idx.coin,
                         "score": idx.score, "sample_size": idx.sample_size,
                     })
+
+            # Gate 5.6 — ADX chop sit-out + fee min-edge (HARD for new BUYs).
+            if signal.action is Action.BUY:
+                signal = self._apply_adx_and_fee_gates(signal, bars)
+
+            # Gate 5.65 — breakout concurrent / per-symbol caps.
+            if signal.action is Action.BUY and self._is_breakout_sleeve():
+                max_n = int(getattr(self.settings, "max_concurrent_positions", 3) or 3)
+                open_n = self._open_bot_position_count()
+                already = self._bot_qty.get(self.settings.symbol, 0.0) > 1e-9
+                if already:
+                    signal = Signal(
+                        Action.WAIT, signal.score,
+                        f"Breakout gate: already in {self.settings.symbol} (max 1/symbol)",
+                        signal.price, signal.atr, signal.stop_price,
+                    )
+                elif open_n >= max_n:
+                    signal = Signal(
+                        Action.WAIT, signal.score,
+                        f"Breakout gate: max concurrent positions ({max_n}) reached",
+                        signal.price, signal.atr, signal.stop_price,
+                    )
+
+            # Gate 5.66 — adaptive learner: bench negative-expectancy symbol /
+            # regime after >= learner_min_sample closed trades, shrink size on
+            # weak/unproven names. Exits are never gated.
+            self._learner_size_mult = 1.0
+            self._entry_regime = self._adx_regime(bars)
+            if (signal.action is Action.BUY and self.learner.enabled
+                    and getattr(self.settings, "learner_gate_enabled", True)):
+                verdict = self.learner.gate(self.settings.symbol, self._entry_regime)
+                gates["learner"] = verdict.to_dict()
+                self.audit.record(AuditEvent.SIGNAL, {"event": "learner_gate", **verdict.to_dict()})
+                if not verdict.allow:
+                    signal = Signal(
+                        Action.WAIT, signal.score,
+                        f"Learner bench {verdict.key}: {verdict.reason}",
+                        signal.price, signal.atr, signal.stop_price,
+                    )
+                else:
+                    self._learner_size_mult = float(verdict.size_mult)
 
             # Gate 5.7 — DCA accumulator sleeve (complementary to MR).
             # If the main strategy is not entering this bar and DCA is due for its
@@ -725,7 +1092,7 @@ class TradingEngine:
                 self._bot_qty.get(self._cycle_symbol_snapshot, 0.0) > 1e-9
 
         # Gate 6 — risk
-        equity = self.gateway.account_equity()
+        equity = self._account_equity()
         state = self.state_store.load(equity)
         state.current_equity = equity
         state.peak_equity = max(state.peak_equity, equity)
@@ -781,6 +1148,12 @@ class TradingEngine:
             # notional, still bounded by the authorized exposure cap. Real
             # equity and the explicitly authorized strategy budget both bind.
             sym = self.settings.symbol
+            if not getattr(self, "_dca_executed_this_cycle", False):
+                mult = float(getattr(self, "_learner_size_mult", 1.0))
+                if mult < 1.0:
+                    gates["learner_size"] = {"mult": mult, "before": buy_notional,
+                                             "after": buy_notional * mult}
+                    buy_notional *= mult
             try:
                 coin_min = self._min_notional(sym)
             except Exception:
@@ -814,6 +1187,11 @@ class TradingEngine:
             # (outside this branch) so it runs even if risk rejected the order.
             if getattr(self, "_dca_executed_this_cycle", False) and order_id is not None:
                 self.dca.record_buy(self._dca_state)
+            elif order_id is not None:
+                try:
+                    self.learner.note_entry(sym, regime=self._entry_regime, notional=buy_notional)
+                except Exception:
+                    pass
         elif signal.action is Action.SELL and in_position and risk.approved:
             # Exits use the risk manager's verdict (approved for SELL, never
             # blocked by entry breakers). Cancel any attached bracket orders
@@ -991,6 +1369,10 @@ class TradingEngine:
                     portfolio = self.paper_portfolio.snapshot()
                     position = portfolio.positions.get(self.settings.symbol)
                     quantity = float(position.quantity) if position else 0.0
+                    cost_basis = (
+                        quantity * float(position.entry_price) + float(position.fees_paid)
+                        if position else 0.0
+                    )
                     if quantity > 1e-12:
                         fill = self.fill_model.sell(
                             price=float(ticker["last"]),
@@ -1006,8 +1388,12 @@ class TradingEngine:
                             when=datetime.now(timezone.utc).isoformat(),
                         )
                         # Self-learning: feed the closed-trade outcome back in.
+                        entry_meta = self.learner.pop_entry(self.settings.symbol) or {}
                         self.learner.record_trade(
-                            self.settings.symbol, realized, self.learner.last_regime
+                            self.settings.symbol, realized,
+                            entry_meta.get("regime") or self.learner.last_regime,
+                            notional=cost_basis or entry_meta.get("notional"),
+                            strategy=entry_meta.get("strategy"),
                         )
                         # Adaptive risk: update win/loss streak + scale from
                         # the realized P&L of this closed trade (audit #6).
@@ -1164,6 +1550,78 @@ class TradingEngine:
         return res
 
     # ── bot-owned lot ledger (audit finding #3) ─────────────
+    def _hydrate_bot_qty_from_paper_portfolio(self) -> None:
+        """Copy open paper portfolio lots into the paper bot-qty ledger.
+
+        The paper loop constructs a new TradingEngine every cycle. Without a
+        persisted paper ledger (or after upgrading from a build that NO-OPed
+        saves), ``_bot_qty`` starts empty even though ``paper_portfolio.json``
+        still holds open lots — so ``in_position`` stays False and exits never
+        fire. Hydrate once on init when the ledger is empty.
+        """
+        equity = float(getattr(self.settings, "strategy_equity_usd", 0.0) or 0.0)
+        try:
+            self.paper_portfolio.load(equity=equity, cash=equity)
+        except Exception:
+            return
+        snap = self.paper_portfolio.snapshot()
+        holdings = {
+            str(sym): float(pos.quantity)
+            for sym, pos in snap.positions.items()
+            if float(pos.quantity) > 1e-9
+        }
+        if not holdings:
+            return
+        self._bot_qty.update(holdings)
+        self._save_bot_qty()
+
+    def _apply_paper_protective_exit(self, signal: Signal, bars) -> Signal:
+        """Force SELL when paper entry vs last price hits stop or take-profit."""
+        sym = self.settings.symbol
+        try:
+            snap = self.paper_portfolio.snapshot()
+            pos = snap.positions.get(sym)
+        except Exception:
+            return signal
+        if pos is None or float(pos.quantity) <= 1e-9 or float(pos.entry_price) <= 0:
+            return signal
+        entry = float(pos.entry_price)
+        last: float | None = None
+        try:
+            if bars is not None and len(bars) and "close" in bars:
+                last = float(bars["close"].iloc[-1])
+        except Exception:
+            last = None
+        if last is None:
+            try:
+                ticker = self.gateway.get_ticker()
+                last = float(ticker["last"])
+            except Exception:
+                return signal
+        stop_pct = float(self.settings.stop_loss_pct)
+        tp_pct = float(self.settings.take_profit_pct)
+        if last <= entry * (1.0 - stop_pct):
+            return Signal(
+                Action.SELL,
+                99,
+                f"Paper stop loss hit: last={last:.8g} entry={entry:.8g} "
+                f"stop={stop_pct:.2%}",
+                last,
+                signal.atr,
+                signal.stop_price,
+            )
+        if last >= entry * (1.0 + tp_pct):
+            return Signal(
+                Action.SELL,
+                99,
+                f"Paper take profit hit: last={last:.8g} entry={entry:.8g} "
+                f"tp={tp_pct:.2%}",
+                last,
+                signal.atr,
+                signal.stop_price,
+            )
+        return signal
+
     def _load_bot_qty(self) -> dict[str, float]:
         try:
             import json
@@ -1319,13 +1777,10 @@ class TradingEngine:
         return None
 
     def _save_bot_qty(self) -> None:
-        # Never persist the lot ledger in paper/dry-run mode. A diagnostic or
-        # dry cycle that "buys" would otherwise write phantom lots to
-        # logs/bot_positions.json, which the LIVE bot then reads as real and
-        # freezes into exit-only (stale-phantom-lot freeze — audit finding).
-        if self.settings.paper_trading or self.settings.dry_run:
-            return
-        import json
+        # Paper/dry-run persist to logs/paper_bot_positions.json (path set in
+        # __init__). Live uses logs/bot_positions.json. Live must never read
+        # the paper file — keeping the ledgers separate prevents a paper buy
+        # from freezing the live bot into exit-only mode.
         self._bot_qty_path.parent.mkdir(parents=True, exist_ok=True)
         self._bot_qty_path.write_text(json.dumps(self._bot_qty), encoding="utf-8")
 
@@ -1463,6 +1918,12 @@ class TradingEngine:
 
     def _cancel_attached_bracket(self, state) -> bool:
         """Release only verified child orders before a bot-owned SELL."""
+        # Paper/dry-run never leave live child stops on the book. Incomplete
+        # paper bracket refs must not fail-closed and block simulated exits.
+        if self.settings.paper_trading or self.settings.dry_run:
+            if self._bracket_ref_for(self.settings.symbol) is not None:
+                self._clear_bracket_ref(self.settings.symbol)
+            return True
         record = self._bracket_ref_for(self.settings.symbol)
         if record is None:
             return True

@@ -32,3 +32,8 @@ tests/test_acurast_ceo.py
 dist/
 build/
 .eggs/
+
+# Cached Kraken market data (re-creatable via scripts/fetch_kraken_history.py)
+data/*.csv
+data/.trades_state_*.json
+data/*.log
