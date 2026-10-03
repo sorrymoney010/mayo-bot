@@ -232,11 +232,14 @@ class TrendHoldSleeve:
                 self._event(st, res, "position_missing", sym, note="paper lot gone; sleeve record dropped")
         self._manage_positions(st, res, lots, state, now)
         self._scan_entries(st, res, lots, state, now)
+        from .sleeve_sync import commit_sleeve_cycle
+        commit_sleeve_cycle(
+            self.portfolio, st, state_path=self.state_path, lots_path=PAPER_LOTS,
+            save_state=self._save_state, equity=float(self.settings.strategy_equity_usd),
+        )
         self.registry.load()
         self.registry.set_sleeve(SLEEVE, owned=set(st["positions"]), pending={})
         self.registry.save()
-        self._save_lots(lots)
-        self._save_state(st)
         self.state_store.save(state)
         return res
 

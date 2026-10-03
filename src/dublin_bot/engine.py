@@ -149,6 +149,8 @@ class TradingEngine:
         else:
             self._bot_qty_path = Path("logs/bot_positions.json")
         self._bot_qty: dict[str, float] = self._load_bot_qty()
+        # Symbols added in this process before the paper book shows them.
+        self._bot_qty_inflight: set[str] = set()
         # Drop lots the exchange no longer holds before any strategy call, so a
         # stale phantom lot can never freeze the bot into exit-only WAIT.
         self._reconcile_bot_qty()
@@ -1940,11 +1942,22 @@ class TradingEngine:
         # __init__). Live uses logs/bot_positions.json. Live must never read
         # the paper file — keeping the ledgers separate prevents a paper buy
         # from freezing the live bot into exit-only mode.
+        if self.settings.paper_trading or self.settings.dry_run:
+            from .sleeve_sync import save_paper_bot_qty
+            save_paper_bot_qty(
+                self._bot_qty_path, self._bot_qty, self.paper_portfolio,
+                equity=float(self.settings.strategy_equity_usd),
+                in_flight=self._bot_qty_inflight,
+            )
+            self._bot_qty_inflight.clear()
+            return
         self._bot_qty_path.parent.mkdir(parents=True, exist_ok=True)
         self._bot_qty_path.write_text(json.dumps(self._bot_qty), encoding="utf-8")
 
     def _record_bot_buy(self, symbol: str, qty: float) -> None:
         self._bot_qty[symbol] = self._bot_qty.get(symbol, 0.0) + qty
+        if self.settings.paper_trading or self.settings.dry_run:
+            self._bot_qty_inflight.add(symbol)
         self._save_bot_qty()
 
     def _record_bot_sell(self, symbol: str, qty: float | None = None) -> None:

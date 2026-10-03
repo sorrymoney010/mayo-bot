@@ -18,7 +18,7 @@ from .tickstore import TickStore
 
 
 def load_pipeline_bars(data_dir: Path | str, symbol: str, tf_minutes: int, *,
-                       now: float | None = None) -> tuple[pd.DataFrame, dict]:
+                       now: float | None = None, write_cache: bool = True) -> tuple[pd.DataFrame, dict]:
     """Latest contiguous run of fully-covered tick-built bars.
 
     Returns (frame, info). ``frame`` has a ``time`` column (bar open, epoch s)
@@ -26,7 +26,8 @@ def load_pipeline_bars(data_dir: Path | str, symbol: str, tf_minutes: int, *,
     """
     sym = canonical(symbol)
     now = time.time() if now is None else now
-    bars = BarBuilder(TickStore(data_dir)).build(sym, tf_minutes, 0, now=now)
+    bars = BarBuilder(TickStore(data_dir)).build(
+        sym, tf_minutes, 0, now=now, write_cache=write_cache)
     info = {"symbol": sym, "tf": tf_minutes, "bars_total": int(len(bars))}
     if not len(bars):
         return pd.DataFrame(), info | {"bars": 0}

@@ -104,7 +104,7 @@ while any existing lock is still shut.
 | Feature | Default | Notes |
 |---|---|---|
 | Trailing take-profit, per sleeve | **off** | 2026-10-03 public-OHLC walk-forward did not improve out-of-sample results after fees. See docs/PAPER_PRO.md |
-| Fast exit watcher (stops / trailing / TP) | **on** | Inside the paper loop; public prices; no new entries |
+| Fast exit watcher (stops / trailing / TP) | **on** | `EXIT_WATCHER_ENABLED=false` stops it without a code change. Public prices; no new entries |
 | Futures short sleeve (`PF_XBTUSD`, `PF_ETHUSD`, `PF_SOLUSD`) | **off** | 2026-10-03 study: 0 one-hour shorts, 4 four-hour shorts at −164 bps. Leverage hard-capped at 2x |
 | `ALLOW_FUTURES_LIVE_ORDERS` / `ALLOW_MARGIN_LIVE_ORDERS` | **off** | Also require the three safety locks to be opened |
 | Spot-margin short sleeve | not built | Borrow cost is modeled; perpetuals are the short. See docs/PAPER_PRO.md |

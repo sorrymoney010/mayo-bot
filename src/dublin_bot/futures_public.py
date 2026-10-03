@@ -58,6 +58,25 @@ class FuturesPublic:
             raise FuturesPublicError("tickers payload missing 'tickers'")
         return [r for r in rows if isinstance(r, dict)]
 
+    def marks(self, symbols: list[str]) -> dict[str, float]:
+        """Mark (or last) for each symbol from a single public tickers download."""
+        wanted = {s.upper() for s in symbols}
+        out: dict[str, float] = {}
+        for row in self.tickers():
+            sym = str(row.get("symbol", "")).upper()
+            if sym not in wanted:
+                continue
+            raw = row.get("markPrice")
+            if raw is None:
+                raw = row.get("last")
+            try:
+                px = float(raw)
+            except (TypeError, ValueError):
+                continue
+            if px > 0:
+                out[sym] = px
+        return out
+
     def ticker(self, symbol: str) -> dict:
         sym = symbol.upper()
         for row in self.tickers():

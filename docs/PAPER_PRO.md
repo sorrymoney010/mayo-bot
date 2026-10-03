@@ -50,15 +50,32 @@ overlay only exits. Sub-1h entries and the momentum family stay refused.
 
 `EXIT_WATCHER_ENABLED` (default true) starts a thread inside
 `scripts/paper_trader_loop.py` after the ledger-owner check and the
-single-instance lock. It builds 1-minute candles from the public trade/ticker
-websocket, the tick-collector file, or a public REST poll, and books a paper
-stop, trailing stop, or take-profit when price crosses. Strategy entries and
-signal exits (chandelier, RSI, EMA) stay on their own timeframe.
+single-instance lock. Set it to `false` to stop the watcher without a code
+change. It builds 1-minute candles from a fresh public price and books a
+paper stop, trailing stop, or take-profit when price crosses. Strategy
+entries and signal exits (chandelier, RSI, EMA) stay on their own timeframe.
+
+Price order: a websocket print newer than 5 seconds, else the last complete
+line of today's tick file when that trade is newer than 15 seconds (tail
+read only; a half-written or stale line is ignored), else one public REST
+ticker. The watcher opens its own websocket only while the tick stream is
+not fresh. Futures marks are one public tickers request, and only while
+`FUTURES_SLEEVE_ENABLED` is true.
 
 The sell reloads the paper book under a file lock
 (`PaperPortfolio.try_record_sell`). A second close of the same lot is a no-op.
+Claim keys include the lot's open time, and closed claims are pruned.
+Sleeve state and `paper_bot_positions.json` are rewritten under that same
+lock from the book, so a sleeve that loaded at the start of the 300s cycle
+cannot put the lot back at the end. Learner closes are appended to an inbox
+the next load/save drains, instead of a second writer replacing
+`learner.json`. Trailing state is written only when the trail changes.
+Watcher exceptions are appended to `logs/exit_watcher.log`, at most once a
+minute per error type.
+
 `scripts/exit_watcher.py` is a one-shot pass that refuses without
-`MAYO_LEDGER_OWNER=1` and the instance lock, so it cannot run beside the loop.
+`MAYO_LEDGER_OWNER=1` and the instance lock, and exits quietly when
+`EXIT_WATCHER_ENABLED=false`.
 
 ## Futures short sleeve — default OFF
 
@@ -96,10 +113,16 @@ python scripts/backtest_futures_short.py --fetch-funding
 relative rates from the public historical-funding-rates endpoint). Without
 that file the study uses zero funding and says so.
 
+The study scripts read tick-built bars from `data/ticks/` when those files
+exist, and they do not write a `bars1m` cache into that directory. Without
+ticks they fall back to the public OHLC cache. Each run writes a new
+timestamped file (`reports/<study>_YYYY-MM-DDTHHMMSSZ.json`) so a later run
+does not overwrite an earlier one.
+
 ## Study on 2026-10-03 (public OHLC, not a multi-year sample)
 
-Kraken's public OHLC endpoint returns about 720 bars: 30 days at 1h, 120 days
-at 4h, 719 days of daily bars for the trend filter. Reports:
+That run used Kraken's public OHLC endpoint, about 720 bars: 30 days at 1h,
+120 days at 4h, 719 days of daily bars for the trend filter. Reports:
 
 * `reports/trailing_tp_2026-10-03.json`
 * `reports/futures_short_2026-10-03.json`

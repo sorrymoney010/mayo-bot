@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -10,7 +11,17 @@ import pytest
 
 from dublin_bot.book_risk import futures_equity_addon
 from dublin_bot.config import Settings
-from dublin_bot.exit_watcher import CandleBook, ExitWatcher
+from dublin_bot.exit_watcher import (
+    CandleBook,
+    ExitWatcher,
+    _collect_prices,
+    _fresh_ticks,
+    log_limited,
+)
+from dublin_bot.learner import LearningAgent, enqueue_learner_exit
+from dublin_bot.realtime import FeedSnapshot
+from dublin_bot.sleeve_sync import commit_sleeve_cycle, save_paper_bot_qty
+from dublin_bot.study_data import load_study_bars, unique_report
 from dublin_bot.futures_costs import (
     MAX_PAPER_LEVERAGE,
     clamp_leverage,
@@ -360,3 +371,218 @@ def test_exit_watcher_script_refuses_without_owner(tmp_path, monkeypatch):
                           env=env, capture_output=True, text=True, timeout=30)
     assert proc.returncode == 3
     assert "ledger owner" in proc.stdout
+
+
+def _save_state(path):
+    def _write(st):
+        path.write_text(json.dumps(st), encoding="utf-8")
+    return _write
+
+
+def test_stale_sleeve_save_cannot_resurrect_a_fast_exit(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    state_path = tmp_path / "meanrev_sleeve.json"
+    lots_path = tmp_path / "paper_bot_positions.json"
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=500, cash=500)
+    book.record_buy("BTC/USD", 0.01, 100.0, 0.1, "t-btc")
+    book.record_buy("ETH/USD", 1.0, 10.0, 0.1, "t-eth")
+    stale = {
+        "positions": {
+            "BTC/USD": {"qty": 0.01, "entry": 100, "stop": 90, "tp": 200, "filled_at": "t-btc"},
+            "ETH/USD": {"qty": 1.0, "entry": 10, "stop": 1, "tp": 20, "filled_at": "t-eth"},
+        },
+        "pending": {},
+        "events": [],
+    }
+    state_path.write_text(json.dumps(stale), encoding="utf-8")
+    lots_path.write_text(json.dumps({"BTC/USD": 0.01, "ETH/USD": 1.0}), encoding="utf-8")
+    memory = json.loads(json.dumps(stale))
+    watcher = ExitWatcher(
+        _settings(meanrev_state_path=state_path, stop_loss_pct=0.5, take_profit_pct=0.5),
+        portfolio=book,
+    )
+    closed = watcher.run_once([("BTC/USD", 1_700_000_000, 80.0)])
+    assert closed and closed[0]["sleeve"] == "meanrev_4h"
+    commit_sleeve_cycle(
+        book, memory, state_path=state_path, lots_path=lots_path,
+        save_state=_save_state(state_path), equity=500,
+    )
+    disk = json.loads(state_path.read_text(encoding="utf-8"))
+    lots = json.loads(lots_path.read_text(encoding="utf-8"))
+    snap = book.load(equity=500, cash=500)
+    assert "BTC/USD" not in disk["positions"]
+    assert "ETH/USD" in disk["positions"]
+    assert "BTC/USD" not in lots
+    assert lots["ETH/USD"] == pytest.approx(1.0)
+    assert "BTC/USD" not in snap.positions
+    assert "ETH/USD" in snap.positions
+
+
+def test_primary_claim_uses_open_time_and_is_pruned(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=500, cash=500)
+    s = _settings(stop_loss_pct=0.05, take_profit_pct=0.5)
+    watcher = ExitWatcher(s, portfolio=book)
+    book.record_buy("BTC/USD", 0.01, 100.0, 0.0, "open-1")
+    # A legacy empty-stamp claim must not block the next lot.
+    (tmp_path / "exit_claims.json").write_text(json.dumps({"primary|BTC/USD|": 1}), encoding="utf-8")
+    first = watcher.run_once([("BTC/USD", 1_700_000_000, 90.0)])
+    assert first and first[0]["reason"] == "stop"
+    claims = json.loads((tmp_path / "exit_claims.json").read_text(encoding="utf-8"))
+    assert "primary|BTC/USD|" not in claims
+    assert claims == {}
+    book.record_buy("BTC/USD", 0.02, 100.0, 0.0, "open-2")
+    second = watcher.run_once([("BTC/USD", 1_700_000_100, 90.0)])
+    assert second and second[0]["reason"] == "stop"
+    assert "BTC/USD" not in book.load(equity=500, cash=500).positions
+
+
+def test_websocket_price_beats_a_stale_or_partial_tick(tmp_path, monkeypatch):
+    now = 1_700_000_000.0
+    tick = tmp_path / "ticks" / "BTCUSD" / "2023-11-14.csv"
+    tick.parent.mkdir(parents=True)
+    # Fresh complete trade at 42, then a half-written line the collector has not finished.
+    body = f"trade_id,ts,price,qty,side,ord_type\n1,{now - 1:.3f},42,1,b,m\n2,{now:.3f},99,1,b"
+    tick.write_bytes(body.encode())
+    fresh = _fresh_ticks(tmp_path, ("BTC/USD",), now)
+    assert fresh["BTC/USD"][0] == pytest.approx(42)
+    # A gap-fill that appends an old trade must not become the live price.
+    stale = tmp_path / "ticks" / "ETHUSD" / "2023-11-14.csv"
+    stale.parent.mkdir(parents=True)
+    stale.write_text(
+        f"trade_id,ts,price,qty,side,ord_type\n9,{now - 10_000:.3f},7,1,b,m\n",
+        encoding="utf-8",
+    )
+    assert "ETH/USD" not in _fresh_ticks(tmp_path, ("ETH/USD",), now)
+
+    class Feed:
+        def latest(self, sym):
+            if sym != "BTC/USD":
+                return None
+            return FeedSnapshot(symbol=sym, last=111.0, updated_at=now)
+
+    monkeypatch.setattr("dublin_bot.exit_watcher._rest_last", lambda _sym: 77.0)
+    s = _settings(pipeline_data_dir=tmp_path, futures_sleeve_enabled=False)
+    prices = _collect_prices(s, Feed(), now)
+    assert prices["BTC/USD"] == pytest.approx(111.0)
+    assert prices["ETH/USD"] == pytest.approx(77.0)
+
+
+def test_futures_marks_are_one_request_and_only_when_enabled(monkeypatch):
+    calls = []
+
+    def marks(self, symbols):
+        calls.append(list(symbols))
+        return {"PF_XBTUSD": 10.0, "PF_ETHUSD": 20.0, "PF_SOLUSD": 30.0}
+
+    monkeypatch.setattr("dublin_bot.futures_public.FuturesPublic.marks", marks)
+    monkeypatch.setattr("dublin_bot.exit_watcher._rest_last", lambda _sym: None)
+    monkeypatch.setattr("dublin_bot.exit_watcher._fresh_ticks", lambda *_a, **_k: {})
+    off = _collect_prices(_settings(futures_sleeve_enabled=False), None, time.time())
+    assert calls == []
+    assert not any(k.startswith("PF:") for k in off)
+    on = _collect_prices(_settings(futures_sleeve_enabled=True), None, time.time())
+    assert len(calls) == 1
+    assert set(calls[0]) == {"PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"}
+    assert on["PF:BTC/USD"] == pytest.approx(10.0)
+
+
+def test_trailing_state_is_not_rewritten_when_unchanged(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    trail = tmp_path / "trailing_state.json"
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=500, cash=500)
+    book.record_buy("BTC/USD", 0.01, 100.0, 0.0, "t0")
+    state = {
+        "primary|BTC/USD|t0": {
+            "sleeve": "primary", "symbol": "BTC/USD", "side": "long",
+            "entry": 100.0, "atr": 1.0, "activate_atr": 1.0, "trail_atr": 1.0,
+            "opened_at": "t0", "peak": 110.0, "armed": True, "stop": 109.0,
+        }
+    }
+    trail.write_text(json.dumps(state), encoding="utf-8")
+    watcher = ExitWatcher(
+        _settings(trailing_tp_regime=True, trailing_state_path=trail,
+                  stop_loss_pct=0.5, take_profit_pct=0.5),
+        portfolio=book,
+    )
+    saves = []
+    real = watcher.trail.save
+
+    def _save():
+        saves.append(1)
+        real()
+
+    watcher.trail.save = _save
+    # 109.5 is above the armed stop (109) and below the peak (110): nothing moves.
+    assert watcher.run_once([("BTC/USD", 1.0, 109.5)]) == []
+    assert saves == []
+    assert watcher.run_once([("BTC/USD", 2.0, 112.0)]) == []
+    assert len(saves) == 1
+
+
+def test_watcher_errors_are_logged_once_per_minute(tmp_path):
+    path = tmp_path / "exit_watcher.log"
+    log_limited(path, "RuntimeError", "RuntimeError: first")
+    log_limited(path, "RuntimeError", "RuntimeError: second")
+    text = path.read_text(encoding="utf-8")
+    assert text.count("RuntimeError") == 1
+    log_limited(path, "ValueError", "ValueError: other")
+    assert "ValueError" in path.read_text(encoding="utf-8")
+
+
+def test_learner_inbox_survives_a_stale_save(tmp_path):
+    path = tmp_path / "learner.json"
+    agent = LearningAgent(path, enabled=True, strategy_key="regime")
+    agent.note_entry("BTC/USD", regime="trend", notional=100.0)
+    stale = LearningAgent(path, enabled=True, strategy_key="regime")
+    enqueue_learner_exit(path, symbol="BTC/USD", pnl=5.0, strategy="regime",
+                         notional=100.0, ts=time.time())
+    stale.last_regime = "trend"
+    stale.save()
+    fresh = LearningAgent(path, enabled=True, strategy_key="regime")
+    assert fresh.coins["BTC/USD"].trades == 1
+    assert fresh.coins["BTC/USD"].pnl == pytest.approx(5.0)
+    assert "BTC/USD" not in fresh.open_entries
+
+
+def test_exit_watcher_kill_switch(monkeypatch):
+    monkeypatch.setenv("EXIT_WATCHER_ENABLED", "false")
+    assert _settings().exit_watcher_enabled is False
+    monkeypatch.setenv("EXIT_WATCHER_ENABLED", "true")
+    assert _settings().exit_watcher_enabled is True
+
+
+def test_study_bars_read_ticks_without_writing_cache(tmp_path):
+    from dublin_bot.pipeline.tickstore import Tick, TickStore
+    base = 1_577_923_200  # 2020-01-02 00:00:00 UTC, a closed day
+    ticks = [Tick(trade_id=i + 1, ts=float(base + i), price="100", qty="1", side="b", ord_type="m")
+             for i in range(180)]
+    TickStore(tmp_path).append("BTC/USD", ticks)
+    df, src = load_study_bars("BTC/USD", 1, tmp_path, with_daily=False)
+    assert src == "ticks"
+    assert df is not None and len(df) >= 1
+    assert not (tmp_path / "bars1m").exists()
+    first = unique_report(tmp_path, "trailing_tp", ".json")[".json"]
+    first.write_text("{}", encoding="utf-8")
+    second = unique_report(tmp_path, "trailing_tp", ".json")[".json"]
+    assert first != second
+    assert first.exists() and not second.exists()
+
+
+def test_paper_bot_qty_drops_a_lot_the_book_no_longer_holds(tmp_path):
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=500, cash=500)
+    book.record_buy("ETH/USD", 1.0, 10.0, 0.0, "t")
+    path = tmp_path / "paper_bot_positions.json"
+    bot = {"BTC/USD": 0.01, "ETH/USD": 1.0}
+    save_paper_bot_qty(path, bot, book, equity=500)
+    assert "BTC/USD" not in bot
+    disk = json.loads(path.read_text(encoding="utf-8"))
+    assert "BTC/USD" not in disk
+    assert disk["ETH/USD"] == pytest.approx(1.0)
+    inflight = {"SOL/USD": 2.0}
+    save_paper_bot_qty(path, inflight, book, equity=500, in_flight={"SOL/USD"})
+    assert json.loads(path.read_text(encoding="utf-8"))["SOL/USD"] == pytest.approx(2.0)

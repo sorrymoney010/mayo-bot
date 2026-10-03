@@ -79,6 +79,45 @@ def _write_json(path: Path, data) -> None:
     tmp.replace(path)
 
 
+# A websocket print older than this is ignored. The tick-file tail may be a
+# few seconds behind the collector and is still a live price inside this window.
+WS_FRESH_SECONDS = 5.0
+TICK_FRESH_SECONDS = 15.0
+_TAIL_BYTES = 4096
+_LOG_INTERVAL = 60.0
+_LOG_AT: dict[str, float] = {}
+
+
+def log_limited(path: Path, key: str, message: str, *, interval: float = _LOG_INTERVAL) -> None:
+    """Append one line, at most once per ``interval`` for each ``key``."""
+    now = time.time()
+    if now - _LOG_AT.get(key, 0.0) < interval:
+        return
+    _LOG_AT[key] = now
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as fh:
+            fh.write(f"[{datetime.now(timezone.utc).isoformat()}] {message}\n")
+    except OSError:
+        return
+
+
+def claim_opened(sleeve: str, opened: str, pos) -> str:
+    """Stable non-empty stamp so two lots on one coin do not share a claim key."""
+    stamp = str(opened or "").strip()
+    if sleeve == "primary":
+        stamp = str(getattr(pos, "opened_at", "") or "").strip() or stamp
+    if stamp:
+        return stamp
+    entry = float(getattr(pos, "entry_price", 0.0) or 0.0)
+    trades = int(getattr(pos, "trades", 0) or 0)
+    return f"legacy:{entry:.8f}:{trades}"
+
+
+def claim_key(sleeve: str, symbol: str, opened: str) -> str:
+    return f"{sleeve}|{symbol}|{opened}"
+
+
 def spot_exit_levels(settings, symbol: str, entry: float) -> tuple[str, float | None, float | None, str]:
     """(sleeve, stop_price, tp_price, opened_at) for one spot lot.
 
@@ -132,6 +171,8 @@ class ExitWatcher:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.closes: list[dict] = []
+        self.error_log = base / "exit_watcher.log"
+        self._err_at: dict[str, float] = {}
         self.trail = TrailBook(getattr(settings, "trailing_state_path", "logs/trailing_state.json"))
 
     def allowed(self) -> tuple[bool, str]:
@@ -186,6 +227,7 @@ class ExitWatcher:
             return None
         entry = float(pos.entry_price)
         sleeve, stop, tp, opened = spot_exit_levels(self.settings, symbol, entry)
+        opened = claim_opened(sleeve, opened, pos)
         reason = None
         fill_px = price
         maker = False
@@ -216,22 +258,24 @@ class ExitWatcher:
         st = self.trail.states.get(seed.key())
         if st is None:
             return None
+        before = (st.armed, st.peak, st.stop, st.atr)
         st, reason = on_price(st, price)
+        after = (st.armed, st.peak, st.stop, st.atr)
         if reason:
             self.trail.drop(st)
             self.trail.save()
             return reason
-        self.trail.put(st)
-        self.trail.save()
+        if after != before:
+            self.trail.put(st)
+            self.trail.save()
         return None
 
     def _book_spot(self, symbol, sleeve, qty, fill_px, reason, maker, opened, ts) -> dict | None:
         from .fills import FillModel
-        key = f"{sleeve}|{symbol}|{opened}"
+        key = claim_key(sleeve, symbol, opened)
         with paper_book_lock(self.portfolio.path):
-            claims = _read_json(self.claims_path, {})
-            if not isinstance(claims, dict):
-                claims = {}
+            claims = self._load_claims()
+            claims = self._prune_claims(claims)
             if key in claims:
                 return None
             model = FillModel(self.settings)
@@ -248,6 +292,9 @@ class ExitWatcher:
             claims[key] = ts
             _write_json(self.claims_path, claims)
             _drop_sleeve_position(self.settings, symbol, sleeve, lots_path=self.lots_path)
+            # The lot is flat now. Drop its claim so the next open on this coin
+            # is not blocked, and drop any older keys for positions already gone.
+            self._prune_claims(claims)
         row = {"ts": when, "symbol": symbol, "sleeve": sleeve, "reason": reason,
                "price": price, "qty": qty, "realized": realized, "venue": "spot"}
         self._log(row)
@@ -264,10 +311,8 @@ class ExitWatcher:
             if not isinstance(pos, dict):
                 return None
             opened = str(pos.get("opened_at") or "")
-            key = f"futures_short|{symbol}|{opened}"
-            claims = _read_json(self.claims_path, {})
-            if not isinstance(claims, dict):
-                claims = {}
+            key = claim_key("futures_short", symbol, opened or f"legacy:{float(pos.get('entry') or 0):.8f}")
+            claims = self._prune_claims(self._load_claims())
             if key in claims:
                 return None
             reason = None
@@ -288,6 +333,7 @@ class ExitWatcher:
             save_ledger(book, path)
             claims[key] = ts
             _write_json(self.claims_path, claims)
+            self._prune_claims(claims)
         row = {"ts": datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(),
                "symbol": symbol, "sleeve": "futures_short", "reason": reason,
                "price": exit_px, "realized": pnl - exit_fee, "venue": "futures"}
@@ -300,34 +346,84 @@ class ExitWatcher:
         with self.fast_exits_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, default=str) + "\n")
 
+    def _load_claims(self) -> dict:
+        claims = _read_json(self.claims_path, {})
+        return claims if isinstance(claims, dict) else {}
+
+    def _open_claim_keys(self) -> set[str]:
+        """Claim keys for lots the book still holds. Caller holds the book lock."""
+        equity = float(self.settings.strategy_equity_usd)
+        snap = self.portfolio.load(equity=equity, cash=equity)
+        keys: set[str] = set()
+        for sym, pos in snap.positions.items():
+            sleeve, _stop, _tp, opened = spot_exit_levels(self.settings, sym, float(pos.entry_price))
+            keys.add(claim_key(sleeve, sym, claim_opened(sleeve, opened, pos)))
+        try:
+            from .futures_sleeve import load_ledger
+            path = Path(getattr(self.settings, "futures_ledger_path", "logs/paper_futures.json"))
+            book = load_ledger(path)
+        except Exception:
+            book = {"positions": {}}
+        for sym, pos in (book.get("positions") or {}).items():
+            if not isinstance(pos, dict):
+                continue
+            opened = str(pos.get("opened_at") or "") or f"legacy:{float(pos.get('entry') or 0):.8f}"
+            keys.add(claim_key("futures_short", sym, opened))
+        return keys
+
+    def _prune_claims(self, claims: dict) -> dict:
+        keep = self._open_claim_keys()
+        pruned = {k: v for k, v in claims.items() if k in keep}
+        if pruned != claims:
+            _write_json(self.claims_path, pruned)
+        return pruned
+
+    def _note_error(self, exc: BaseException) -> None:
+        log_limited(self.error_log, type(exc).__name__, f"{type(exc).__name__}: {exc}")
+
     def _learn(self, symbol: str, sleeve: str, realized: float, qty: float, price: float) -> None:
         try:
-            from .learner import LearningAgent
+            from .learner import enqueue_learner_exit
             key = {"meanrev_4h": "meanrev_mk", "trendhold_4h": "trendhold",
                    "primary": "regime"}.get(sleeve, sleeve)
-            agent = LearningAgent(self.settings.learner_path, enabled=True, strategy_key=key)
-            agent.pop_entry(symbol)
-            agent.record_trade(symbol, float(realized), "unknown", notional=abs(qty * price),
-                               strategy=key, detail={"exit_reason": "fast_exit", "sleeve": sleeve})
-        except Exception:
-            return
+            enqueue_learner_exit(
+                self.settings.learner_path, symbol=symbol, pnl=float(realized), strategy=key,
+                notional=abs(float(qty) * float(price)), ts=time.time(),
+                detail={"exit_reason": "fast_exit", "sleeve": sleeve},
+            )
+        except Exception as exc:
+            self._note_error(exc)
 
     def _loop(self) -> None:
-        feed = _try_feed()
+        feed = None
+        symbols = ("BTC/USD", "ETH/USD", "SOL/USD")
         while not self._stop.is_set():
             now = time.time()
-            for symbol, price in _collect_prices(self.settings, feed, now).items():
-                self.candles.add(symbol, now, price)
-                try:
-                    self.evaluate(symbol, price, now)
-                except Exception:
-                    continue
+            try:
+                fresh = _fresh_ticks(getattr(self.settings, "pipeline_data_dir", "data"), symbols, now)
+                if len(fresh) == len(symbols):
+                    if feed is not None:
+                        try:
+                            feed.stop()
+                        except Exception as exc:
+                            self._note_error(exc)
+                        feed = None
+                elif feed is None:
+                    feed = _try_feed()
+                for symbol, price in _collect_prices(self.settings, feed, now).items():
+                    self.candles.add(symbol, now, price)
+                    try:
+                        self.evaluate(symbol, price, now)
+                    except Exception as exc:
+                        self._note_error(exc)
+            except Exception as exc:
+                self._note_error(exc)
             self._stop.wait(2.0)
         if feed is not None:
             try:
                 feed.stop()
-            except Exception:
-                pass
+            except Exception as exc:
+                self._note_error(exc)
 
 
 def _try_feed():
@@ -337,25 +433,34 @@ def _try_feed():
         feed = KrakenRealtimeFeed(pairs)
         feed.start()
         return feed
-    except Exception:
+    except Exception as exc:
+        log_limited(Path("logs/exit_watcher.log"), "ws_feed", f"{type(exc).__name__}: {exc}")
         return None
 
 
 def _collect_prices(settings, feed, now: float) -> dict[str, float]:
+    """Fresh websocket price wins. A stale or partial tick-file line does not.
+
+    Futures marks are one public request, and only when that sleeve is enabled.
+    """
     out: dict[str, float] = {}
     symbols = ("BTC/USD", "ETH/USD", "SOL/USD")
     if feed is not None:
         for sym in symbols:
             snap = feed.latest(sym)
-            if snap is not None and snap.last > 0 and now - snap.updated_at < 5:
+            if snap is not None and snap.last > 0 and now - float(snap.updated_at) < WS_FRESH_SECONDS:
                 out[sym] = float(snap.last)
+    ticks = _fresh_ticks(getattr(settings, "pipeline_data_dir", "data"), symbols, now)
+    for sym, (px, _ts) in ticks.items():
+        if sym not in out:
+            out[sym] = px
     for sym in symbols:
         if sym not in out:
             px = _rest_last(sym)
             if px:
                 out[sym] = px
-    out.update(_tail_tick_files(getattr(settings, "pipeline_data_dir", "data"), symbols))
-    out.update(_futures_marks())
+    if getattr(settings, "futures_sleeve_enabled", False):
+        out.update(_futures_marks())
     return out
 
 
@@ -375,43 +480,91 @@ def _rest_last(symbol: str) -> float | None:
         return None
 
 
-def _tail_tick_files(data_dir, symbols) -> dict[str, float]:
-    """Last trade in today's tick-collector file, if the collector is running."""
-    out = {}
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+def _last_complete_line(path: Path) -> str | None:
+    """Last newline-terminated CSV row, reading only the tail of the file.
+
+    A row without a trailing newline is still being written and is ignored.
+    """
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return None
+    if size <= 0:
+        return None
+    try:
+        with path.open("rb") as fh:
+            fh.seek(max(0, size - _TAIL_BYTES))
+            blob = fh.read()
+    except OSError:
+        return None
+    if size > _TAIL_BYTES:
+        cut = blob.find(b"\n")
+        if cut < 0:
+            return None
+        blob = blob[cut + 1:]
+    if not blob.endswith(b"\n"):
+        cut = blob.rfind(b"\n")
+        if cut < 0:
+            return None
+        blob = blob[:cut + 1]
+    lines = []
+    for raw in blob.decode("utf-8", "replace").splitlines():
+        if raw.strip() and not raw.startswith("trade_id"):
+            lines.append(raw)
+    return lines[-1] if lines else None
+
+
+def _parse_tick_line(line: str) -> tuple[float, float] | None:
+    """``(price, ts)`` from ``trade_id,ts,price,...``. None if partial or junk."""
+    parts = line.split(",")
+    if len(parts) < 6:
+        return None
+    try:
+        ts = float(parts[1])
+        price = float(parts[2])
+    except ValueError:
+        return None
+    if price <= 0 or ts <= 0:
+        return None
+    return price, ts
+
+
+def _fresh_ticks(data_dir, symbols, now: float) -> dict[str, tuple[float, float]]:
+    """Today's last complete tick, when its timestamp is still fresh.
+
+    The file day comes from ``now`` (the same clock as the freshness check),
+    not a second wall-clock read.
+    """
+    out: dict[str, tuple[float, float]] = {}
+    day = datetime.fromtimestamp(now, tz=timezone.utc).strftime("%Y-%m-%d")
     root = Path(data_dir) / "ticks"
     key = {"BTC/USD": "BTCUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
     for sym in symbols:
-        path = root / key[sym] / f"{day}.csv"
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except OSError:
+        line = _last_complete_line(root / key[sym] / f"{day}.csv")
+        if line is None:
             continue
-        if len(lines) < 2:
+        parsed = _parse_tick_line(line)
+        if parsed is None:
             continue
-        parts = lines[-1].split(",")
-        if len(parts) < 3:
+        price, ts = parsed
+        if now - ts > TICK_FRESH_SECONDS:
             continue
-        try:
-            out[sym] = float(parts[2])
-        except ValueError:
-            continue
+        out[sym] = (price, ts)
     return out
 
 
 def _futures_marks() -> dict[str, float]:
+    """One public tickers download for the three perps. Caller checks the sleeve flag."""
     try:
-        from .futures_public import FuturesPublic
         from .futures_costs import SPOT_TO_PERP
-        client = FuturesPublic(timeout=5)
-        out = {}
-        for spot, perp in SPOT_TO_PERP.items():
-            try:
-                snap = client.snapshot(perp)
-            except Exception:
-                continue
-            if snap.get("mark"):
-                out[f"PF:{spot}"] = float(snap["mark"])
-        return out
-    except Exception:
+        from .futures_public import FuturesPublic
+        marks = FuturesPublic(timeout=5).marks(list(SPOT_TO_PERP.values()))
+    except Exception as exc:
+        log_limited(Path("logs/exit_watcher.log"), "futures_marks", f"{type(exc).__name__}: {exc}")
         return {}
+    out = {}
+    for spot, perp in SPOT_TO_PERP.items():
+        px = marks.get(perp)
+        if px:
+            out[f"PF:{spot}"] = float(px)
+    return out

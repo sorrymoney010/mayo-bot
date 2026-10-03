@@ -31,7 +31,6 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dublin_bot.backtest_core import add_indicators  # noqa: E402
 from dublin_bot.futures_backtest import (  # noqa: E402
     ShortSimParams,
     short_metrics,
@@ -41,6 +40,7 @@ from dublin_bot.futures_costs import SPOT_TO_PERP  # noqa: E402
 from dublin_bot.promotion import check_strategy  # noqa: E402
 from dublin_bot.research import buy_and_hold  # noqa: E402
 from dublin_bot.backtest_core import Costs  # noqa: E402
+from dublin_bot.study_data import load_study_bars, unique_report  # noqa: E402
 
 SYMBOLS = ["BTC/USD", "ETH/USD", "SOL/USD"]
 
@@ -54,30 +54,19 @@ def _read(path: Path):
 
 
 def load_price(symbol: str, tf: int, data: Path):
-    import pandas as pd
-    from dublin_bot.daily_filter import attach_d1, riskon_table
     perp = SPOT_TO_PERP[symbol]
-    base = symbol.replace("/", "")
-    df = _read(data / f"futures_{perp}_{tf}.csv")
-    src = "futures"
+    raw = _read(data / f"futures_{perp}_{tf}.csv")
+    if raw is not None:
+        from dublin_bot.backtest_core import add_indicators
+        from dublin_bot.daily_filter import attach_d1, riskon_table
+        df = add_indicators(raw)
+        daily, _src = load_study_bars(symbol, 1440, data, with_daily=False)
+        if daily is not None and len(daily):
+            df = attach_d1(df, riskon_table(daily), tf)
+        return df, "futures"
+    df, src = load_study_bars(symbol, tf, data)
     if df is None:
-        parts = []
-        for suffix in ("_trades", ""):
-            got = _read(data / f"kraken_{base}_{tf}m{suffix}.csv")
-            if got is not None:
-                parts.append(got)
-        if not parts:
-            return None, "missing"
-        df = pd.concat(parts).drop_duplicates("time", keep="last").sort_values("time").reset_index(drop=True)
-        src = "spot_cache"
-    daily = None
-    for suffix in ("_trades", ""):
-        daily = _read(data / f"kraken_{base}_1440m{suffix}.csv")
-        if daily is not None:
-            break
-    df = add_indicators(df)
-    if daily is not None:
-        df = attach_d1(df, riskon_table(daily), tf)
+        return None, "missing"
     return df, src
 
 
@@ -193,14 +182,21 @@ def main() -> int:
             "python scripts/backtest_futures_short.py --fetch-funding"
         )
     else:
-        report["history"] = "cache"
-        report["sample"] = (
-            "Kraken public OHLC is capped near 720 bars "
-            "(about 30 days at 1h, 120 days at 4h). Daily bars cover the filter only."
-        )
+        used = {s for run in report["runs"] for s in run.get("sources") or []}
+        if "ticks" in used:
+            report["history"] = "ticks"
+            report["sample"] = "Tick-built bars from the data dir (read-only; no bars1m cache written)."
+        elif "ohlc" in used or "missing" in used:
+            report["history"] = "ohlc"
+            report["sample"] = (
+                "No tick-built bars in the data dir. Fell back to Kraken public OHLC, "
+                "which is capped near 720 bars (about 30 days at 1h, 120 days at 4h)."
+            )
+        else:
+            report["history"] = "futures"
+            report["sample"] = "Perp candles from data/futures_<PERP>_<tf>.csv."
         report["default_on"] = any(r["promote"] for r in report["runs"])
-    out = ROOT / "reports" / f"futures_short_{day}.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
+    out = unique_report(ROOT / "reports", "futures_short", ".json")[".json"]
     out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
     print(json.dumps(report, indent=2, default=str))
     print(f"wrote {out}")

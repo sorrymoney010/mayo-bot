@@ -13,9 +13,12 @@ can never hijack the bot. Below that threshold the learner is advisory only.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import math
+import threading
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -28,6 +31,57 @@ BENCH_HOURS = 72.0           # benched symbol/regime sits out this long, then pr
 PROBATION_SIZE = 0.5         # size multiplier for the first trade after a bench
 WEAK_EDGE_BPS = 25.0         # 0 <= expectancy < this → "weak" → reduced size
 SIZE_MIN, SIZE_MAX = 0.5, 1.0  # every allowed entry is sized within these multipliers
+
+# The fast exit watcher and the 300s loop both record closes. A stale in-memory
+# agent must not overwrite a close the other writer just appended. Inbox lines
+# are drained under this lock at the start of every load and save.
+_LEARNER_THREAD = threading.RLock()
+_LEARNER_DEPTH = threading.local()
+
+
+@contextmanager
+def learner_file_lock(path: Path | str):
+    """Reentrant per thread. flock only on the outermost acquire (same process)."""
+    depth = getattr(_LEARNER_DEPTH, "n", 0)
+    if depth:
+        _LEARNER_DEPTH.n = depth + 1
+        try:
+            yield
+        finally:
+            _LEARNER_DEPTH.n = depth
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(str(target) + ".learnerlock")
+    fh = open(lock_path, "a+", encoding="utf-8")
+    _LEARNER_DEPTH.n = 1
+    try:
+        with _LEARNER_THREAD:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    finally:
+        fh.close()
+        _LEARNER_DEPTH.n = 0
+
+
+def enqueue_learner_exit(path: Path | str, *, symbol: str, pnl: float, strategy: str,
+                         notional: float | None, ts: float, detail: dict | None = None) -> None:
+    """Append one close for the next learner load/save. Does not rewrite the store."""
+    path = Path(path)
+    inbox = path.with_suffix(".inbox.jsonl")
+    event_id = f"{symbol.upper()}|{float(ts):.6f}|{float(pnl):.6f}|{strategy}"
+    row = {"id": event_id, "symbol": symbol.upper().strip(), "pnl": float(pnl),
+           "strategy": strategy, "notional": notional, "ts": float(ts),
+           "regime": "unknown", "detail": detail or {}}
+    with learner_file_lock(path):
+        inbox.parent.mkdir(parents=True, exist_ok=True)
+        with inbox.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, default=str) + "\n")
+
+
 BENCH_CONFIDENCE = 0.90      # bench only if the one-sided 90% UPPER bound of mean net bps < 0
 
 
@@ -130,6 +184,7 @@ class LearningAgent:
         # symbol -> {"regime","notional","ts","strategy"} captured at paper BUY
         self.open_entries: dict[str, dict] = {}
         self.decisions_log = self.path.parent / "learner_decisions.jsonl"
+        self.inbox_path = self.path.with_suffix(".inbox.jsonl")
         self.priors: dict[str, dict] = {}
         self.load()
         if priors_path is not None:
@@ -137,6 +192,12 @@ class LearningAgent:
 
     # ── persistence ────────────────────────────────────────────
     def load(self) -> None:
+        with learner_file_lock(self.path):
+            self._read_unlocked()
+            if self._drain_inbox_unlocked():
+                self._write_unlocked()
+
+    def _read_unlocked(self) -> None:
         if not self.path.exists():
             return
         try:
@@ -181,7 +242,53 @@ class LearningAgent:
         """This strategy's bench record for ``key`` ("SYM" or "SYM|regime")."""
         return self.benches.get(self._sk(key))
 
+    def _drain_inbox_unlocked(self) -> bool:
+        """Apply queued closes onto this agent. Caller holds the learner lock."""
+        if not self.inbox_path.exists():
+            return False
+        try:
+            lines = self.inbox_path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return False
+        changed = False
+        for line in lines:
+            if not line.strip():
+                continue
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                changed = True
+                continue
+            eid = str(ev.get("id") or "")
+            if eid and eid in self._seen:
+                continue
+            sym = str(ev.get("symbol") or "").upper().strip()
+            if not sym:
+                continue
+            self._append_trade(
+                sym, float(ev.get("pnl") or 0.0), str(ev.get("regime") or "unknown"),
+                notional=ev.get("notional"), strategy=ev.get("strategy"),
+                ts=ev.get("ts"), detail=ev.get("detail") if isinstance(ev.get("detail"), dict) else None,
+            )
+            if eid:
+                self._seen.add(eid)
+            entry = self.open_entries.get(sym)
+            exit_ts = float(ev.get("ts") or 0.0)
+            if entry is None or float(entry.get("ts") or 0.0) <= exit_ts + 1.0:
+                self.open_entries.pop(sym, None)
+            changed = True
+        try:
+            self.inbox_path.write_text("", encoding="utf-8")
+        except OSError:
+            pass
+        return changed
+
     def save(self) -> None:
+        with learner_file_lock(self.path):
+            self._drain_inbox_unlocked()
+            self._write_unlocked()
+
+    def _write_unlocked(self) -> None:
         data = {
             "last_regime": self.last_regime,
             "sync_cursor": self.sync_cursor,
@@ -250,6 +357,16 @@ class LearningAgent:
         """
         if not self.enabled:
             return
+        with learner_file_lock(self.path):
+            self._drain_inbox_unlocked()
+            self._append_trade(symbol, pnl, regime, notional=notional, strategy=strategy,
+                               ts=ts, detail=detail)
+            self._write_unlocked()
+
+    def _append_trade(self, symbol: str, pnl: float, regime: str = "unknown", *,
+                      notional: float | None = None, strategy: str | None = None,
+                      ts: float | None = None, detail: dict | None = None) -> None:
+        """Mutate memory only. Caller holds the learner lock and writes afterwards."""
         sym = symbol.upper().strip()
         c = self.coins.get(sym) or CoinStats(symbol=sym)
         net_bps = None
@@ -276,7 +393,6 @@ class LearningAgent:
             c.best_regime = regime
         self.coins[sym] = c
         self.last_regime = regime
-        self.save()
 
     # ── bias for selection ────────────────────────────────────
     def update_regime(self, regime: str, *, persist: bool = True) -> None:

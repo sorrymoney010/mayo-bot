@@ -197,7 +197,9 @@ def main() -> None:
         f"live_margin_orders={getattr(settings, 'allow_margin_live_orders', False)}")
 
     watcher = None
-    if getattr(settings, "exit_watcher_enabled", True) and not live:
+    if not getattr(settings, "exit_watcher_enabled", True):
+        log("EXIT_WATCHER off (EXIT_WATCHER_ENABLED=false)")
+    elif not live:
         try:
             from dublin_bot.exit_watcher import ExitWatcher
             watcher = ExitWatcher(settings, held_lock=lock)

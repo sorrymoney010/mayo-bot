@@ -22,43 +22,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dublin_bot.backtest_core import Costs, add_indicators  # noqa: E402
+from dublin_bot.backtest_core import Costs  # noqa: E402
 from dublin_bot.research import library, register_shadow, search  # noqa: E402
-
-
-def _load(symbol: str, tf: int, data: Path):
-    import pandas as pd
-    base = symbol.replace("/", "")
-    parts = []
-    for suffix in ("_trades", ""):
-        p = data / f"kraken_{base}_{tf}m{suffix}.csv"
-        if p.exists():
-            df = pd.read_csv(p)
-            if len(df):
-                parts.append(df)
-    if not parts:
-        return None
-    df = (pd.concat(parts).drop_duplicates("time", keep="last").sort_values("time").reset_index(drop=True))
-    gaps = df["time"].diff().fillna(tf * 60) > tf * 60 * 6
-    if gaps.any():
-        df = df.iloc[int(gaps[gaps].index[-1]):].reset_index(drop=True)
-    return add_indicators(df)
-
-
-def _attach_d1(df, symbol: str, tf: int, data: Path):
-    import pandas as pd
-    from dublin_bot.daily_filter import attach_d1, riskon_table
-    base = symbol.replace("/", "")
-    daily = None
-    for suffix in ("_trades", ""):
-        p = data / f"kraken_{base}_1440m{suffix}.csv"
-        if p.exists():
-            daily = pd.read_csv(p)
-            break
-    if daily is None or not len(daily):
-        return df
-    table = riskon_table(daily)
-    return attach_d1(df, table, tf)
+from dublin_bot.study_data import load_study_bars, unique_report  # noqa: E402
 
 
 def render(rep: dict) -> str:
@@ -121,10 +87,10 @@ def main() -> int:
     for tf in args.tfs:
         bucket = []
         for sym in args.symbols:
-            df = _load(sym, tf, data)
+            df, src = load_study_bars(sym, tf, data)
             if df is None:
                 continue
-            df = _attach_d1(df, sym, tf, data)
+            df.attrs["source"] = src
             bucket.append(df)
             found += 1
         frames[tf] = bucket
@@ -138,19 +104,23 @@ def main() -> int:
     else:
         rep = search(frames, costs, folds=args.folds, equity=args.equity)
         rep["generated_at"] = day
-        rep["history"] = "cache"
-        rep["sample"] = (
-            "Kraken public OHLC is capped near 720 bars "
-            "(about 30 days at 1h, 120 days at 4h). This is not a multi-year sample."
-        )
+        sources = [getattr(df, "attrs", {}).get("source") for frames_ in frames.values() for df in frames_]
+        rep["history"] = "ticks" if "ticks" in sources else "ohlc"
+        if rep["history"] == "ticks":
+            rep["sample"] = "Tick-built bars from the data dir (read-only; no bars1m cache written)."
+        else:
+            rep["sample"] = (
+                "No tick-built bars in the data dir. Fell back to Kraken public OHLC, "
+                "which is capped near 720 bars (about 30 days at 1h, 120 days at 4h)."
+            )
         rep["costs"] = {"fee_bps": args.fee_bps, "slip_bps": args.slip_bps, "maker_bps": args.maker_bps}
         rep["library"] = {k: [s.label() for s in v] for k, v in library().items()}
-        if args.register:
-            rep["registered"] = [register_shadow(w, path=args.shadow_path,
-                                                 report=f"reports/strategy_research_{day}.json")
-                                 for w in rep["winners"]]
-    json_path = out_dir / f"strategy_research_{day}.json"
-    md_path = out_dir / f"strategy_research_{day}.md"
+    paths = unique_report(out_dir, "strategy_research", ".json", ".md")
+    json_path, md_path = paths[".json"], paths[".md"]
+    if found and args.register:
+        rel = str(json_path.relative_to(ROOT))
+        rep["registered"] = [register_shadow(w, path=args.shadow_path, report=rel)
+                             for w in rep["winners"]]
     json_path.write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8")
     md_path.write_text(render(rep) + "\n", encoding="utf-8")
     print(md_path.read_text(encoding="utf-8"))

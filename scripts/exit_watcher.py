@@ -31,6 +31,9 @@ def main() -> int:
         return 3
     try:
         settings = Settings()
+        if not settings.exit_watcher_enabled:
+            print("EXIT_WATCHER disabled (EXIT_WATCHER_ENABLED=false)")
+            return 0
         watcher = ExitWatcher(settings, held_lock=lock)
         ok, why = watcher.allowed()
         if not ok:

@@ -199,7 +199,8 @@ class BarBuilder:
                 pass
         return sig
 
-    def day(self, symbol: str, day: str, *, now: float | None = None) -> tuple[pd.DataFrame, DaySummary]:
+    def day(self, symbol: str, day: str, *, now: float | None = None,
+            write_cache: bool = True) -> tuple[pd.DataFrame, DaySummary]:
         now = time.time() if now is None else now
         tick_files = [p for p in self.store.day_files(symbol) if p.name.startswith(day)]
         quote_files = [p for p in self.store.day_files(symbol, "quotes") if p.name.startswith(day)]
@@ -227,7 +228,7 @@ class BarBuilder:
         quotes = self.store.read_quotes(symbol, lo, hi)
         m1 = ticks_to_1m(ticks, quotes)
         summ = summarize(ticks, day, xholes)
-        if closed and summ.n:
+        if write_cache and closed and summ.n:
             cdir.mkdir(parents=True, exist_ok=True)
             tmp = bars_p.with_name(bars_p.name + ".tmp")
             m1.to_csv(tmp, compression="gzip")
@@ -236,7 +237,8 @@ class BarBuilder:
         return m1, summ
 
     def build(self, symbol: str, tf_minutes: int, start_ts: float, end_ts: float | None = None,
-              *, now: float | None = None, status: dict | None = None) -> pd.DataFrame:
+              *, now: float | None = None, status: dict | None = None,
+              write_cache: bool = True) -> pd.DataFrame:
         """Fully-covered closed ``tf_minutes`` bars whose open is in [start_ts, end_ts)."""
         now = time.time() if now is None else now
         end_ts = now if end_ts is None else min(end_ts, now)
@@ -247,7 +249,7 @@ class BarBuilder:
             return _empty_bars()
         m1s, sums = [], []
         for d in days:
-            m1, s = self.day(symbol, d, now=now)
+            m1, s = self.day(symbol, d, now=now, write_cache=write_cache)
             m1s.append(m1)
             sums.append(s)
         m1 = pd.concat([x for x in m1s if len(x)]) if any(len(x) for x in m1s) else _empty_bars()

@@ -20,8 +20,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from dublin_bot.backtest_core import Costs, Spec, add_indicators, metrics, walk_forward  # noqa: E402
+from dublin_bot.backtest_core import Costs, Spec, metrics, walk_forward  # noqa: E402
 from dublin_bot.research import buy_and_hold, improves  # noqa: E402
+from dublin_bot.study_data import load_study_bars, unique_report  # noqa: E402
 
 # Paper defaults. The first (and only) spec is what the sleeve runs; the
 # overlay does not re-pick entry parameters.
@@ -36,32 +37,6 @@ SLEEVES = {
 TFS = {"regime": 60, "meanrev": 240, "trendhold": 240}
 GRID = ((1.0, 1.0), (1.5, 1.0), (2.0, 1.5))
 SYMBOLS = ["BTC/USD", "ETH/USD", "SOL/USD"]
-
-
-def load(symbol: str, tf: int, data: Path):
-    import pandas as pd
-    from dublin_bot.daily_filter import attach_d1, riskon_table
-    base = symbol.replace("/", "")
-    parts = []
-    for suffix in ("_trades", ""):
-        p = data / f"kraken_{base}_{tf}m{suffix}.csv"
-        if p.exists():
-            df = pd.read_csv(p)
-            if len(df):
-                parts.append(df)
-    if not parts:
-        return None
-    df = pd.concat(parts).drop_duplicates("time", keep="last").sort_values("time").reset_index(drop=True)
-    daily = None
-    for suffix in ("_trades", ""):
-        p = data / f"kraken_{base}_1440m{suffix}.csv"
-        if p.exists():
-            daily = pd.read_csv(p)
-            break
-    df = add_indicators(df)
-    if daily is not None and len(daily):
-        df = attach_d1(df, riskon_table(daily), tf)
-    return df
 
 
 def _pool(frames, spec, costs):
@@ -88,11 +63,16 @@ def main() -> int:
               "grid": [{"activate_atr": a, "trail_atr": t} for a, t in GRID],
               "sleeves": {}}
     any_bars = False
+    sources = []
     for name, spec in SLEEVES.items():
         tf = TFS[name]
-        frames = [load(sym, tf, data) for sym in SYMBOLS]
+        loaded = [load_study_bars(sym, tf, data) for sym in SYMBOLS]
+        sleeve_src = [src for _df, src in loaded]
+        sources.extend(sleeve_src)
+        frames = [df for df, _src in loaded]
         if not any(f is not None and len(f) >= 400 for f in frames):
-            report["sleeves"][name] = {"history": "missing", "promote": False, "tf": tf}
+            report["sleeves"][name] = {"history": "missing", "promote": False, "tf": tf,
+                                       "sources": sleeve_src}
             continue
         any_bars = True
         base, holds = _pool(frames, spec, costs)
@@ -109,7 +89,8 @@ def main() -> int:
                 best = row
         bh_bps = sum(h["net_bps"] for h in holds) / len(holds) if holds else None
         report["sleeves"][name] = {
-            "tf": tf, "history": "cache", "promote": best is not None,
+            "tf": tf, "history": "ticks" if "ticks" in sleeve_src else "ohlc",
+            "sources": sleeve_src, "promote": best is not None,
             "baseline": base.to_dict(), "trials": trials, "chosen": best,
             "buy_and_hold_mean_net_bps": bh_bps,
         }
@@ -117,13 +98,15 @@ def main() -> int:
         report["history"] = "missing"
         report["command"] = "python scripts/fetch_kraken_history.py ohlc --tfs 60 240 1440 && python scripts/backtest_trailing.py"
     else:
-        report["history"] = "cache"
-        report["sample"] = (
-            "Kraken public OHLC is capped near 720 bars "
-            "(about 30 days at 1h, 120 days at 4h). This is not a multi-year sample."
-        )
-    out = ROOT / "reports" / f"trailing_tp_{day}.json"
-    out.parent.mkdir(parents=True, exist_ok=True)
+        report["history"] = "ticks" if "ticks" in sources else "ohlc"
+        if report["history"] == "ohlc":
+            report["sample"] = (
+                "No tick-built bars in the data dir. Fell back to Kraken public OHLC, "
+                "which is capped near 720 bars (about 30 days at 1h, 120 days at 4h)."
+            )
+        else:
+            report["sample"] = "Tick-built bars from the data dir (read-only; no bars1m cache written)."
+    out = unique_report(ROOT / "reports", "trailing_tp", ".json")[".json"]
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
     print(f"wrote {out}")
