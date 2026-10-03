@@ -1,0 +1,282 @@
+{
+  "generated_at": "2026-10-03",
+  "fees": {
+    "taker_bps": 5.0,
+    "maker_bps": 2.0,
+    "source": "https://support.kraken.com/articles/360048917612-fee-schedule"
+  },
+  "leverage_cap": 2.0,
+  "runs": [
+    {
+      "tf": 60,
+      "leverage": 1.0,
+      "sources": [
+        "spot_cache",
+        "spot_cache",
+        "spot_cache"
+      ],
+      "funding": [
+        "cache",
+        "cache",
+        "cache"
+      ],
+      "oos": {
+        "trades": 0,
+        "wins": 0,
+        "win_rate": 0.0,
+        "avg_net_bps": 0.0,
+        "avg_gross_bps": 0.0,
+        "expectancy_usd": 0.0,
+        "total_return_pct": 0.0,
+        "max_dd_pct": 0.0,
+        "profit_factor": 0.0
+      },
+      "promotion": {
+        "trades": 0,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 0,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": null,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": null,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": null,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": 0,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "promote": false,
+      "buy_and_hold_mean_net_bps": 977.8752814304211,
+      "buy_and_hold_mean_return_pct": 9.77875281430421,
+      "buy_and_hold_mean_max_dd_pct": 6.511451140714956
+    },
+    {
+      "tf": 60,
+      "leverage": 2.0,
+      "sources": [
+        "spot_cache",
+        "spot_cache",
+        "spot_cache"
+      ],
+      "funding": [
+        "cache",
+        "cache",
+        "cache"
+      ],
+      "oos": {
+        "trades": 0,
+        "wins": 0,
+        "win_rate": 0.0,
+        "avg_net_bps": 0.0,
+        "avg_gross_bps": 0.0,
+        "expectancy_usd": 0.0,
+        "total_return_pct": 0.0,
+        "max_dd_pct": 0.0,
+        "profit_factor": 0.0
+      },
+      "promotion": {
+        "trades": 0,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 0,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": null,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": null,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": null,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": 0,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "promote": false,
+      "buy_and_hold_mean_net_bps": 977.8752814304211,
+      "buy_and_hold_mean_return_pct": 9.77875281430421,
+      "buy_and_hold_mean_max_dd_pct": 6.511451140714956
+    },
+    {
+      "tf": 240,
+      "leverage": 1.0,
+      "sources": [
+        "spot_cache",
+        "spot_cache",
+        "spot_cache"
+      ],
+      "funding": [
+        "cache",
+        "cache",
+        "cache"
+      ],
+      "oos": {
+        "trades": 4,
+        "wins": 0,
+        "win_rate": 0.0,
+        "avg_net_bps": -164.3971,
+        "avg_gross_bps": -157.0483,
+        "expectancy_usd": -2.0426,
+        "total_return_pct": -1.634,
+        "max_dd_pct": 1.634,
+        "profit_factor": 0.0
+      },
+      "promotion": {
+        "trades": 4,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 4,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": -164.4,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -200.8,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": -193.5,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": -8.2199,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "promote": false,
+      "buy_and_hold_mean_net_bps": 4405.665764724395,
+      "buy_and_hold_mean_return_pct": 44.05665764724395,
+      "buy_and_hold_mean_max_dd_pct": 8.516696595499887
+    },
+    {
+      "tf": 240,
+      "leverage": 2.0,
+      "sources": [
+        "spot_cache",
+        "spot_cache",
+        "spot_cache"
+      ],
+      "funding": [
+        "cache",
+        "cache",
+        "cache"
+      ],
+      "oos": {
+        "trades": 4,
+        "wins": 0,
+        "win_rate": 0.0,
+        "avg_net_bps": -164.3971,
+        "avg_gross_bps": -157.0483,
+        "expectancy_usd": -4.0604,
+        "total_return_pct": -3.2484,
+        "max_dd_pct": 3.2484,
+        "profit_factor": 0.0
+      },
+      "promotion": {
+        "trades": 4,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 4,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": -164.4,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -200.8,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": -193.5,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": -16.4397,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "promote": false,
+      "buy_and_hold_mean_net_bps": 4405.665764724395,
+      "buy_and_hold_mean_return_pct": 44.05665764724395,
+      "buy_and_hold_mean_max_dd_pct": 8.516696595499887
+    }
+  ],
+  "history": "cache",
+  "sample": "Kraken public OHLC is capped near 720 bars (about 30 days at 1h, 120 days at 4h). Daily bars cover the filter only.",
+  "default_on": false
+}

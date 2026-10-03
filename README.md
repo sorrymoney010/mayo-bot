@@ -15,6 +15,7 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
 | [RUNBOOK.md](RUNBOOK.md) | Daily operation, incident response, state files |
 | [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner, current paper config |
 | [docs/MEANREV_SLEEVE.md](docs/MEANREV_SLEEVE.md) | 4h mean-reversion paper sleeve (limit entries) running beside regime_trend |
+| [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin, strategy research |
 
 ## Current scope
 
@@ -28,7 +29,10 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
   mean-reversion sleeve with post-only limit entries on BTC/ETH/SOL
   (see docs/MEANREV_SLEEVE.md). Shared max-positions and risk caps, and no
   symbol collisions between sleeves
-- No leverage, no shorting, **no withdrawal access**
+- No leverage on the spot book, **no withdrawal access**. A paper perpetual
+  short and a paper margin-cost model exist and default **off**; see
+  [docs/PAPER_PRO.md](docs/PAPER_PRO.md). Live US access to Kraken margin and
+  futures depends on account eligibility.
 - Trend + breakout confirmation with ATR-based risk sizing
 - Daily loss, drawdown, cooldown, and order-count circuit breakers
 - Market-data freshness validation and exchange clock-skew detection
@@ -90,9 +94,21 @@ ruff check .     # lint the complete project
 pytest -q        # run the complete offline test suite
 ```
 
-Current verified result: **489 tests passed**. The suite is fully offline — no
-network calls, no real orders.
+Current verified result: the offline suite (`pytest -q`) plus `ruff check .`.
 `tests/test_safety_locks.py` fails loudly if the trading locks are relaxed.
+`tests/test_paper_pro.py` fails if the futures or margin live locks can fire
+while any existing lock is still shut.
+
+## Paper professional features (defaults)
+
+| Feature | Default | Notes |
+|---|---|---|
+| Trailing take-profit, per sleeve | **off** | 2026-10-03 public-OHLC walk-forward did not improve out-of-sample results after fees. See docs/PAPER_PRO.md |
+| Fast exit watcher (stops / trailing / TP) | **on** | Inside the paper loop; public prices; no new entries |
+| Futures short sleeve (`PF_XBTUSD`, `PF_ETHUSD`, `PF_SOLUSD`) | **off** | 2026-10-03 study: 0 one-hour shorts, 4 four-hour shorts at −164 bps. Leverage hard-capped at 2x |
+| `ALLOW_FUTURES_LIVE_ORDERS` / `ALLOW_MARGIN_LIVE_ORDERS` | **off** | Also require the three safety locks to be opened |
+| Spot-margin short sleeve | not built | Borrow cost is modeled; perpetuals are the short. See docs/PAPER_PRO.md |
+| `scripts/strategy_research.py` | manual | Walk-forward on 1h+ bars; winners register as shadow sleeves (no fills) |
 
 ## Important
 

@@ -375,7 +375,39 @@ class Settings(BaseSettings):
         le=1.0,
         validation_alias=AliasChoices("TAKE_PROFIT_PCT", "TP_PCT"),
     )
-    trailing_stop: bool = Field(default=False)                 # trail SL to peak
+    trailing_stop: bool = Field(default=False)                 # legacy trail flag; sleeves use the fields below
+    # ATR trailing take-profit. Each sleeve stays OFF until a walk-forward
+    # (scripts/backtest_trailing.py) shows the overlay improves out-of-sample
+    # results after fees. See docs/PAPER_PRO.md.
+    trailing_tp_regime: bool = Field(default=False)
+    trailing_tp_meanrev: bool = Field(default=False)
+    trailing_tp_trendhold: bool = Field(default=False)
+    trailing_tp_futures: bool = Field(default=False)
+    trailing_activate_atr: float = Field(default=1.5, gt=0)
+    trailing_atr_mult: float = Field(default=1.0, gt=0)
+    trailing_state_path: Path = Path("logs/trailing_state.json")
+    # Fast paper exits (stops / trailing / take-profit) between the 300s loop.
+    # Public prices only. Does not place entries. Still requires the ledger
+    # owner and runs inside the single-instance lock.
+    exit_watcher_enabled: bool = Field(default=True)
+    # Perpetual short sleeve. OFF until scripts/backtest_futures_short.py
+    # clears the promotion bar. Leverage cannot be set above 2.
+    futures_sleeve_enabled: bool = Field(default=False)
+    futures_leverage: float = Field(default=1.0, gt=0, le=2.0)
+    futures_maintenance_margin: float = Field(default=0.01, gt=0, lt=0.5)
+    futures_timeframe_minutes: int = Field(default=240, ge=60)
+    futures_symbols: list[str] = Field(
+        default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"]
+    )
+    futures_ema_fast: int = Field(default=20, ge=2)
+    futures_ema_slow: int = Field(default=100, ge=10)
+    futures_margin_fraction: float = Field(default=0.25, gt=0, le=0.34)
+    futures_ledger_path: Path = Path("logs/paper_futures.json")
+    # Live order locks for venues the paper bot only simulates. Independent of
+    # PAPER_TRADING / DRY_RUN / ALLOW_LIVE_TRADING and default OFF. A real
+    # order also requires every existing lock to be open. See venue_locks.py.
+    allow_futures_live_orders: bool = Field(default=False)
+    allow_margin_live_orders: bool = Field(default=False)
     journal_path: Path = Path("logs/decisions.jsonl")
 
     @field_validator("learner_min_sample", mode="after")
@@ -466,4 +498,8 @@ def paper_live_choice_ok(settings: "Settings") -> tuple[bool, str]:
         tf = getattr(settings, field_name, None)
         if tf is not None and int(tf) < MIN_PAPER_LIVE_TF_MINUTES:
             return False, f"{field_name}={tf} is a retired sub-1h timeframe"
+    if getattr(settings, "futures_sleeve_enabled", False):
+        tf = int(getattr(settings, "futures_timeframe_minutes", 240) or 240)
+        if tf < MIN_PAPER_LIVE_TF_MINUTES:
+            return False, f"futures_timeframe_minutes={tf} is a retired sub-1h timeframe"
     return True, "ok"

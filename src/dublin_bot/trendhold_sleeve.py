@@ -137,11 +137,70 @@ class TrendHoldSleeve:
         seed = float(self.settings.strategy_equity_usd)
         snap = self.portfolio.load(equity=seed, cash=seed)
         basis = sum(p.quantity * p.entry_price for p in snap.positions.values())
-        return max(snap.cash + basis, 0.0)
+        from .book_risk import futures_equity_addon
+        return max(snap.cash + basis, 0.0) + futures_equity_addon(
+            getattr(self.settings, "futures_ledger_path", None))
 
     def _bars(self, symbol: str) -> pd.DataFrame:
         self.settings.symbol = symbol
         return self.gateway.get_bars()
+
+    def _trail_exit(self, sym: str, pos: dict, last: float) -> bool:
+        from .trailing import maintain, sleeve_trail_enabled
+        if not sleeve_trail_enabled(self.settings, SLEEVE):
+            return False
+        atr_v = 0.0
+        try:
+            bars = self._bars(sym)
+            from .technicals import atr as atr_fn
+            if bars is not None and len(bars) and "high" in bars:
+                atr_v = float(atr_fn(bars, 14).iloc[-1])
+        except Exception:
+            atr_v = 0.0
+        opened = str(pos.get("filled_at") or "")
+        try:
+            return maintain(self.settings, SLEEVE, sym, "long", float(pos["entry"]), last,
+                            opened, atr_v) == "trail"
+        except Exception:
+            return False
+
+    def _close_position(self, st, res, lots, state, sym, pos, ticker, reason: str, now: float) -> None:
+        qty = float(pos["qty"])
+        fill = self.fill_model.sell(price=float(ticker["last"]), volume=qty,
+                                    bid=ticker.get("bid"), ask=ticker.get("ask"))
+        book = self.portfolio.snapshot().positions.get(sym)
+        cost_basis = book.cost_basis if book else qty * float(pos["entry"])
+        sell_qty = min(qty, book.quantity) if book else qty
+        try:
+            realized = self.portfolio.record_sell(symbol=sym, quantity=sell_qty, fill_price=fill.price,
+                                                  fee=fill.fee, when=_iso(now))
+        except ValueError as exc:
+            if "No open paper position" not in str(exc):
+                raise
+            st["positions"].pop(sym, None)
+            res.symbols[sym] = "already closed by the fast exit watcher"
+            return
+        remaining = lots.get(sym, 0.0) - sell_qty
+        if remaining <= 1e-12:
+            lots.pop(sym, None)
+        else:
+            lots[sym] = remaining
+        st["positions"].pop(sym)
+        try:
+            meta = self.learner.pop_entry(sym) or {}
+            self.learner.record_trade(sym, realized, meta.get("regime") or "trend",
+                                      notional=cost_basis, strategy=self.strategy_key, ts=now,
+                                      detail={"exit_reason": reason})
+        except Exception:
+            pass
+        self.risk.update_scale_from_trade(realized, state)
+        state.realized_pnl_today += realized
+        state.current_equity = self._equity()
+        state.peak_equity = max(state.peak_equity, state.current_equity)
+        net_bps = realized / cost_basis * 1e4 if cost_basis > 0 else 0.0
+        self._event(st, res, "exit", sym, reason=reason, price=fill.price, qty=sell_qty,
+                    realized=round(realized, 6), net_bps=round(net_bps, 1))
+        res.symbols[sym] = f"EXIT {reason} @ {fill.price:.6g} realized ${realized:+.2f} ({net_bps:+.0f} bps)"
 
     def _event(self, st: dict, res: SleeveResult, kind: str, symbol: str, **info) -> None:
         ev = {"ts": _iso(self.now_fn()), "event": kind, "symbol": symbol, **info}
@@ -185,6 +244,15 @@ class TrendHoldSleeve:
     def _manage_positions(self, st, res, lots, state, now) -> None:
         for sym in list(st["positions"]):
             pos = st["positions"][sym]
+            from .trailing import sleeve_trail_enabled
+            if sleeve_trail_enabled(self.settings, SLEEVE):
+                try:
+                    t = self.gateway.get_ticker_for(sym)
+                    if self._trail_exit(sym, pos, float(t["last"])):
+                        self._close_position(st, res, lots, state, sym, pos, t, "trail", now)
+                        continue
+                except Exception:
+                    pass
             try:
                 bars = self._bars(sym)
                 closed_at = bars.index[-1].timestamp() + self.tf_seconds
@@ -211,8 +279,15 @@ class TrendHoldSleeve:
             book = self.portfolio.snapshot().positions.get(sym)
             cost_basis = book.cost_basis if book else qty * float(pos["entry"])
             sell_qty = min(qty, book.quantity) if book else qty
-            realized = self.portfolio.record_sell(symbol=sym, quantity=sell_qty, fill_price=fill.price,
-                                                  fee=fill.fee, when=_iso(now))
+            try:
+                realized = self.portfolio.record_sell(symbol=sym, quantity=sell_qty, fill_price=fill.price,
+                                                      fee=fill.fee, when=_iso(now))
+            except ValueError as exc:
+                if "No open paper position" not in str(exc):
+                    raise
+                st["positions"].pop(sym, None)
+                res.symbols[sym] = "already closed by the fast exit watcher"
+                continue
             remaining = lots.get(sym, 0.0) - sell_qty
             if remaining <= 1e-12:
                 lots.pop(sym, None)
@@ -291,8 +366,14 @@ class TrendHoldSleeve:
                 continue
             exposure += float(qty) * float(self.gateway.get_ticker_for(lot_sym)["last"])
         exposure += self.registry.pending_notional()
+        from .book_risk import futures_exposure_usd, futures_position_count
+        extra = futures_exposure_usd(getattr(self.settings, "futures_ledger_path", None))
+        if extra == float("inf"):
+            raise RuntimeError("futures exposure unknown")
+        exposure += extra
         held = {k for k, v in lots.items() if float(v) > 1e-9}
         used = len(held | (set(self.registry.pending) - held))
+        used += futures_position_count(getattr(self.settings, "futures_ledger_path", None))
         cap = min(equity, float(self.settings.strategy_equity_usd)) * float(self.settings.max_exposure_fraction)
         return exposure, cap, used
 

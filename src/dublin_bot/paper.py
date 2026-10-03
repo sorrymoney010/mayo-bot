@@ -6,11 +6,50 @@ accounting without changing broker behavior.
 """
 from __future__ import annotations
 
+import fcntl
 import json
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Lock
+import threading
+from threading import Lock, RLock
+
+# One writer to the paper book. threading.RLock covers threads inside the
+# paper loop (the 5-minute cycle and the fast exit watcher). fcntl covers a
+# second process. Linux fcntl is per-process, so the thread lock is required.
+# flock on a second fd in the same process deadlocks, so the lock is reentrant
+# per thread: only the outermost acquire takes the kernel lock.
+_BOOK_THREAD = RLock()
+_BOOK_DEPTH = threading.local()
+
+
+@contextmanager
+def paper_book_lock(path: Path | str):
+    """Exclusive lock around a paper-ledger mutation. Reentrant on this thread."""
+    depth = getattr(_BOOK_DEPTH, "n", 0)
+    if depth:
+        _BOOK_DEPTH.n = depth + 1
+        try:
+            yield
+        finally:
+            _BOOK_DEPTH.n = depth
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(str(target) + ".booklock")
+    fh = open(lock_path, "a+", encoding="utf-8")
+    _BOOK_DEPTH.n = 1
+    try:
+        with _BOOK_THREAD:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    finally:
+        fh.close()
+        _BOOK_DEPTH.n = 0
 
 
 @dataclass
@@ -183,46 +222,99 @@ class PaperPortfolio:
             )
         return portfolio
 
+    def _reload_unlocked(self) -> None:
+        """Replace in-memory state with the file, if the file exists.
+
+        Two objects (the slow cycle and the fast watcher) share the book only
+        through this file. Missing file keeps the in-memory seed from ``load``.
+        """
+        if not self.path.exists():
+            return
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, ValueError):
+            return
+        equity = float(data.get("equity", self._portfolio.equity))
+        cash = float(data.get("cash", self._portfolio.cash))
+        self._portfolio = Portfolio(equity=equity, cash=cash, updated_at=data.get("updated_at", ""))
+        self._portfolio.positions = {
+            pos["symbol"]: Position(
+                symbol=pos["symbol"],
+                quantity=float(pos.get("quantity", 0.0)),
+                entry_price=float(pos.get("entry_price", 0.0)),
+                fees_paid=float(pos.get("fees_paid", 0.0)),
+                opened_at=pos.get("opened_at", ""),
+                trades=int(pos.get("trades", 0)),
+            )
+            for pos in data.get("positions", [])
+            if float(pos.get("quantity", 0.0)) > 1e-12
+        }
+
     def record_buy(self, symbol: str, quantity: float, fill_price: float, fee: float, when: str) -> None:
-        with self._lock:
-            if symbol not in self._portfolio.positions:
-                self._portfolio.positions[symbol] = Position(symbol=symbol, opened_at=when)
-            position = self._portfolio.positions[symbol]
-            # Always add to quantity first
-            position.quantity += quantity
-            if position.quantity <= 1e-12:
-                # Should not happen after adding, but safety check
-                position.entry_price = fill_price
-                position.fees_paid = fee
-            else:
-                # For additional buys, update weighted average entry
-                old_cost = (position.quantity - quantity) * position.entry_price + position.fees_paid
-                new_cost = quantity * fill_price + fee
-                position.entry_price = (old_cost + new_cost) / position.quantity
-                position.fees_paid += fee
-            position.trades += 1
-            self._portfolio.equity -= (quantity * fill_price + fee)
-            self._portfolio.cash -= (quantity * fill_price + fee)
-            self._save_unlocked()
+        with paper_book_lock(self.path):
+            with self._lock:
+                self._reload_unlocked()
+                if symbol not in self._portfolio.positions:
+                    self._portfolio.positions[symbol] = Position(symbol=symbol, opened_at=when)
+                position = self._portfolio.positions[symbol]
+                position.quantity += quantity
+                if position.quantity <= 1e-12:
+                    position.entry_price = fill_price
+                    position.fees_paid = fee
+                else:
+                    old_cost = (position.quantity - quantity) * position.entry_price + position.fees_paid
+                    new_cost = quantity * fill_price + fee
+                    position.entry_price = (old_cost + new_cost) / position.quantity
+                    position.fees_paid += fee
+                position.trades += 1
+                self._portfolio.equity -= (quantity * fill_price + fee)
+                self._portfolio.cash -= (quantity * fill_price + fee)
+                self._save_unlocked()
 
     def record_sell(self, symbol: str, quantity: float, fill_price: float, fee: float, when: str) -> float:
-        with self._lock:
-            position = self._portfolio.positions.get(symbol)
-            if position is None or position.quantity <= 1e-12:
-                raise ValueError(f"No open paper position for {symbol}")
-            close_quantity = min(quantity, position.quantity)
-            cost_basis = (close_quantity / max(position.quantity, 1e-12)) * (position.quantity * position.entry_price + position.fees_paid)
-            proceeds = close_quantity * fill_price - fee
-            realized_pl = proceeds - cost_basis
-            position.quantity -= close_quantity
-            position.fees_paid += fee
-            position.trades += 1
-            self._portfolio.equity += proceeds
-            self._portfolio.cash += proceeds
-            if position.quantity <= 1e-12:
-                del self._portfolio.positions[symbol]
-            self._save_unlocked()
-            return realized_pl
+        with paper_book_lock(self.path):
+            with self._lock:
+                self._reload_unlocked()
+                position = self._portfolio.positions.get(symbol)
+                if position is None or position.quantity <= 1e-12:
+                    raise ValueError(f"No open paper position for {symbol}")
+                close_quantity = min(quantity, position.quantity)
+                cost_basis = (close_quantity / max(position.quantity, 1e-12)) * (
+                    position.quantity * position.entry_price + position.fees_paid)
+                proceeds = close_quantity * fill_price - fee
+                realized_pl = proceeds - cost_basis
+                position.quantity -= close_quantity
+                position.fees_paid += fee
+                position.trades += 1
+                self._portfolio.equity += proceeds
+                self._portfolio.cash += proceeds
+                if position.quantity <= 1e-12:
+                    del self._portfolio.positions[symbol]
+                self._save_unlocked()
+                return realized_pl
+
+    def try_record_sell(self, symbol: str, quantity: float, fill_price: float, fee: float,
+                        when: str) -> float | None:
+        """Sell if the on-disk book still holds the lot. None if already flat.
+
+        The fast exit watcher and the 5-minute cycle both close stops. The
+        second caller finds the lot gone and does not book a second fill.
+        """
+        try:
+            return self.record_sell(symbol, quantity, fill_price, fee, when)
+        except ValueError as exc:
+            if "No open paper position" in str(exc):
+                return None
+            raise
+
+    def adjust_cash(self, delta: float) -> None:
+        """Move paper cash (futures margin reserve, funding). Same book lock."""
+        with paper_book_lock(self.path):
+            with self._lock:
+                self._reload_unlocked()
+                self._portfolio.cash += float(delta)
+                self._portfolio.equity += float(delta)
+                self._save_unlocked()
 
     def record_trade(
         self,

@@ -184,6 +184,32 @@ def main() -> None:
     log("TELEMETRY decision_snapshots.jsonl shadow_signals.jsonl equity.jsonl closed_trades.jsonl "
         "(public data only)")
 
+    fu_on, fu_why = False, "not loaded"
+    try:
+        from dublin_bot.futures_sleeve import sleeve_active as futures_active
+        fu_on, fu_why = futures_active(settings)
+    except Exception as exc:  # noqa: BLE001
+        fu_why = f"{type(exc).__name__}: {exc}"
+    log(f"SLEEVES futures_short={'on' if fu_on else 'off'} ({fu_why}) "
+        f"lev_cap=2 configured={getattr(settings, 'futures_leverage', 1)} "
+        f"tf={getattr(settings, 'futures_timeframe_minutes', 240)}m "
+        f"live_futures_orders={getattr(settings, 'allow_futures_live_orders', False)} "
+        f"live_margin_orders={getattr(settings, 'allow_margin_live_orders', False)}")
+
+    watcher = None
+    if getattr(settings, "exit_watcher_enabled", True) and not live:
+        try:
+            from dublin_bot.exit_watcher import ExitWatcher
+            watcher = ExitWatcher(settings, held_lock=lock)
+            if watcher.start():
+                log("EXIT_WATCHER on (public prices, 1m candles, stops/trailing/TP only; entries unchanged)")
+            else:
+                log(f"EXIT_WATCHER not started ({watcher.allowed()[1]})")
+                watcher = None
+        except Exception as exc:  # noqa: BLE001
+            log(f"EXIT_WATCHER not started: {type(exc).__name__}: {exc}")
+            watcher = None
+
     while _running:
         try:
             engine = TradingEngine(settings)
@@ -265,6 +291,28 @@ def main() -> None:
 
         telemetry.tick()
 
+        if fu_on:
+            try:
+                from dublin_bot.futures_sleeve import FuturesSleeve
+                fres = FuturesSleeve(settings).run_cycle()
+                fd = fres.to_dict()
+                acts = ",".join(f"{a['event']}:{a['symbol']}" for a in fd["actions"]) or "none"
+                log(f"CYCLE sleeve=futures_short active={fd['active']} actions={acts} "
+                    f"errors={len(fd['errors'])}"[:900])
+                (ROOT / "logs" / "last_cycle_futures.json").write_text(
+                    json.dumps(fd, default=str, indent=2), encoding="utf-8")
+            except Exception as exc:  # noqa: BLE001
+                log(f"ERROR sleeve=futures_short {type(exc).__name__}: {exc}")
+                traceback.print_exc()
+
+        try:
+            from dublin_bot.research import shadow_cycle
+            logged = shadow_cycle(settings)
+            if logged:
+                log(f"SHADOW signals={len(logged)} (no paper fills)")
+        except Exception as exc:  # noqa: BLE001
+            log(f"SHADOW unavailable: {type(exc).__name__}: {exc}")
+
         if getattr(settings, "pipeline_enabled", False):
             try:
                 from dublin_bot.pipeline.source import get_source, pipeline_summary
@@ -281,6 +329,8 @@ def main() -> None:
                 break
             time.sleep(1)
 
+    if watcher is not None:
+        watcher.stop()
     log("STOP paper loop")
     lock.release()
 

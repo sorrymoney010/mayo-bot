@@ -179,11 +179,32 @@ class MeanRevSleeve:
         seed = float(self.settings.strategy_equity_usd)
         snap = self.portfolio.load(equity=seed, cash=seed)
         basis = sum(p.quantity * p.entry_price for p in snap.positions.values())
-        return max(snap.cash + basis, 0.0)
+        from .book_risk import futures_equity_addon
+        return max(snap.cash + basis, 0.0) + futures_equity_addon(
+            getattr(self.settings, "futures_ledger_path", None))
 
     def _bars(self, symbol: str) -> pd.DataFrame:
         self.settings.symbol = symbol
         return self.gateway.get_bars()
+
+    def _trail_exit(self, sym: str, pos: dict, last: float) -> bool:
+        from .trailing import maintain, sleeve_trail_enabled
+        if not sleeve_trail_enabled(self.settings, SLEEVE):
+            return False
+        atr_v = 0.0
+        try:
+            bars = self._bars(sym)
+            from .technicals import atr as atr_fn
+            if bars is not None and len(bars) and "high" in bars:
+                atr_v = float(atr_fn(bars, 14).iloc[-1])
+        except Exception:
+            atr_v = 0.0
+        opened = str(pos.get("filled_at") or pos.get("opened_at") or "")
+        try:
+            return maintain(self.settings, SLEEVE, sym, "long", float(pos["entry"]), last,
+                            opened, atr_v) == "trail"
+        except Exception:
+            return False
 
     def _event(self, st: dict, res: SleeveResult, kind: str, symbol: str, **info) -> None:
         ev = {"ts": _iso(self.now_fn()), "event": kind, "symbol": symbol, **info}
@@ -309,6 +330,10 @@ class MeanRevSleeve:
                 exit_reason = "tp"
                 price = float(pos["tp"])
                 fee = qty * price * self.fill_model.maker_fee_bps / 1e4
+            elif self._trail_exit(sym, pos, last):
+                exit_reason = "trail"
+                fill = self.fill_model.sell(price=last, volume=qty, bid=t.get("bid"), ask=t.get("ask"))
+                price, fee = fill.price, fill.fee
             else:
                 try:
                     bars = self._bars(sym)
@@ -335,8 +360,15 @@ class MeanRevSleeve:
             book = snap.positions.get(sym)
             cost_basis = book.cost_basis if book else qty * float(pos["entry"])
             sell_qty = min(qty, book.quantity) if book else qty
-            realized = self.portfolio.record_sell(symbol=sym, quantity=sell_qty, fill_price=price,
-                                                  fee=fee, when=_iso(now))
+            try:
+                realized = self.portfolio.record_sell(symbol=sym, quantity=sell_qty, fill_price=price,
+                                                      fee=fee, when=_iso(now))
+            except ValueError as exc:
+                if "No open paper position" not in str(exc):
+                    raise
+                st["positions"].pop(sym, None)
+                res.symbols[sym] = "already closed by the fast exit watcher"
+                continue
             remaining = lots.get(sym, 0.0) - sell_qty
             if remaining <= 1e-12:
                 lots.pop(sym, None)
@@ -430,7 +462,9 @@ class MeanRevSleeve:
         self.registry.load()
         held_all = {k for k, v in lots.items() if float(v) > 1e-9}
         pending_all = (set(self.registry.pending) | set(st["pending"])) - held_all
-        if len(held_all) + len(pending_all) >= max_n:
+        from .book_risk import futures_position_count
+        if len(held_all) + len(pending_all) + futures_position_count(
+                getattr(s, "futures_ledger_path", None)) >= max_n:
             res.symbols[sym] = f"BUY blocked: max concurrent positions ({max_n}) incl. pending"
             return False
         try:
@@ -468,6 +502,12 @@ class MeanRevSleeve:
         exposure += sum(float(o["notional"]) for o in st["pending"].values())
         exposure += sum(float(p.get("notional", 0.0)) for k, p in self.registry.pending.items()
                         if p.get("sleeve") != "meanrev_4h" and k not in st["pending"])
+        from .book_risk import futures_exposure_usd
+        extra = futures_exposure_usd(getattr(s, "futures_ledger_path", None))
+        if extra == float("inf"):
+            res.symbols[sym] = "BUY blocked: futures exposure unknown (fail closed)"
+            return False
+        exposure += extra
         returns = bars["close"].pct_change().dropna()
         decision = self.risk.evaluate(sig, state, open_exposure_usd=exposure,
                                       returns=returns if len(returns) else None)

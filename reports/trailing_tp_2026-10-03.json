@@ -1,0 +1,213 @@
+{
+  "generated_at": "2026-10-03",
+  "rule": "improves() in dublin_bot.research",
+  "costs": {
+    "taker_bps": 40,
+    "maker_bps": 25,
+    "slip_bps": 10
+  },
+  "grid": [
+    {
+      "activate_atr": 1.0,
+      "trail_atr": 1.0
+    },
+    {
+      "activate_atr": 1.5,
+      "trail_atr": 1.0
+    },
+    {
+      "activate_atr": 2.0,
+      "trail_atr": 1.5
+    }
+  ],
+  "sleeves": {
+    "regime": {
+      "tf": 60,
+      "history": "cache",
+      "promote": false,
+      "baseline": {
+        "trades": 8,
+        "wins": 6,
+        "win_rate": 0.75,
+        "avg_net_bps": 208.2216,
+        "avg_gross_bps": 310.8164,
+        "expectancy_usd": 3.5293,
+        "total_return_pct": 5.6469,
+        "max_dd_pct": 0.905,
+        "profit_factor": 5.7936
+      },
+      "trials": [
+        {
+          "activate_atr": 1.0,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 19,
+          "wins": 7,
+          "win_rate": 0.3684,
+          "avg_net_bps": -56.1506,
+          "avg_gross_bps": 43.7872,
+          "expectancy_usd": -0.9243,
+          "total_return_pct": -3.5122,
+          "max_dd_pct": 4.3409,
+          "profit_factor": 0.2579
+        },
+        {
+          "activate_atr": 1.5,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 17,
+          "wins": 8,
+          "win_rate": 0.4706,
+          "avg_net_bps": -50.0326,
+          "avg_gross_bps": 49.9667,
+          "expectancy_usd": -0.8307,
+          "total_return_pct": -2.8245,
+          "max_dd_pct": 4.0806,
+          "profit_factor": 0.4471
+        },
+        {
+          "activate_atr": 2.0,
+          "trail_atr": 1.5,
+          "promote": false,
+          "trades": 14,
+          "wins": 9,
+          "win_rate": 0.6429,
+          "avg_net_bps": -9.9086,
+          "avg_gross_bps": 90.4939,
+          "expectancy_usd": -0.1753,
+          "total_return_pct": -0.4908,
+          "max_dd_pct": 3.1807,
+          "profit_factor": 0.8685
+        }
+      ],
+      "chosen": null,
+      "buy_and_hold_mean_net_bps": 977.8752814304211
+    },
+    "meanrev": {
+      "tf": 240,
+      "history": "cache",
+      "promote": false,
+      "baseline": {
+        "trades": 14,
+        "wins": 11,
+        "win_rate": 0.7857,
+        "avg_net_bps": 94.645,
+        "avg_gross_bps": 170.6944,
+        "expectancy_usd": 1.5977,
+        "total_return_pct": 4.4736,
+        "max_dd_pct": 1.2418,
+        "profit_factor": 3.311
+      },
+      "trials": [
+        {
+          "activate_atr": 1.0,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 18,
+          "wins": 9,
+          "win_rate": 0.5,
+          "avg_net_bps": 40.0086,
+          "avg_gross_bps": 115.6464,
+          "expectancy_usd": 0.6691,
+          "total_return_pct": 2.4087,
+          "max_dd_pct": 0.8922,
+          "profit_factor": 2.3708
+        },
+        {
+          "activate_atr": 1.5,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 15,
+          "wins": 13,
+          "win_rate": 0.8667,
+          "avg_net_bps": 92.5713,
+          "avg_gross_bps": 168.605,
+          "expectancy_usd": 1.5706,
+          "total_return_pct": 4.7119,
+          "max_dd_pct": 0.4815,
+          "profit_factor": 7.2226
+        },
+        {
+          "activate_atr": 2.0,
+          "trail_atr": 1.5,
+          "promote": false,
+          "trades": 15,
+          "wins": 12,
+          "win_rate": 0.8,
+          "avg_net_bps": 91.675,
+          "avg_gross_bps": 167.702,
+          "expectancy_usd": 1.555,
+          "total_return_pct": 4.6649,
+          "max_dd_pct": 0.4815,
+          "profit_factor": 7.0873
+        }
+      ],
+      "chosen": null,
+      "buy_and_hold_mean_net_bps": 4405.665764724395
+    },
+    "trendhold": {
+      "tf": 240,
+      "history": "cache",
+      "promote": false,
+      "baseline": {
+        "trades": 19,
+        "wins": 6,
+        "win_rate": 0.3158,
+        "avg_net_bps": 347.8379,
+        "avg_gross_bps": 451.8358,
+        "expectancy_usd": 0.7005,
+        "total_return_pct": 2.6621,
+        "max_dd_pct": 0.6467,
+        "profit_factor": 3.3311
+      },
+      "trials": [
+        {
+          "activate_atr": 1.0,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 75,
+          "wins": 26,
+          "win_rate": 0.3467,
+          "avg_net_bps": 4.5528,
+          "avg_gross_bps": 105.1006,
+          "expectancy_usd": 0.0088,
+          "total_return_pct": 0.1325,
+          "max_dd_pct": 1.2487,
+          "profit_factor": 1.0494
+        },
+        {
+          "activate_atr": 1.5,
+          "trail_atr": 1.0,
+          "promote": false,
+          "trades": 53,
+          "wins": 25,
+          "win_rate": 0.4717,
+          "avg_net_bps": 28.4769,
+          "avg_gross_bps": 129.2652,
+          "expectancy_usd": 0.0568,
+          "total_return_pct": 0.6016,
+          "max_dd_pct": 1.1113,
+          "profit_factor": 1.2889
+        },
+        {
+          "activate_atr": 2.0,
+          "trail_atr": 1.5,
+          "promote": false,
+          "trades": 46,
+          "wins": 22,
+          "win_rate": 0.4783,
+          "avg_net_bps": 45.1012,
+          "avg_gross_bps": 146.0566,
+          "expectancy_usd": 0.0901,
+          "total_return_pct": 0.8288,
+          "max_dd_pct": 0.9078,
+          "profit_factor": 1.3588
+        }
+      ],
+      "chosen": null,
+      "buy_and_hold_mean_net_bps": 4405.665764724395
+    }
+  },
+  "history": "cache",
+  "sample": "Kraken public OHLC is capped near 720 bars (about 30 days at 1h, 120 days at 4h). This is not a multi-year sample."
+}

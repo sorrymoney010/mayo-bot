@@ -274,15 +274,29 @@ def simulate(d: pd.DataFrame, spec: Spec, costs: Costs) -> list[Trade]:
         exit_px = None
         reason = ""
         j = e
+        trail = None
+        trail_act = float(p.get("trail_activate_atr") or 0.0)
+        if trail_act > 0 and math.isfinite(atr[i]) and atr[i] > 0:
+            from .trailing import TrailState
+            trail = TrailState(
+                sleeve="backtest", symbol="", side="long", entry=float(entry), atr=float(atr[i]),
+                activate_atr=trail_act, trail_atr=float(p.get("trail_atr") or 1.0), peak=float(entry),
+            )
         while j < n:
             # intrabar protective levels (stop first — conservative)
             if o[j] <= stop and j > e:
                 exit_px, reason = o[j], "stop_gap"
             elif l[j] <= stop:
                 exit_px, reason = stop, "stop"
-            elif o[j] >= tp and j > e:
+            elif trail is not None:
+                from .trailing import on_bar
+                trail, tr_reason, tr_px = on_bar(
+                    trail, open_=float(o[j]), high=float(h[j]), low=float(l[j]))
+                if tr_reason:
+                    exit_px, reason = float(tr_px), tr_reason
+            if exit_px is None and o[j] >= tp and j > e:
                 exit_px, reason = o[j], "tp_gap"
-            elif h[j] >= tp:
+            elif exit_px is None and h[j] >= tp:
                 exit_px, reason = tp, "tp"
             if exit_px is not None:
                 break
