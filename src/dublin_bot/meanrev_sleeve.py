@@ -252,13 +252,15 @@ class MeanRevSleeve:
             self.portfolio, st, state_path=self.state_path, lots_path=PAPER_LOTS,
             save_state=self._save_state, equity=float(self.settings.strategy_equity_usd),
         )
-        self.registry.load()
-        self.registry.set_sleeve(
-            SLEEVE, owned=set(st["positions"]),
-            pending={s: float(o["notional"]) for s, o in st["pending"].items()},
-        )
-        self.registry.save()
-        self.state_store.save(state)
+        from .sleeve_registry import registry_lock
+        with registry_lock(self.registry.path):
+            self.registry.load()
+            self.registry.set_sleeve(
+                SLEEVE, owned=set(st["positions"]),
+                pending={s: float(o["notional"]) for s, o in st["pending"].items()},
+            )
+            self.registry.save()
+        self.state_store.save(state, keep_disk_accounting=True)
         return res
 
     # ── pending limit orders ───────────────────────────────────
@@ -393,10 +395,8 @@ class MeanRevSleeve:
                                           detail=detail)
             except Exception:
                 pass
-            self.risk.update_scale_from_trade(realized, state)
-            state.realized_pnl_today += realized
-            state.current_equity = self._equity()
-            state.peak_equity = max(state.peak_equity, state.current_equity)
+            from .state import record_close_pnl
+            record_close_pnl(self.state_store.path, realized, self._equity(), self.settings, state)
             net_bps = realized / cost_basis * 1e4 if cost_basis > 0 else 0.0
             self._event(st, res, "exit", sym, reason=exit_reason, price=price, qty=sell_qty,
                         realized=round(realized, 6), net_bps=round(net_bps, 1))

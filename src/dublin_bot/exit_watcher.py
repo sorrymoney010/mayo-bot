@@ -79,10 +79,11 @@ def _write_json(path: Path, data) -> None:
     tmp.replace(path)
 
 
-# A websocket print older than this is ignored. The tick-file tail may be a
-# few seconds behind the collector and is still a live price inside this window.
+# A websocket print older than this is ignored. The tick-file tail is a live
+# price for two minutes: a coin often goes quiet for longer than 15s, and
+# treating that as "stale" opened and closed a socket dozens of times an hour.
 WS_FRESH_SECONDS = 5.0
-TICK_FRESH_SECONDS = 15.0
+TICK_FRESH_SECONDS = 120.0
 _TAIL_BYTES = 4096
 _LOG_INTERVAL = 60.0
 _LOG_AT: dict[str, float] = {}
@@ -116,6 +117,44 @@ def claim_opened(sleeve: str, opened: str, pos) -> str:
 
 def claim_key(sleeve: str, symbol: str, opened: str) -> str:
     return f"{sleeve}|{symbol}|{opened}"
+
+
+def sleeve_strategy_key(settings, sleeve: str) -> str:
+    """Learner / closed-trade / promotion key, the same one the sleeve writes.
+
+    Fast exits used to store ``trendhold`` / ``meanrev_mk`` / ``regime``. The
+    gates only count ``trendhold@240m`` / ``meanrev_mk@240m`` / ``regime@60m``.
+    """
+    if sleeve == "meanrev_4h":
+        tf = int(getattr(settings, "meanrev_timeframe_minutes", 240) or 240)
+        return f"meanrev_mk@{tf}m"
+    if sleeve == "trendhold_4h":
+        tf = int(getattr(settings, "trendhold_timeframe_minutes", 240) or 240)
+        return f"trendhold@{tf}m"
+    if sleeve == "futures_short":
+        tf = int(getattr(settings, "futures_timeframe_minutes", 240) or 240)
+        return f"futures_short@{tf}m"
+    name = str(getattr(settings, "strategy", "regime") or "regime").lower()
+    family = {
+        "breakout": "breakout", "momentum_breakout": "breakout",
+        "regime_trend": "regime", "regime": "regime", "momentum": "momentum",
+    }.get(name, name)
+    tf = int(getattr(settings, "timeframe_minutes", 60) or 60)
+    return f"{family}@{tf}m"
+
+
+def feed_action(*, actionable: bool, ticks_cover: bool, feed_up: bool) -> str:
+    """``start``, ``stop``, or ``keep`` for the watcher's own websocket.
+
+    No open lot with a stop, take-profit, or trail: do not hold a socket.
+    An actionable lot whose tick is stale opens one socket and leaves it up.
+    Fresh ticks do not open a second socket and do not tear a live one down.
+    """
+    if not actionable:
+        return "stop" if feed_up else "keep"
+    if not ticks_cover and not feed_up:
+        return "start"
+    return "keep"
 
 
 def spot_exit_levels(settings, symbol: str, entry: float) -> tuple[str, float | None, float | None, str]:
@@ -298,7 +337,9 @@ class ExitWatcher:
         row = {"ts": when, "symbol": symbol, "sleeve": sleeve, "reason": reason,
                "price": price, "qty": qty, "realized": realized, "venue": "spot"}
         self._log(row)
-        self._learn(symbol, sleeve, realized, qty, price)
+        self._release_owner(symbol)
+        self._account(realized)
+        self._learn(symbol, sleeve, realized, qty, price, reason)
         return row
 
     def _futures(self, symbol: str, mark: float, ts: float) -> dict | None:
@@ -338,7 +379,30 @@ class ExitWatcher:
                "symbol": symbol, "sleeve": "futures_short", "reason": reason,
                "price": exit_px, "realized": pnl - exit_fee, "venue": "futures"}
         self._log(row)
+        self._release_owner(symbol)
+        self._account(row["realized"])
         return row
+
+    def _release_owner(self, symbol: str) -> None:
+        try:
+            from .sleeve_registry import DEFAULT_PATH, release_symbol
+            release_symbol(symbol, path=DEFAULT_PATH)
+        except Exception as exc:
+            self._note_error(exc)
+
+    def _account(self, realized: float) -> None:
+        """Same session fields a sleeve writes on its own close."""
+        try:
+            from .book_risk import futures_equity_addon
+            from .state import record_close_pnl
+            seed = float(self.settings.strategy_equity_usd)
+            snap = self.portfolio.load(equity=seed, cash=seed)
+            basis = sum(p.quantity * p.entry_price for p in snap.positions.values())
+            equity = max(float(snap.cash) + basis, 0.0) + futures_equity_addon(
+                getattr(self.settings, "futures_ledger_path", None))
+            record_close_pnl(self.settings.session_state_path, float(realized), equity, self.settings)
+        except Exception as exc:
+            self._note_error(exc)
 
     def _log(self, row: dict) -> None:
         self.closes.append(row)
@@ -381,18 +445,53 @@ class ExitWatcher:
     def _note_error(self, exc: BaseException) -> None:
         log_limited(self.error_log, type(exc).__name__, f"{type(exc).__name__}: {exc}")
 
-    def _learn(self, symbol: str, sleeve: str, realized: float, qty: float, price: float) -> None:
+    def _learn(self, symbol: str, sleeve: str, realized: float, qty: float, price: float,
+               reason: str) -> None:
         try:
             from .learner import enqueue_learner_exit
-            key = {"meanrev_4h": "meanrev_mk", "trendhold_4h": "trendhold",
-                   "primary": "regime"}.get(sleeve, sleeve)
+            key = sleeve_strategy_key(self.settings, sleeve)
             enqueue_learner_exit(
                 self.settings.learner_path, symbol=symbol, pnl=float(realized), strategy=key,
                 notional=abs(float(qty) * float(price)), ts=time.time(),
-                detail={"exit_reason": "fast_exit", "sleeve": sleeve},
+                detail={"exit_reason": reason, "fast_exit": True, "sleeve": key},
             )
         except Exception as exc:
             self._note_error(exc)
+
+    def _actionable_symbols(self) -> set[str]:
+        """Open lots the watcher can stop, take profit, or trail. Others need no price."""
+        out: set[str] = set()
+        seed = float(self.settings.strategy_equity_usd)
+        try:
+            snap = self.portfolio.load(equity=seed, cash=seed)
+        except Exception as exc:
+            self._note_error(exc)
+            return out
+        for sym, pos in snap.positions.items():
+            if pos.quantity <= 1e-12 or pos.entry_price <= 0:
+                continue
+            sleeve, stop, tp, _opened = spot_exit_levels(self.settings, sym, float(pos.entry_price))
+            if stop is not None or tp is not None or self._has_trail(sleeve, sym):
+                out.add(sym)
+        if getattr(self.settings, "futures_sleeve_enabled", False):
+            try:
+                from .futures_sleeve import load_ledger
+                path = Path(getattr(self.settings, "futures_ledger_path", "logs/paper_futures.json"))
+                book = load_ledger(path)
+            except Exception as exc:
+                self._note_error(exc)
+                book = {"positions": {}}
+            for sym, pos in (book.get("positions") or {}).items():
+                if isinstance(pos, dict):
+                    out.add(f"PF:{sym}")
+        return out
+
+    def _has_trail(self, sleeve: str, symbol: str) -> bool:
+        if not sleeve_trail_enabled(self.settings, sleeve):
+            return False
+        self.trail.load()
+        prefix = f"{sleeve}|{symbol}|"
+        return any(k.startswith(prefix) for k in self.trail.states)
 
     def _loop(self) -> None:
         feed = None
@@ -400,22 +499,40 @@ class ExitWatcher:
         while not self._stop.is_set():
             now = time.time()
             try:
+                actionable = self._actionable_symbols()
+                spot = {s for s in actionable if not s.startswith("PF:")}
                 fresh = _fresh_ticks(getattr(self.settings, "pipeline_data_dir", "data"), symbols, now)
-                if len(fresh) == len(symbols):
-                    if feed is not None:
-                        try:
-                            feed.stop()
-                        except Exception as exc:
-                            self._note_error(exc)
-                        feed = None
-                elif feed is None:
-                    feed = _try_feed()
-                for symbol, price in _collect_prices(self.settings, feed, now).items():
-                    self.candles.add(symbol, now, price)
+                if not spot:
+                    action = "stop" if feed is not None else "keep"
+                else:
+                    ticks_cover = spot <= set(fresh)
+                    action = feed_action(
+                        actionable=bool(actionable), ticks_cover=ticks_cover, feed_up=feed is not None,
+                    )
+                if action == "stop" and feed is not None:
                     try:
-                        self.evaluate(symbol, price, now)
+                        feed.stop()
                     except Exception as exc:
                         self._note_error(exc)
+                    feed = None
+                elif action == "start":
+                    feed = _try_feed()
+                if actionable:
+                    # REST only when a lot can actually exit and neither the
+                    # tick file nor the socket we keep has a price for it.
+                    allow_rest = action == "start" and feed is None
+                    prices = _collect_prices(
+                        self.settings, feed, now, symbols=tuple(spot) or symbols,
+                        allow_rest=allow_rest, include_futures=any(s.startswith("PF:") for s in actionable),
+                    )
+                    for symbol, price in prices.items():
+                        if symbol not in actionable and f"PF:{symbol}" not in actionable:
+                            continue
+                        self.candles.add(symbol, now, price)
+                        try:
+                            self.evaluate(symbol, price, now)
+                        except Exception as exc:
+                            self._note_error(exc)
             except Exception as exc:
                 self._note_error(exc)
             self._stop.wait(2.0)
@@ -438,28 +555,34 @@ def _try_feed():
         return None
 
 
-def _collect_prices(settings, feed, now: float) -> dict[str, float]:
+def _collect_prices(settings, feed, now: float, *, symbols: tuple[str, ...] | None = None,
+                    allow_rest: bool = True, include_futures: bool | None = None) -> dict[str, float]:
     """Fresh websocket price wins. A stale or partial tick-file line does not.
 
     Futures marks are one public request, and only when that sleeve is enabled.
+    ``allow_rest`` is false while the watcher has nothing it can exit, so a
+    quiet coin does not poll the public ticker every two seconds.
     """
     out: dict[str, float] = {}
-    symbols = ("BTC/USD", "ETH/USD", "SOL/USD")
+    symbols = symbols or ("BTC/USD", "ETH/USD", "SOL/USD")
+    spot = tuple(s for s in symbols if not s.startswith("PF:"))
     if feed is not None:
-        for sym in symbols:
+        for sym in spot:
             snap = feed.latest(sym)
             if snap is not None and snap.last > 0 and now - float(snap.updated_at) < WS_FRESH_SECONDS:
                 out[sym] = float(snap.last)
-    ticks = _fresh_ticks(getattr(settings, "pipeline_data_dir", "data"), symbols, now)
+    ticks = _fresh_ticks(getattr(settings, "pipeline_data_dir", "data"), spot, now)
     for sym, (px, _ts) in ticks.items():
         if sym not in out:
             out[sym] = px
-    for sym in symbols:
-        if sym not in out:
-            px = _rest_last(sym)
-            if px:
-                out[sym] = px
-    if getattr(settings, "futures_sleeve_enabled", False):
+    if allow_rest:
+        for sym in spot:
+            if sym not in out:
+                px = _rest_last(sym)
+                if px:
+                    out[sym] = px
+    want_futures = getattr(settings, "futures_sleeve_enabled", False) if include_futures is None else include_futures
+    if want_futures and getattr(settings, "futures_sleeve_enabled", False):
         out.update(_futures_marks())
     return out
 

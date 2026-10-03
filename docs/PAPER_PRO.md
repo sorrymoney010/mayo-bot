@@ -56,11 +56,19 @@ paper stop, trailing stop, or take-profit when price crosses. Strategy
 entries and signal exits (chandelier, RSI, EMA) stay on their own timeframe.
 
 Price order: a websocket print newer than 5 seconds, else the last complete
-line of today's tick file when that trade is newer than 15 seconds (tail
+line of today's tick file when that trade is newer than 2 minutes (tail
 read only; a half-written or stale line is ignored), else one public REST
-ticker. The watcher opens its own websocket only while the tick stream is
-not fresh. Futures marks are one public tickers request, and only while
-`FUTURES_SLEEVE_ENABLED` is true.
+ticker. The watcher does none of that unless an open lot has a stop,
+take-profit, or trailing stop it can act on. When a tick is stale it opens
+one websocket and keeps it; fresh trades do not tear that socket down.
+Futures marks are one public tickers request, and only while
+`FUTURES_SLEEVE_ENABLED` is true and a futures lot can be exited.
+
+A fast exit is recorded under the sleeve's own strategy key
+(`trendhold@240m`, `meanrev_mk@240m`, `regime@60m`), including
+`closed_trades.jsonl` and the learner gate. It also adds the realized P&L
+to `session_state.json` (daily P&L and the loss streak) under the session
+lock, and drops the symbol from `paper_sleeve_owners.json` immediately.
 
 The sell reloads the paper book under a file lock
 (`PaperPortfolio.try_record_sell`). A second close of the same lot is a no-op.
@@ -113,11 +121,13 @@ python scripts/backtest_futures_short.py --fetch-funding
 relative rates from the public historical-funding-rates endpoint). Without
 that file the study uses zero funding and says so.
 
-The study scripts read tick-built bars from `data/ticks/` when those files
-exist, and they do not write a `bars1m` cache into that directory. Without
-ticks they fall back to the public OHLC cache. Each run writes a new
-timestamped file (`reports/<study>_YYYY-MM-DDTHHMMSSZ.json`) so a later run
-does not overwrite an earlier one.
+Intraday study bars prefer `data/ticks/` when those files exist, and the
+loader does not write a `bars1m` cache into that directory. The daily
+risk-on filter keeps the longest daily history: the public daily file is
+the base, and tick-built daily bars only extend it or fill days it lacks.
+Each run writes a new timestamped file
+(`reports/<study>_YYYY-MM-DDTHHMMSSZ.json`) so a later run does not
+overwrite an earlier one.
 
 ## Study on 2026-10-03 (public OHLC, not a multi-year sample)
 

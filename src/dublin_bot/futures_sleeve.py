@@ -343,10 +343,12 @@ class FuturesSleeve:
         return True
 
     def _publish(self, book: dict) -> None:
+        from .sleeve_registry import registry_lock
         owned = set(book["positions"])
-        self.registry.load()
-        self.registry.set_sleeve(SLEEVE, owned=owned, pending={})
-        self.registry.save()
+        with registry_lock(self.registry.path):
+            self.registry.load()
+            self.registry.set_sleeve(SLEEVE, owned=owned, pending={})
+            self.registry.save()
 
     def _spot_held(self, symbol: str) -> bool:
         try:

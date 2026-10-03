@@ -1370,7 +1370,9 @@ class TradingEngine:
             self.risk.update_scale_from_trade(cycle_pnl, state)
         else:
             self.risk.update_scale(state)
-        self.state_store.save(state)
+        self.state_store.save(
+            state, keep_disk_accounting=bool(self.settings.paper_trading or self.settings.dry_run),
+        )
         record = DecisionRecord(
             symbol=self.settings.symbol,
             signal=signal,
@@ -1549,10 +1551,11 @@ class TradingEngine:
                         )
                         # Adaptive risk: update win/loss streak + scale from
                         # the realized P&L of this closed trade (audit #6).
-                        self.risk.update_scale_from_trade(realized, state)
-                        state.realized_pnl_today += realized
-                        state.current_equity = self.paper_portfolio.snapshot().equity
-                        state.peak_equity = max(state.peak_equity, state.current_equity)
+                        from .state import record_close_pnl
+                        record_close_pnl(
+                            self.state_store.path, realized, self._account_equity(),
+                            self.settings, state,
+                        )
         except PrecisionError as exc:
             self.ledger.fail(key, f"precision: {exc}")
             self.audit.record(AuditEvent.ORDER_REJECTED,

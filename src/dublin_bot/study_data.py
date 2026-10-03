@@ -1,8 +1,13 @@
 """Read-only bar loader for the paper research scripts.
 
-Tick-built bars under ``data/ticks/`` are preferred when they exist. The
-loader never writes a ``bars1m`` cache into that directory. Public OHLC
-caches (``data/kraken_*_<tf>m.csv``, about 720 bars) are the fallback.
+Intraday bars prefer ``data/ticks/`` when those files exist. The loader
+never writes a ``bars1m`` cache into that directory. Public OHLC caches
+(``data/kraken_*_<tf>m.csv``, about 720 bars) are the fallback.
+
+The daily risk-on filter uses the longest daily history available. The
+public daily file is the base; tick-built daily bars only extend it or
+fill days it does not have. A 120-day tick run must not replace a longer
+public daily cache.
 
 Report files are timestamped so a second run on the same day does not
 overwrite the first.
@@ -58,6 +63,31 @@ def _ticks(symbol: str, tf: int, data: Path) -> pd.DataFrame | None:
     return df
 
 
+def _time_key(df: pd.DataFrame) -> pd.Series:
+    num = pd.to_numeric(df["time"], errors="coerce")
+    return num.round().astype("Int64")
+
+
+def merge_daily(public: pd.DataFrame | None, ticks: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Longest daily history. Public bars win on overlap; ticks extend or fill."""
+    if public is None or not len(public):
+        return None if ticks is None or not len(ticks) else ticks
+    if ticks is None or not len(ticks):
+        return public
+    have = set(int(t) for t in _time_key(public).dropna().tolist())
+    tick_time = _time_key(ticks)
+    extra = ticks.loc[~tick_time.isin(have)].copy()
+    merged = pd.concat([public, extra], ignore_index=True)
+    return (merged.drop_duplicates("time", keep="first")
+            .sort_values("time").reset_index(drop=True))
+
+
+def load_daily_history(symbol: str, data: Path | str) -> pd.DataFrame | None:
+    """Daily bars for the D1 filter. Public history first, ticks only to extend."""
+    data = Path(data)
+    return merge_daily(_ohlc(symbol, 1440, data), _ticks(symbol, 1440, data))
+
+
 def load_study_bars(symbol: str, tf: int, data: Path | str, *,
                     with_daily: bool = True) -> tuple[pd.DataFrame | None, str]:
     """``(frame, source)``. ``source`` is ``ticks``, ``ohlc``, or ``missing``.
@@ -78,9 +108,7 @@ def load_study_bars(symbol: str, tf: int, data: Path | str, *,
         return None, "missing"
     df = add_indicators(df)
     if with_daily:
-        daily = _ticks(symbol, 1440, data)
-        if daily is None:
-            daily = _ohlc(symbol, 1440, data)
+        daily = load_daily_history(symbol, data)
         if daily is not None and len(daily):
             df = attach_d1(df, riskon_table(daily), tf)
     return df, source

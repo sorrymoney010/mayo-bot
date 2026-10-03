@@ -40,7 +40,7 @@ from dublin_bot.futures_costs import SPOT_TO_PERP  # noqa: E402
 from dublin_bot.promotion import check_strategy  # noqa: E402
 from dublin_bot.research import buy_and_hold  # noqa: E402
 from dublin_bot.backtest_core import Costs  # noqa: E402
-from dublin_bot.study_data import load_study_bars, unique_report  # noqa: E402
+from dublin_bot.study_data import load_daily_history, load_study_bars, unique_report  # noqa: E402
 
 SYMBOLS = ["BTC/USD", "ETH/USD", "SOL/USD"]
 
@@ -60,7 +60,7 @@ def load_price(symbol: str, tf: int, data: Path):
         from dublin_bot.backtest_core import add_indicators
         from dublin_bot.daily_filter import attach_d1, riskon_table
         df = add_indicators(raw)
-        daily, _src = load_study_bars(symbol, 1440, data, with_daily=False)
+        daily = load_daily_history(symbol, data)
         if daily is not None and len(daily):
             df = attach_d1(df, riskon_table(daily), tf)
         return df, "futures"

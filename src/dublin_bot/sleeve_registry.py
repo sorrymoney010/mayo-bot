@@ -16,11 +16,56 @@ path never reads this file.
 """
 from __future__ import annotations
 
+import fcntl
 import json
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 PRIMARY = "primary"
 DEFAULT_PATH = Path("logs/paper_sleeve_owners.json")
+
+# The fast exit watcher releases a symbol the moment the lot is flat. A sleeve
+# rewrites its slice at the end of the 300s cycle. Both have to take this lock
+# or the sleeve's stale snapshot puts the symbol back.
+_REG_THREAD = threading.RLock()
+_REG_DEPTH = threading.local()
+
+
+@contextmanager
+def registry_lock(path: Path | str = DEFAULT_PATH):
+    """Exclusive lock for the owners file. Reentrant on this thread."""
+    depth = getattr(_REG_DEPTH, "n", 0)
+    if depth:
+        _REG_DEPTH.n = depth + 1
+        try:
+            yield
+        finally:
+            _REG_DEPTH.n = depth
+        return
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = Path(str(target) + ".reglock")
+    fh = open(lock_path, "a+", encoding="utf-8")
+    _REG_DEPTH.n = 1
+    try:
+        with _REG_THREAD:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+    finally:
+        fh.close()
+        _REG_DEPTH.n = 0
+
+
+def release_symbol(symbol: str, *, path: Path | str = DEFAULT_PATH) -> None:
+    """Drop ``symbol`` from the owners file. The lot is flat."""
+    with registry_lock(path):
+        reg = SleeveRegistry(path)
+        reg.owners.pop(str(symbol).upper(), None)
+        reg.save()
 
 
 class SleeveRegistry:

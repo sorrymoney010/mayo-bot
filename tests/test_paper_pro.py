@@ -16,12 +16,14 @@ from dublin_bot.exit_watcher import (
     ExitWatcher,
     _collect_prices,
     _fresh_ticks,
+    feed_action,
     log_limited,
+    sleeve_strategy_key,
 )
 from dublin_bot.learner import LearningAgent, enqueue_learner_exit
 from dublin_bot.realtime import FeedSnapshot
 from dublin_bot.sleeve_sync import commit_sleeve_cycle, save_paper_bot_qty
-from dublin_bot.study_data import load_study_bars, unique_report
+from dublin_bot.study_data import load_daily_history, load_study_bars, merge_daily, unique_report
 from dublin_bot.futures_costs import (
     MAX_PAPER_LEVERAGE,
     clamp_leverage,
@@ -586,3 +588,157 @@ def test_paper_bot_qty_drops_a_lot_the_book_no_longer_holds(tmp_path):
     inflight = {"SOL/USD": 2.0}
     save_paper_bot_qty(path, inflight, book, equity=500, in_flight={"SOL/USD"})
     assert json.loads(path.read_text(encoding="utf-8"))["SOL/USD"] == pytest.approx(2.0)
+
+
+def test_sleeve_strategy_keys_match_the_sleeves_own_exits():
+    s = _settings(strategy="regime_trend",
+                  meanrev_timeframe_minutes=240, trendhold_timeframe_minutes=240)
+    assert sleeve_strategy_key(s, "trendhold_4h") == "trendhold@240m"
+    assert sleeve_strategy_key(s, "meanrev_4h") == "meanrev_mk@240m"
+    assert sleeve_strategy_key(s, "primary") == "regime@60m"
+
+
+def test_fast_exit_records_sleeve_key_daily_pnl_and_releases_owner(tmp_path, monkeypatch):
+    """A trendhold trail exit must count as trendhold@240m, move the daily loss, and free the coin."""
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    from dublin_bot.models import Action, Signal
+    from dublin_bot.promotion import build_report
+    from dublin_bot.risk import RiskManager
+    from dublin_bot.sleeve_registry import SleeveRegistry
+    from dublin_bot.state import StateStore
+
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=100, cash=100)
+    book.record_buy("SOL/USD", 1.0, 100.0, 0.0, "t0")
+    (tmp_path / "trendhold_sleeve.json").write_text(json.dumps({
+        "positions": {"SOL/USD": {"qty": 1.0, "entry": 100.0, "filled_at": "t0"}},
+        "events": [],
+    }), encoding="utf-8")
+    (tmp_path / "trailing_state.json").write_text(json.dumps({
+        "trendhold_4h|SOL/USD|t0": {
+            "sleeve": "trendhold_4h", "symbol": "SOL/USD", "side": "long",
+            "entry": 100.0, "atr": 1.0, "activate_atr": 1.0, "trail_atr": 1.0,
+            "opened_at": "t0", "peak": 110.0, "armed": True, "stop": 90.0,
+        }
+    }), encoding="utf-8")
+    reg = SleeveRegistry(tmp_path / "paper_sleeve_owners.json")
+    reg.set_sleeve("trendhold_4h", owned={"SOL/USD"}, pending={})
+    reg.save()
+    # The default registry path is what the watcher releases. Point both at it.
+    logs = Path("logs")
+    logs.mkdir(exist_ok=True)
+    owners = logs / "paper_sleeve_owners.json"
+    owners.write_text((tmp_path / "paper_sleeve_owners.json").read_text(encoding="utf-8"), encoding="utf-8")
+    session = StateStore(logs / "session_state.json")
+    stale = session.load(100.0)
+    session.save(stale)
+    stale = session.load(100.0)
+    s = _settings(
+        strategy="regime_trend", strategy_equity_usd=100,
+        trendhold_timeframe_minutes=240, trailing_tp_trendhold=True,
+        trendhold_state_path=tmp_path / "trendhold_sleeve.json",
+        trailing_state_path=tmp_path / "trailing_state.json",
+        learner_path=logs / "learner.json", session_state_path=logs / "session_state.json",
+        stop_loss_pct=0.5, take_profit_pct=0.5,
+    )
+    watcher = ExitWatcher(s, portfolio=book)
+    closed = watcher.run_once([("SOL/USD", 1_700_000_000, 80.0)])
+    assert closed and closed[0]["reason"] == "trail"
+    agent = LearningAgent(logs / "learner.json", enabled=True, strategy_key="trendhold@240m")
+    assert agent.coins["SOL/USD"].history[-1]["strategy"] == "trendhold@240m"
+    wrong = LearningAgent(logs / "learner.json", enabled=True, strategy_key="trendhold")
+    assert wrong._live("SOL/USD")[1] == 0
+    assert agent._live("SOL/USD")[1] == 1
+    row = json.loads((logs / "closed_trades.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+    assert row["sleeve"] == "trendhold@240m"
+    report = build_report(logs)
+    assert "trendhold@240m" in report["strategies"]
+    assert "trendhold" not in report["strategies"]
+    after = session.load(100.0)
+    assert after.realized_pnl_today < 0
+    assert after.loss_streak == 1
+    session.save(stale, keep_disk_accounting=True)
+    assert session.load(100.0).realized_pnl_today == pytest.approx(after.realized_pnl_today)
+    halted = RiskManager(s).evaluate(
+        Signal(Action.BUY, 1, "test", price=80.0, atr=1.0, stop_price=70.0), after,
+    )
+    assert halted.approved is False and "Daily loss" in halted.reason
+    assert SleeveRegistry().owner_of("SOL/USD") == "primary"
+    assert "SOL/USD" not in SleeveRegistry().owners
+
+
+def test_watcher_skips_fallback_unless_a_lot_can_exit(tmp_path, monkeypatch):
+    now = 1_700_000_000.0
+    tick = tmp_path / "ticks" / "BTCUSD" / "2023-11-14.csv"
+    tick.parent.mkdir(parents=True)
+    tick.write_text(
+        f"trade_id,ts,price,qty,side,ord_type\n1,{now - 30:.3f},42,1,b,m\n",
+        encoding="utf-8",
+    )
+    fresh = _fresh_ticks(tmp_path, ("BTC/USD",), now)
+    assert "BTC/USD" in fresh
+    stale = _fresh_ticks(tmp_path, ("BTC/USD",), now + 10_000)
+    assert "BTC/USD" not in stale
+    assert feed_action(actionable=False, ticks_cover=False, feed_up=False) == "keep"
+    assert feed_action(actionable=False, ticks_cover=False, feed_up=True) == "stop"
+    assert feed_action(actionable=True, ticks_cover=False, feed_up=False) == "start"
+    assert feed_action(actionable=True, ticks_cover=True, feed_up=True) == "keep"
+    assert feed_action(actionable=True, ticks_cover=True, feed_up=False) == "keep"
+    book = PaperPortfolio(tmp_path / "paper_portfolio.json")
+    book.load(equity=100, cash=100)
+    book.record_buy("SOL/USD", 1.0, 10.0, 0.0, "t0")
+    held = tmp_path / "trendhold_sleeve.json"
+    held.write_text(json.dumps({
+        "positions": {"SOL/USD": {"qty": 1.0, "entry": 10.0, "filled_at": "t0"}},
+    }), encoding="utf-8")
+    quiet = ExitWatcher(_settings(
+        trendhold_state_path=held, trailing_tp_trendhold=False,
+        stop_loss_pct=0.05, take_profit_pct=0.1,
+    ), portfolio=book)
+    assert quiet._actionable_symbols() == set()
+    book.record_buy("BTC/USD", 0.01, 100.0, 0.0, "t1")
+    primary = ExitWatcher(_settings(trendhold_state_path=held, stop_loss_pct=0.05, take_profit_pct=0.1),
+                          portfolio=book)
+    assert "BTC/USD" in primary._actionable_symbols()
+    assert "SOL/USD" not in primary._actionable_symbols()
+    calls = []
+    monkeypatch.setattr("dublin_bot.exit_watcher._rest_last", lambda sym: calls.append(sym) or 1.0)
+    monkeypatch.setattr("dublin_bot.exit_watcher._fresh_ticks", lambda *_a, **_k: {})
+    _collect_prices(_settings(futures_sleeve_enabled=False), None, now, allow_rest=False)
+    assert calls == []
+
+
+def test_daily_filter_keeps_the_longer_public_history(tmp_path):
+    # Public daily cache is the long series. Tick-built days only extend it.
+    day = 86_400
+    start = 1_577_836_800  # 2020-01-01 00:00:00 UTC
+    public_days = 60
+    rows = ["time,open,high,low,close,volume"]
+    for i in range(public_days):
+        t = start + i * day
+        rows.append(f"{t},7,7,7,7,1")
+    (tmp_path / "kraken_BTCUSD_1440m.csv").write_text("\n".join(rows) + "\n", encoding="utf-8")
+    # Two closed days of continuous minute trades, one overlapping the public
+    # file and one past its end.
+    from dublin_bot.pipeline.tickstore import Tick, TickStore
+    overlap = start + (public_days - 1) * day
+    # Start a day before the overlap so that daily bucket is strictly inside the run.
+    tick_start = overlap - day
+    ticks = []
+    for i in range(1440 * 4):
+        ticks.append(Tick(trade_id=i + 1, ts=float(tick_start + i * 60), price="9", qty="1",
+                          side="b", ord_type="m"))
+    TickStore(tmp_path).append("BTC/USD", ticks)
+    daily = load_daily_history("BTC/USD", tmp_path)
+    assert daily is not None
+    assert len(daily) >= public_days + 1
+    times = pd.to_numeric(daily["time"], errors="coerce")
+    overlap_close = float(daily.loc[times == overlap, "close"].iloc[0])
+    assert overlap_close == pytest.approx(7.0)
+    assert not (tmp_path / "bars1m").exists()
+    # The merge itself: public close wins on a shared day, ticks fill a hole.
+    public = pd.DataFrame({"time": [1, 3], "close": [7.0, 7.0]})
+    built = pd.DataFrame({"time": [3, 4], "close": [9.0, 9.0]})
+    merged = merge_daily(public, built)
+    assert list(merged["time"]) == [1, 3, 4]
+    assert float(merged.loc[merged["time"] == 3, "close"].iloc[0]) == pytest.approx(7.0)
