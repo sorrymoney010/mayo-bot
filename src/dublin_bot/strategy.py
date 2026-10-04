@@ -177,8 +177,9 @@ def build_strategy(settings: Settings):
     - ``pattern`` / ``elliott_lite``: rule-based OHLC patterns (double bottom / flag)
     - ``breakout`` / ``momentum_breakout``: N-bar high + volume breakout (defined-risk)
     - ``regime_trend``: ADX/vol-gated trend follower, flat in chop (walk-forward pick)
+    - ``hold_core``: D1 risk-on hold, flat on risk-off. No EMA churn. Paper experiment.
     """
-    name = getattr(settings, "strategy", "momentum")
+    name = getattr(settings, "strategy", "regime_trend")
     if name == "mean_reversion":
         return MeanReversionStrategy(settings)
     if name == "sr_flip":
@@ -193,4 +194,7 @@ def build_strategy(settings: Settings):
     if name in ("regime_trend", "regime"):
         from .strategies.regime_strategy import RegimeTrendStrategy
         return RegimeTrendStrategy(settings)
+    if name in ("hold_core", "holdcore"):
+        from .strategies.holdcore_strategy import HoldCoreStrategy
+        return HoldCoreStrategy(settings)
     return TrendBreakoutStrategy(settings)

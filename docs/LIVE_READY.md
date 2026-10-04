@@ -1,19 +1,10 @@
-# Kraken live-ready (locked)
+# Not live-ready
 
-Paper breakout is the active sleeve. Live stays off until explicit unlock.
+Live stays locked: `PAPER_TRADING=true`, `DRY_RUN=true`, `ALLOW_LIVE_TRADING=false`.
 
-## Already on Kraken
-- ~$80 USDC + ~$17.5 USD (spot BTC = 0)
-- Deposit address API needs Funding permission on the Mayo API key
+The previous note named paper breakout as the active sleeve and sketched a $97
+unlock envelope. That is withdrawn. Walk-forward breakout was noise at 15m
+(+5 bps) and negative at 60m, 4h, and daily. Do not unlock on that doc.
 
-## Envelope when unlocked
-- Equity budget: $97 (`LIVE_READY_EQUITY_USD`)
-- Risk/trade: 1% (`LIVE_READY_RISK_PER_TRADE`)
-- Stop/TP: 2% / 4% (same as paper breakout)
-- Max concurrent: 2
-- Universe: BTC/USD, ETH/USD, SOL/USD
-
-## Unlock checklist
-1. Enable Funding/Deposit on Kraken API key (or deposit in Kraken app)
-2. User says unlock live
-3. Flip `ALLOW_LIVE_TRADING=true` only after that — never by default
+Green means `docs/GREEN.md`, not a balance sitting on Kraken. Nothing has
+cleared it. The Oct 3 research run promoted nothing.
