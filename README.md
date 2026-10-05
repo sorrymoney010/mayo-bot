@@ -21,7 +21,7 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
 
 - **Kraken Spot** native connector (Alpaca retained as fallback)
 - BTC/USD first, with a reusable multi-asset architecture
-- $25 strategy budget by default; dollar-notional sizing
+- $25 strategy budget with the supplied `.env.example`; dollar-notional sizing
 - Conservative risk defaults: `RISK_PER_TRADE=0.01` (alias `RISK_PCT`),
   `MAX_POSITION_FRACTION=0.25`, `MAX_LEVERAGE=1.0` (sizer cap, spot only),
   `MARGIN_EXPOSURE_FRACTION=0`
@@ -66,7 +66,12 @@ dublin-bot run-once
 ```
 
 The default `run-once` command is dry-run paper trading and cannot submit a real
-order. Public market data works without credentials. If you later add a Kraken
+order.
+The setup profile in `.env.example` uses a $25 budget, `momentum`, the fixed
+basket, three orders per day, and a 15-minute cooldown. Without that file or
+environment overrides, `Settings` uses a $100 paper budget, `regime_trend`,
+`all_usd`, no daily order-count cap, and a 10-minute cooldown. Both profiles
+retain the same paper/dry-run locks and conservative per-trade risk limits. Public market data works without credentials. If you later add a Kraken
 key for private account-status checks, use a **read-only** key (*Query Funds* +
 *Query Orders* only — never *Withdraw Funds*). Never commit `.env`.
 
