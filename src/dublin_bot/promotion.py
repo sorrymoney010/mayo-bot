@@ -10,6 +10,8 @@ Bar, per strategy (sleeve key), on closed PAPER trades after fees:
   2. mean net bps > 0 AND the one-sided 90% lower confidence bound > 0
   3. still positive without its best 2 trades (mean of the rest > 0)
   4. at least as good as cash: total realized P&L >= 0
+  5. not a retired sleeve (15m, daily, momentum, breakout, futures, PUMP)
+  6. when a buy-and-hold benchmark is supplied, strategy return must beat it
 """
 from __future__ import annotations
 
@@ -21,6 +23,23 @@ from .learner import mean_bounds
 
 MIN_TRADES = 30
 CONF = 0.90
+
+# Audit 2026-10-04: these families lost after costs or were noise. A green
+# printout on them is not a promotion, even if a short window looks positive.
+RETIRED_MARKERS = (
+    "momentum", "breakout", "futures", "pump", "sr_flip", "pattern",
+    "elliott", "15m", "1440",
+)
+
+
+def is_retired(sleeve: str) -> bool:
+    name = (sleeve or "").lower()
+    if not name:
+        return False
+    if name.startswith("meanrev") or name.startswith("regime") or "hold" in name or "trendhold" in name:
+        # 15m / daily variants of the survivors are still retired.
+        return any(tag in name for tag in ("15m", "1440", "pump", "futures"))
+    return any(tag in name for tag in RETIRED_MARKERS)
 
 
 def load_jsonl(path: Path | str) -> list[dict]:
@@ -49,7 +68,9 @@ def dedup_trades(rows: list[dict]) -> list[dict]:
     return sorted(best.values(), key=lambda r: float(r.get("ts", 0)))
 
 
-def check_strategy(trades: list[dict], *, min_trades: int = MIN_TRADES, conf: float = CONF) -> dict:
+def check_strategy(trades: list[dict], *, min_trades: int = MIN_TRADES, conf: float = CONF,
+                    sleeve: str = "", benchmark_return_pct: float | None = None,
+                    seed: float | None = None) -> dict:
     bps = [float(t["net_bps"]) for t in trades if t.get("net_bps") is not None]
     pnl = sum(float(t.get("pnl", 0.0) or 0.0) for t in trades)
     n = len(bps)
@@ -65,6 +86,19 @@ def check_strategy(trades: list[dict], *, min_trades: int = MIN_TRADES, conf: fl
                                "need": "mean without best 2 trades > 0 bps"},
         "beats_cash": {"pass": pnl >= 0 and n > 0, "value": round(pnl, 4), "need": "total realized P&L >= $0"},
     }
+    if sleeve:
+        retired = is_retired(sleeve)
+        checks["not_retired"] = {
+            "pass": not retired, "value": sleeve,
+            "need": "sleeve not on the 2026-10-04 retired list",
+        }
+    if benchmark_return_pct is not None:
+        strat = (pnl / seed * 100.0) if seed else None
+        checks["beats_hold"] = {
+            "pass": strat is not None and strat > float(benchmark_return_pct),
+            "value": None if strat is None else round(strat, 2),
+            "need": f"return > buy-and-hold {float(benchmark_return_pct):.2f}% on the same window",
+        }
     return {"trades": n, "passes": all(c["pass"] for c in checks.values()),
             "failed": [k for k, c in checks.items() if not c["pass"]], "checks": checks}
 
@@ -94,8 +128,8 @@ def build_report(logs_dir: Path | str, *, now: float | None = None) -> dict:
                  "promotion to live is a manual decision."),
         "bar": {"min_trades": MIN_TRADES, "confidence": CONF,
                 "rules": ["n >= 30 closed paper trades", "mean net bps > 0 and 90% lower bound > 0",
-                          "mean without best 2 trades > 0", "total realized P&L >= 0 (at least as good as cash)"]},
-        "strategies": {k: check_strategy(v) for k, v in sorted(by.items())},
+                          "mean without best 2 trades > 0", "total realized P&L >= 0 (at least as good as cash)", "not a retired sleeve", "beats buy-and-hold when a benchmark is supplied"]},
+        "strategies": {k: check_strategy(v, sleeve=k) for k, v in sorted(by.items())},
         "paper_book": book,
     }
 

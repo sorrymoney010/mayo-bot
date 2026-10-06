@@ -128,6 +128,25 @@ def trendhold_signals(d: pd.DataFrame, p: dict) -> dict[str, np.ndarray]:
     return {"entry": entry, "exit": exit_, "ema_fast": ef, "ema_slow": es, "d1_ok": d1_ok}
 
 
+def holdcore_signals(d: pd.DataFrame, p: dict) -> dict[str, np.ndarray]:
+    """Hold-core: long only while the daily filter is risk-on.
+
+    No EMA cross and no intraday stop. That churn is why trend-hold lagged
+    equal-weight buy-and-hold by about 27 points in the Aug 3-Oct 2 2026
+    window. Entry and exit are the D1 flip only. Warmup fails closed.
+    """
+    from dublin_bot.daily_filter import d1_mask
+
+    d1_ok = d1_mask(d) if p.get("d1", True) else np.ones(len(d), dtype=bool)
+    warm = np.arange(len(d)) >= int(p.get("min_bars", 50))
+    on = warm & d1_ok
+    # Enter on the first risk-on bar; exit on the first risk-off bar after entry.
+    prev = np.concatenate([[False], on[:-1]])
+    entry = on & ~prev
+    exit_ = ~on & prev
+    return {"entry": entry, "exit": exit_, "d1_ok": d1_ok}
+
+
 def classify_adx_regime(bars: pd.DataFrame, enter: float = 25.0, exit_: float = 20.0) -> str:
     """'trend' | 'chop' | 'volatile_chop' for the last closed bar (learner key)."""
     if bars is None or len(bars) < 60:
