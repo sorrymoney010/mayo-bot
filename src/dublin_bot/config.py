@@ -403,6 +403,22 @@ class Settings(BaseSettings):
     futures_ema_slow: int = Field(default=100, ge=10)
     futures_margin_fraction: float = Field(default=0.25, gt=0, le=0.34)
     futures_ledger_path: Path = Path("logs/paper_futures.json")
+    # SHADOW perp sleeves (signals + virtual P&L ledger only; no paper fills, no
+    # orders, no lock changes). OFF by default. See reports/perp_study_2026-10-10.md
+    # and src/dublin_bot/futures_shadow.py.
+    futures_shadow_d1flip_enabled: bool = Field(default=False)
+    futures_shadow_d1flip_bear: str = Field(default="strict", pattern="^(strict|repo)$")
+    futures_shadow_d1flip_leverage: float = Field(default=1.0, gt=0, le=2.0)
+    futures_shadow_donchian_enabled: bool = Field(default=False)
+    futures_shadow_donchian_entry_days: int = Field(default=55, ge=5, le=120)
+    futures_shadow_donchian_exit_days: int = Field(default=20, ge=2, le=60)
+    futures_shadow_donchian_leverage: float = Field(default=1.0, gt=0, le=2.0)
+    futures_shadow_book_usd: float = Field(default=500.0, gt=0)
+    futures_shadow_symbols: list[str] = Field(
+        default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"]
+    )
+    futures_shadow_logs_dir: Path = Path("logs")
+    futures_shadow_budget_seconds: float = Field(default=3.0, ge=0.0, le=30.0)
     # Live order locks for venues the paper bot only simulates. Independent of
     # PAPER_TRADING / DRY_RUN / ALLOW_LIVE_TRADING and default OFF. A real
     # order also requires every existing lock to be open. See venue_locks.py.

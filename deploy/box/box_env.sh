@@ -110,6 +110,9 @@ PAPER_ENV=(
   PIPELINE_ENABLED=true
   PIPELINE_DATA_DIR="$REPO/data"
   PIPELINE_STALE_SECONDS=600
+  # SHADOW perp sleeves (virtual ledger only; no paper fills, no orders, no lock changes).
+  FUTURES_SHADOW_D1FLIP_ENABLED=true
+  FUTURES_SHADOW_DONCHIAN_ENABLED=true
 )
 blog() { local f=$1; shift; echo "$(date "+%F %T %Z") $*" >> "$f"; }
 # Refuse to run if a .env ever appears in the repo (Settings would read it).

@@ -196,6 +196,20 @@ def main() -> None:
         f"live_futures_orders={getattr(settings, 'allow_futures_live_orders', False)} "
         f"live_margin_orders={getattr(settings, 'allow_margin_live_orders', False)}")
 
+    shadow_runner = None
+    try:
+        from dublin_bot.futures_shadow import ShadowRunner, build_shadows
+        _shadows = build_shadows(settings)
+        if _shadows:
+            shadow_runner = ShadowRunner(
+                _shadows, log, budget=float(getattr(settings, "futures_shadow_budget_seconds", 3.0)))
+            log("SHADOW_FUTURES on: " + ",".join(f"{s.name}@{s.tf_minutes}m" for s in _shadows)
+                + " (virtual ledger only; no paper fills, no orders, public futures data)")
+            shadow_runner.init_status()
+    except Exception as exc:  # noqa: BLE001 — shadows are optional
+        log(f"WARN SHADOW_FUTURES not started: {type(exc).__name__}: {exc}")
+        shadow_runner = None
+
     watcher = None
     if not getattr(settings, "exit_watcher_enabled", True):
         log("EXIT_WATCHER off (EXIT_WATCHER_ENABLED=false)")
@@ -306,6 +320,12 @@ def main() -> None:
             except Exception as exc:  # noqa: BLE001
                 log(f"ERROR sleeve=futures_short {type(exc).__name__}: {exc}")
                 traceback.print_exc()
+
+        if shadow_runner is not None:
+            try:
+                shadow_runner.tick()
+            except Exception as exc:  # noqa: BLE001 — never take the loop down
+                log(f"WARN SHADOW_FUTURES tick: {type(exc).__name__}: {exc}")
 
         try:
             from dublin_bot.research import shadow_cycle
