@@ -42,3 +42,4 @@ data/*.log
 data/ticks/
 data/quotes/
 data/bars1m/
+logs/flow_cache/

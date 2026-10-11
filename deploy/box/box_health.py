@@ -181,6 +181,18 @@ def main() -> None:
         except Exception as e:  # noqa: BLE001
             actions.append(f"scorecard ERROR {type(e).__name__}: {e}")
 
+    # 6. self-running research: weekly walk-forward + order-flow overlay study, daily forward
+    #    shadow scoring and staged promotion (scripts/research_cycle.py decides what is due).
+    #    Paper research only; never touches locks/env/keys. Opt out: touch logs/RESEARCH_STOP.
+    if (now - float(st.get("research_check", 0)) >= 3600 and not (LOGS / "RESEARCH_STOP").exists()
+            and not lock_held(LOGS / "research_cycle.lock")):
+        st["research_check"] = now
+        subprocess.Popen(["setsid", "nohup", "nice", "-n", "19", sys.executable,
+                          str(REPO / "scripts" / "research_cycle.py")],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                         close_fds=True, cwd=str(REPO))
+        actions.append("research_cycle launched")
+
     st["last_run"] = now
     tmp = STATE.with_suffix(".tmp")
     tmp.write_text(json.dumps(st))

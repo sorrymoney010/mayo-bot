@@ -65,7 +65,44 @@ def render(rep: dict) -> str:
     if not rep["winners"]:
         lines.append("")
         lines.append("No candidate cleared the promotion bar. Nothing registered.")
+    of = rep.get("orderflow")
+    if of:
+        lines.append("")
+        if of.get("report"):
+            lines.append(f"Order-flow overlays ({of.get('configs_tried')} pre-registered configs): "
+                         f"{', '.join(of.get('shadow_candidates') or []) or 'no shadow candidate'}; "
+                         f"see {of['report']}")
+        else:
+            lines.append(f"Order-flow overlays: {of.get('skipped') or of.get('error')}")
     return "\n".join(lines)
+
+
+def orderflow_overlays(args, data: Path, costs: Costs, out_dir: Path) -> dict:
+    """Order-flow entry filters / exit timers on the live sleeves (needs tick files).
+
+    With --register, overlays that clear the backtest bar AND the improvement gate move
+    candidate -> shadow automatically in --flow-registry (no fills, no locks)."""
+    if not (data / "ticks").exists():
+        return {"skipped": "no tick files in the data dir"}
+    try:
+        from dublin_bot.flow_promotion import update_from_backtest
+        from dublin_bot.flow_research import load_flow_sleeve_frames, render_md, run_study
+        frames = load_flow_sleeve_frames(data, args.symbols, cache=args.flow_cache)
+        if not frames:
+            return {"skipped": "no contiguous tick run"}
+        rep = run_study(frames, costs, folds=args.folds)
+        paths = unique_report(out_dir, "orderflow_overlays", ".json", ".md")
+        paths[".json"].write_text(json.dumps(rep, indent=1, default=str), encoding="utf-8")
+        paths[".md"].write_text(render_md(rep), encoding="utf-8")
+        summary = {"report": str(paths[".md"].relative_to(ROOT)) if paths[".md"].is_relative_to(ROOT)
+                   else str(paths[".md"]), "configs_tried": rep["configs_tried"],
+                   "shadow_candidates": rep["shadow_candidates"]}
+        if args.register:
+            reg = update_from_backtest(rep, path=args.flow_registry, report_path=summary["report"])
+            summary["stages"] = {k: v.get("stage") for k, v in reg.items() if v.get("stage") != "candidate"}
+        return summary
+    except Exception as exc:  # noqa: BLE001 — the overlay study must not sink the weekly run
+        return {"error": f"{type(exc).__name__}: {exc}"}
 
 
 def main() -> int:
@@ -80,6 +117,11 @@ def main() -> int:
     ap.add_argument("--maker-bps", type=float, default=25.0)
     ap.add_argument("--register", action="store_true")
     ap.add_argument("--shadow-path", default=str(ROOT / "logs" / "shadow_sleeves.json"))
+    ap.add_argument("--no-orderflow", action="store_true",
+                    help="skip the order-flow overlay study (filters/exit timers on the live sleeves)")
+    ap.add_argument("--flow-registry", default=str(ROOT / "logs" / "flow_overlays.json"))
+    ap.add_argument("--flow-cache", default="/tmp/mayo-flow-cache",
+                    help="per-day 1m flow cache (never inside --data)")
     args = ap.parse_args()
     data = Path(args.data)
     frames: dict[int, list] = {}
@@ -121,6 +163,8 @@ def main() -> int:
         rel = str(json_path.relative_to(ROOT))
         rep["registered"] = [register_shadow(w, path=args.shadow_path, report=rel)
                              for w in rep["winners"]]
+    if found and not args.no_orderflow:
+        rep["orderflow"] = orderflow_overlays(args, data, costs, out_dir)
     json_path.write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8")
     md_path.write_text(render(rep) + "\n", encoding="utf-8")
     print(md_path.read_text(encoding="utf-8"))
