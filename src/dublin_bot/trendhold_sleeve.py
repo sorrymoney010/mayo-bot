@@ -353,6 +353,12 @@ class TrendHoldSleeve:
                 res.symbols[sym] = "signal bar older than one bar (not chased)"
                 continue
             st["last_signal_bar"][sym] = bar_iso
+            from .flow_promotion import paper_entry_veto
+            veto = paper_entry_veto(f"trendhold@{self.tf_seconds // 60}m", sym, settings=self.settings)
+            if veto:
+                res.symbols[sym] = veto[:160]
+                res.blocked.append(blocked_entry(self, sym, sig, bars, veto, gate="flow_overlay"))
+                continue
             if self._try_buy(st, res, sym, sig, bar_iso, lots, state, now):
                 mine.add(sym)
                 held_all.add(sym)

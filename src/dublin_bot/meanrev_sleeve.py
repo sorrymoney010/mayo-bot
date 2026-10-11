@@ -441,6 +441,12 @@ class MeanRevSleeve:
             if st["last_order_bar"].get(sym) == bar_iso:
                 res.symbols[sym] = f"signal bar {bar_iso} already handled"
                 continue
+            from .flow_promotion import paper_entry_veto
+            veto = paper_entry_veto(f"meanrev_mk@{self.tf_seconds // 60}m", sym, settings=self.settings)
+            if veto:
+                res.symbols[sym] = veto[:140]
+                res.blocked.append(blocked_entry(self, sym, sig, bars, veto, gate="flow_overlay"))
+                continue
             if now >= expires_at:
                 res.symbols[sym] = "signal bar too old (order window passed)"
                 continue

@@ -173,6 +173,9 @@ class Settings(BaseSettings):
     meanrev_limit_valid_bars: int = Field(default=1, ge=1, le=6)
     # Optional order-flow entry filter for the 4h sleeve (see regime_flow_filter).
     meanrev_flow_filter: str = Field(default="")
+    # Order-flow overlay auto-promotion (src/dublin_bot/flow_promotion.py). Shadow stage is
+    # automatic and fill-free; moving a forward-proven overlay into PAPER needs this on.
+    flow_auto_paper: bool = Field(default=False)
     meanrev_state_path: Path = Path("logs/meanrev_sleeve.json")
     # ── Daily risk-on filter (D1) on ENTRIES ──────────────────────
     # close_d > SMA50_d and SMA50_d rising over 5 days, closed UTC daily bars

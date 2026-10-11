@@ -55,7 +55,7 @@ def _ticks(symbol: str, tf: int, data: Path) -> pd.DataFrame | None:
     """Tick-built frame, or None. Does not create ``data/bars1m``."""
     try:
         from .pipeline.history import load_pipeline_bars
-        df, _info = load_pipeline_bars(data, symbol, tf, write_cache=False)
+        df, _info = load_pipeline_bars(data, symbol, tf, write_cache=False, run="auto")
     except Exception:
         return None
     if df is None or not len(df):

@@ -108,7 +108,9 @@ while any existing lock is still shut.
 | Futures short sleeve (`PF_XBTUSD`, `PF_ETHUSD`, `PF_SOLUSD`) | **off** | 2026-10-03 study: 0 one-hour shorts, 4 four-hour shorts at −164 bps. Leverage hard-capped at 2x |
 | `ALLOW_FUTURES_LIVE_ORDERS` / `ALLOW_MARGIN_LIVE_ORDERS` | **off** | Also require the three safety locks to be opened |
 | Spot-margin short sleeve | not built | Borrow cost is modeled; perpetuals are the short. See docs/PAPER_PRO.md |
-| `scripts/strategy_research.py` | manual | Walk-forward on 1h+ bars; winners register as shadow sleeves (no fills) |
+| `scripts/strategy_research.py` | weekly via `research_cycle.py` | Walk-forward on 1h+ bars + order-flow overlay study; winners register as shadow (no fills) |
+| `scripts/research_cycle.py` | box_health (hourly check) | Weekly research + daily forward shadow scoring; staged candidate -> shadow -> paper promotion of order-flow overlays |
+| `scripts/study_orderflow_exits.py` | manual | Order-flow entry filters / exit timers on the live sleeves (walk-forward, after fees) |
 
 ## Important
 

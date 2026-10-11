@@ -193,3 +193,28 @@ fill them. The dated write-up is `reports/strategy_research_<date>.md`.
 
 Nothing in that script writes `PAPER_TRADING`, `DRY_RUN`, `ALLOW_LIVE_TRADING`,
 or the new venue locks.
+
+### Order-flow overlays and the self-running loop
+
+`scripts/strategy_research.py` now also runs the order-flow overlay study
+(`dublin_bot.flow_research`, standalone: `scripts/study_orderflow_exits.py`) when
+tick files exist: 35 pre-registered entry filters / exit timers (large-order
+distribution, absorption, buy/sell climax, VWAP euphoria, hold-through-shakeout
+stops, partial take-profits) on the live regime@60m, meanrev_mk@240m and
+trendhold@240m sleeves, scored on walk-forward OOS folds after fees. Tick-built
+bars now use the latest contiguous run only if it spans >= 60 days, otherwise the
+longest run (the Oct 4-9 outage hole had shrunk research to 2.4 days / 0 trades).
+
+Staged promotion (`dublin_bot.flow_promotion`, registry `logs/flow_overlays.json`):
+
+| stage | how it gets there | effect |
+|---|---|---|
+| candidate | scored by the weekly study | none |
+| shadow | backtest bar (>= 30 OOS trades, mean > 0, 90% LB > 0, ex-best-2 > 0, P&L >= 0) AND improvement gate vs the unmodified sleeve (higher mean and return, >= 3/4 folds better, stress-cost mean > 0, >= 2/3 coins positive) — automatic | forward replay only, `logs/flow_shadow_trades.jsonl`; no fills |
+| paper | >= 30 FORWARD shadow trades pass the same bar AND beat the unmodified sleeve on the same window; `flow_auto_paper=true`; process in paper mode; entry-filter overlays only | the sleeve skips entries the overlay vetoes (fails open on any error) |
+| retired | paper-window forward trades (>= 30) mean <= 0 or below the sleeve | off again |
+
+`scripts/research_cycle.py` (launched hourly-checked by `deploy/box/box_health.py`,
+niced, single instance) runs the weekly study and the daily forward scoring /
+stage transitions. Opt out with `touch logs/RESEARCH_STOP`. Nothing in it reads or
+writes a lock, env file or key, and live trading is never a stage.

@@ -1143,6 +1143,17 @@ class TradingEngine:
                         signal.price, signal.atr, signal.stop_price,
                     )
 
+            # Gate 5.655 — order-flow overlay, PAPER stage only (flow_promotion). With no
+            # overlay promoted to paper this is a registry read and nothing else; any error
+            # leaves the signal unchanged.
+            if signal.action is Action.BUY and str(getattr(self.settings, "strategy", "")) == "regime_trend":
+                from .flow_promotion import paper_entry_veto
+                veto = paper_entry_veto(f"regime@{int(self.settings.timeframe_minutes)}m",
+                                        self.settings.symbol, settings=self.settings)
+                if veto:
+                    signal = Signal(Action.WAIT, signal.score, veto, signal.price, signal.atr,
+                                    signal.stop_price)
+
             # Gate 5.66 — adaptive learner: bench negative-expectancy symbol /
             # regime after >= learner_min_sample closed trades, shrink size on
             # weak/unproven names. Exits are never gated.
