@@ -205,7 +205,9 @@ class Settings(BaseSettings):
     # (research/signal_frequency_study.py). Not individually significant per
     # coin; must go through candidate->shadow->paper before any use.
     # Risk bounds: 1 position per coin, <=3 alt positions open, 8% book each.
-    alt_regime_enabled: bool = Field(default=False)
+    alt_regime_enabled: bool = Field(default=False)  # paper sleeve: stays OFF
+    # SHADOW only (virtual ledger logs/alt_regime_shadow.jsonl, public OHLC, no orders)
+    alt_regime_shadow_enabled: bool = Field(default=True)
     alt_regime_symbols: list[str] = Field(default_factory=lambda: [
         "XRP/USD", "DOGE/USD", "ADA/USD", "AVAX/USD", "LINK/USD", "LTC/USD", "DOT/USD", "SUI/USD"])
     alt_regime_timeframe_minutes: int = Field(default=240, ge=60)

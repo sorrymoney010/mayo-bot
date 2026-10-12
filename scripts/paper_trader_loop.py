@@ -210,6 +210,18 @@ def main() -> None:
         log(f"WARN SHADOW_FUTURES not started: {type(exc).__name__}: {exc}")
         shadow_runner = None
 
+    alt_shadow = None
+    try:
+        from dublin_bot.alt_regime_shadow import AltShadowRunner, build_alt_shadow
+        _alt = build_alt_shadow(settings)
+        if _alt is not None:
+            alt_shadow = AltShadowRunner(_alt, log)
+            log(f"SHADOW_ALT on: {_alt.name}@{_alt.tf_minutes}m {','.join(_alt.symbols)} "
+                "(virtual ledger only; no paper fills, no orders, public spot OHLC)")
+    except Exception as exc:  # noqa: BLE001 — shadows are optional
+        log(f"WARN SHADOW_ALT not started: {type(exc).__name__}: {exc}")
+        alt_shadow = None
+
     watcher = None
     if not getattr(settings, "exit_watcher_enabled", True):
         log("EXIT_WATCHER off (EXIT_WATCHER_ENABLED=false)")
@@ -326,6 +338,9 @@ def main() -> None:
                 shadow_runner.tick()
             except Exception as exc:  # noqa: BLE001 — never take the loop down
                 log(f"WARN SHADOW_FUTURES tick: {type(exc).__name__}: {exc}")
+
+        if alt_shadow is not None:
+            alt_shadow.tick()  # own try/except inside; never blocks (daemon thread)
 
         try:
             from dublin_bot.research import shadow_cycle
