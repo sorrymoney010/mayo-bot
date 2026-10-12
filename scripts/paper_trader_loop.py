@@ -238,6 +238,34 @@ def main() -> None:
             log(f"EXIT_WATCHER not started: {type(exc).__name__}: {exc}")
             watcher = None
 
+    alt_sleeve = alt_watcher = None
+    alt_thread = None
+    try:
+        from dublin_bot.alt_regime_sleeve import AltExitWatcher, AltRegimeSleeve, sleeve_active as alt_active
+        alt_on, alt_why = alt_active(settings)
+        if alt_on:
+            alt_sleeve = AltRegimeSleeve(settings)
+            alt_watcher = AltExitWatcher(settings, held_lock=lock)
+            w_ok = alt_watcher.start()
+            log(f"SLEEVES alt_regime_4h=on PAPER-ENABLED ({alt_why}) tf={alt_sleeve.tf}m "
+                f"symbols={','.join(alt_sleeve.symbols)} size={alt_sleeve.frac:.0%}/pos "
+                f"max_open={alt_sleeve.max_open} 1/coin book=logs/alt/paper_portfolio.json "
+                f"fast_exit_watcher={'on' if w_ok else 'off'} (simulated fills, public prices, no orders)")
+        else:
+            log(f"SLEEVES alt_regime_4h=off ({alt_why})")
+    except Exception as exc:  # noqa: BLE001 — optional sleeve
+        log(f"WARN alt_regime_4h not started: {type(exc).__name__}: {exc}")
+        alt_sleeve = None
+
+    def _alt_work():
+        try:
+            r = alt_sleeve.run_cycle()
+            if r["actions"] or r["errors"]:
+                log(f"CYCLE sleeve=alt_regime_4h paper=True actions={[(a['event'], a.get('symbol')) for a in r['actions']]} "
+                    f"open={r.get('open')} errors={r['errors'][:4]}"[:900])
+        except Exception as exc:  # noqa: BLE001
+            log(f"WARN sleeve=alt_regime_4h {type(exc).__name__}: {exc}"[:400])
+
     while _running:
         try:
             engine = TradingEngine(settings)
@@ -341,6 +369,10 @@ def main() -> None:
 
         if alt_shadow is not None:
             alt_shadow.tick()  # own try/except inside; never blocks (daemon thread)
+        if alt_sleeve is not None and (alt_thread is None or not alt_thread.is_alive()):
+            import threading as _th
+            alt_thread = _th.Thread(target=_alt_work, name="alt-regime-sleeve", daemon=True)
+            alt_thread.start()
 
         try:
             from dublin_bot.research import shadow_cycle

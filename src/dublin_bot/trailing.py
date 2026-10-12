@@ -236,5 +236,6 @@ def sleeve_trail_enabled(settings, sleeve: str) -> bool:
         "trendhold_4h": "trailing_tp_trendhold",
         "trendhold": "trailing_tp_trendhold",
         "futures_short": "trailing_tp_futures",
+        "alt_regime_4h": "trailing_tp_regime",  # same trail as regime_trend
     }.get(sleeve, "")
     return bool(flag and getattr(settings, flag, False))

@@ -134,6 +134,8 @@ def sleeve_strategy_key(settings, sleeve: str) -> str:
     if sleeve == "futures_short":
         tf = int(getattr(settings, "futures_timeframe_minutes", 240) or 240)
         return f"futures_short@{tf}m"
+    if sleeve == "alt_regime_4h":
+        return "alt_regime@240m"
     name = str(getattr(settings, "strategy", "regime") or "regime").lower()
     family = {
         "breakout": "breakout", "momentum_breakout": "breakout",
