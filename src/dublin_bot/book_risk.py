@@ -65,4 +65,31 @@ def futures_equity_addon(path: Path | str | None = None) -> float:
             extra += float(p.get("margin") or 0.0) + float(p.get("unrealized") or 0.0)
         except (TypeError, ValueError):
             continue
-    return extra
+    # The alt_regime_4h paper sub-book's P&L rides on the same equity readers so the
+    # daily-loss / drawdown breakers and the dashboard see one combined book. Its lots
+    # never enter paper_bot_positions.json, so they keep their own slot pool.
+    return extra + alt_equity_addon()
+
+
+ALT_BOOK = Path("logs/alt/paper_portfolio.json")
+
+
+def alt_equity_addon(path: Path | str | None = None) -> float:
+    """Alt sub-book (cash + open cost basis) minus its seed (``seed.json`` next to it,
+    written once by the sleeve); 0.0 when absent/unreadable."""
+    _json = json
+    p = Path(path) if path else ALT_BOOK
+    try:
+        if not p.exists():
+            return 0.0
+        data = _json.loads(p.read_text(encoding="utf-8"))
+        seed_file = p.parent / "seed.json"
+        seed = float(_json.loads(seed_file.read_text(encoding="utf-8")).get("seed") or 0.0)
+        cash = float(data.get("cash"))
+        basis = sum(float(x.get("quantity", 0.0)) * float(x.get("entry_price", 0.0))
+                    for x in data.get("positions", []))
+        if seed <= 0:
+            return 0.0
+        return cash + basis - seed
+    except (OSError, ValueError, TypeError):
+        return 0.0

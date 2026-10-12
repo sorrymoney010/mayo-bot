@@ -52,3 +52,24 @@ def test_paper_entry_caps_stop_and_isolation(tmp_path, monkeypatch):
 def test_refuses_without_paper_locks(tmp_path):
     s = Settings().model_copy(update={"allow_live_trading": True})
     assert m.AltRegimeSleeve(s, base_dir=tmp_path).run_cycle()["active"] is False
+
+
+def test_alt_pnl_reaches_breakers_and_equity_not_slots(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # every relative logs/ path lands in tmp
+    from dublin_bot.book_risk import alt_equity_addon, futures_equity_addon
+    from dublin_bot.state import StateStore
+    s = Settings()
+    base = tmp_path / "logs" / "alt"
+    sl = m.AltRegimeSleeve(s, base_dir=base, ticker=lambda sym: {"bid": 1.0, "ask": 1.0, "last": 1.0})
+    assert alt_equity_addon() == 0.0
+    st = sl.load_state()
+    sl._buy(st, {"actions": []}, "XRP/USD", 0.01, 0, 0.0)
+    assert abs(alt_equity_addon()) < 1e-6  # at cost basis: no P&L yet
+    sl.ticker = lambda sym: {"bid": 0.9, "ask": 0.9, "last": 0.9}
+    out = {"actions": []}
+    sl._close(st, out, "XRP/USD", sl.ticker("XRP/USD"), "stop", 1.0)
+    loss = alt_equity_addon()
+    assert loss < 0 and abs(futures_equity_addon(None) - loss) < 1e-9  # every equity reader sees it
+    sess = StateStore(tmp_path / s.session_state_path).load(s.strategy_equity_usd)
+    assert sess.realized_pnl_today < 0  # daily-loss breaker input
+    assert not (tmp_path / "logs" / "paper_bot_positions.json").exists()  # slot pool untouched

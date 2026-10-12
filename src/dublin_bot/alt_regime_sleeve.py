@@ -8,9 +8,10 @@ regime trailing stop when ``trailing_tp_regime`` is on (same as regime_trend).
 
 ISOLATION (deliberate): the sleeve keeps its own paper sub-book
 ``logs/alt/paper_portfolio.json`` (seeded at STRATEGY_EQUITY_USD, never mixed
-with ``logs/paper_portfolio.json``). It never writes ``paper_bot_positions.json``,
-the sleeve registry or session_state, so the BTC/ETH/SOL sleeves' slots, cash,
-exposure and breakers are untouched. Its own caps: 1 position per coin, at most
+with ``logs/paper_portfolio.json``). It never writes ``paper_bot_positions.json``
+or the sleeve registry, so the BTC/ETH/SOL slot pool and cash are untouched. Its
+P&L DOES reach the shared breakers: closes call ``record_close_pnl`` and every
+equity reader adds ``book_risk.alt_equity_addon`` (combined equity). Its own caps: 1 position per coin, at most
 ``alt_regime_max_open_positions`` (3), ``alt_regime_position_fraction`` (5%) of
 the book each. Fills: ``FillModel`` (paper taker fee + slippage) at the PUBLIC
 ticker. No gateway, no keys, no orders. Refuses to run unless paper + dry-run +
@@ -89,6 +90,9 @@ class AltRegimeSleeve:
         self.p = dict(adx_enter=float(settings.adx_enter_above), adx_exit=float(settings.adx_exit_below),
                       lookback=20, atr_mult=3.0, stop=0.03, d1=False)
         self.base.mkdir(parents=True, exist_ok=True)
+        seed_file = self.base / "seed.json"
+        if not seed_file.exists():
+            seed_file.write_text(json.dumps({"seed": self.seed}), encoding="utf-8")
 
     # ── files ──
     def load_state(self) -> dict:
@@ -188,7 +192,7 @@ class AltRegimeSleeve:
             return
         t = self.ticker(sym)
         notional = self.seed * self.frac
-        snap = self.portfolio.snapshot()
+        snap = self.portfolio.load(equity=self.seed, cash=self.seed)
         price = float(t["ask"])
         if not (price > 0 and math.isfinite(price)):
             return
@@ -216,6 +220,25 @@ class AltRegimeSleeve:
                                           realized=round(realized, 6),
                                           net_bps=round(realized / basis * 1e4, 1) if basis else 0.0))
         _learn(self.settings, sym, realized, basis, reason)
+        account_close(self.settings, realized)
+
+
+def combined_equity(settings) -> float:
+    """Main paper book (cash + basis) + futures addon + alt addon (see book_risk)."""
+    from .book_risk import futures_equity_addon
+    seed = float(settings.strategy_equity_usd)
+    snap = PaperPortfolio(Path("logs/paper_portfolio.json")).load(equity=seed, cash=seed)
+    basis = sum(p.quantity * p.entry_price for p in snap.positions.values())
+    return max(snap.cash + basis, 0.0) + futures_equity_addon(getattr(settings, "futures_ledger_path", None))
+
+
+def account_close(settings, realized: float) -> None:
+    """Alt closes land in the SHARED session (daily-loss halt, streak, drawdown)."""
+    try:
+        from .state import record_close_pnl
+        record_close_pnl(settings.session_state_path, float(realized), combined_equity(settings), settings)
+    except Exception:
+        pass
 
 
 def _learn(settings, sym, realized, notional, reason, fast=False) -> None:
@@ -268,8 +291,8 @@ class AltExitWatcher(ExitWatcher):
     def _release_owner(self, symbol):  # alt coins are not in the shared registry
         return None
 
-    def _account(self, realized):  # shared session/breakers untouched by design
-        return None
+    def _account(self, realized):  # shared breakers see alt P&L (combined equity)
+        account_close(self.settings, realized)
 
     def _learn(self, symbol, sleeve, realized, qty, price, reason):
         _learn(self.settings, symbol, realized, qty * price, reason, fast=True)

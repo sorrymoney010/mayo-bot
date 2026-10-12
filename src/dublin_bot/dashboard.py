@@ -719,9 +719,20 @@ def portfolio_snapshot(settings: Settings) -> dict[str, object]:
             portfolio = engine.paper_portfolio.mark_to_market({settings.symbol: engine.gateway.get_ticker()["last"]})
         realized = round(state.realized_pnl_today, 2)
         positions = portfolio.to_dict()["positions"] or []
+        alt_addon = 0.0
+        try:  # alt_regime_4h paper sub-book: show its lots + fold its P&L into equity
+            from .book_risk import ALT_BOOK, alt_equity_addon
+            if ALT_BOOK.exists():
+                from .paper import PaperPortfolio as _PP
+                for p in (_PP(ALT_BOOK).load(equity=0.0, cash=0.0).to_dict()["positions"] or []):
+                    positions.append({**p, "sleeve": "alt_regime_4h", "book": "alt"})
+                alt_addon = alt_equity_addon()
+        except Exception:
+            pass
         unrealized = round(sum(float(p.get("unrealized_pl", 0.0)) for p in positions), 2)
         return {
-            "equity": round(portfolio.equity, 2),
+            "alt_book_pnl": round(alt_addon, 2),
+            "equity": round(portfolio.equity + alt_addon, 2),
             "cash": round(portfolio.cash, 2),
             "positions": positions,
             "orders": engine.gateway.orders() if settings.has_credentials else [],
