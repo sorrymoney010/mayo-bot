@@ -199,6 +199,20 @@ class Settings(BaseSettings):
     trendhold_ema_slow: int = Field(default=100, ge=10)
     trendhold_daily_filter: bool = Field(default=True)
     trendhold_state_path: Path = Path("logs/trendhold_sleeve.json")
+    # ── Alt-coin regime CANDIDATE (research only; NOT wired, OFF) ──
+    # regime_trend@240m, ADX 25/20, lookback 20, D1 filter OFF, pooled over
+    # 8 alts cleared the promotion bar on the last-60d holdout at 40/25/10 bps
+    # (research/signal_frequency_study.py). Not individually significant per
+    # coin; must go through candidate->shadow->paper before any use.
+    # Risk bounds: 1 position per coin, <=3 alt positions open, 8% book each.
+    alt_regime_enabled: bool = Field(default=False)
+    alt_regime_symbols: list[str] = Field(default_factory=lambda: [
+        "XRP/USD", "DOGE/USD", "ADA/USD", "AVAX/USD", "LINK/USD", "LTC/USD", "DOT/USD", "SUI/USD"])
+    alt_regime_timeframe_minutes: int = Field(default=240, ge=60)
+    alt_regime_daily_filter: bool = Field(default=False)
+    alt_regime_max_positions_per_symbol: int = Field(default=1, ge=1, le=1)
+    alt_regime_max_open_positions: int = Field(default=3, ge=1, le=4)
+    alt_regime_position_fraction: float = Field(default=0.08, gt=0, le=0.10)
     # ── Market-data pipeline (Data -> Ticks -> Bars -> Technicals) ──
     # When enabled, gateway.get_bars() for BTC/ETH/SOL at 1/15/60/240m serves
     # tick-built bars (with order-flow columns) from PIPELINE_DATA_DIR, written
