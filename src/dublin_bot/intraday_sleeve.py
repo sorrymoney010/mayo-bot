@@ -1,4 +1,9 @@
-"""Intraday PAPER sleeves (15m / 30m / 1h) for BTC/ETH/SOL — the user's original strategy.
+"""Intraday PAPER sleeve for BTC/ETH/SOL. ACTIVE strategy (2026-10-24): ``mtf_synth`` — ONE strategy
+synthesized from all user sources + research (reports/intraday_reset_2026-10-24.md):
+1h trend (EMA20>EMA50, close>EMA200) + 30m momentum (close>EMA20, RSI14 45-68) + 15m trigger (close >
+prior 20-bar high, volume >= 1.10x avg); post-only limit entry; stop 1.5xATR14(15m); 1/3 off at 1R and
+2R (maker), stop to breakeven after TP1, runner exits on 1h close < 1h EMA20; 12h time stop.
+Legacy single-timeframe variants below are kept for research only.
 
 PAPER ONLY: no gateway, no keys, no private API, no orders. Public Kraken OHLC + the box tick
 collector (data/ticks via dublin_bot.pipeline) only. Own sub-book under logs/intraday/.
@@ -28,7 +33,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
-VARIANTS = ("user_breakout", "user_emacross", "pullback_trend")
+VARIANTS = ("user_breakout", "user_emacross", "pullback_trend", "mtf_synth")
 
 
 def _env(name, default):
@@ -118,7 +123,7 @@ class IntradaySleeve:
         self.slip = float(_env("INTRADAY_SLIPPAGE_BPS", "10"))
         self.risk = float(_env("INTRADAY_RISK_PER_TRADE", "0.01"))
         self.cap = float(_env("INTRADAY_MAX_POSITION_FRACTION", "0.10"))
-        self.max_open = int(_env("INTRADAY_MAX_OPEN", "9"))
+        self.max_open = int(_env("INTRADAY_MAX_OPEN", "3"))
         self.daily_loss = float(_env("INTRADAY_MAX_DAILY_LOSS_FRACTION", "0.03"))
         self.time_stop_h = float(_env("INTRADAY_TIME_STOP_HOURS", "12"))
         self.state = self._load()
@@ -194,7 +199,14 @@ class IntradaySleeve:
         self._roll_day(marks)
         self._work_pending(out)
         self._manage(out, marks)
-        for tf in self.tfs:
+        if self.variants == ["mtf_synth"]:
+            for sym in PAIRS:
+                try:
+                    self._evaluate_mtf(sym, out, marks)
+                except Exception as exc:  # noqa: BLE001
+                    out["errors"].append(f"{sym}@mtf: {type(exc).__name__}: {exc}"[:200])
+            self._runner_exit(out, marks)
+        for tf in ([] if self.variants == ["mtf_synth"] else self.tfs):
             for sym in PAIRS:
                 try:
                     self._evaluate(sym, tf, out, marks)
@@ -258,6 +270,65 @@ class IntradaySleeve:
             out["actions"].append({"event": "post_only_limit", "symbol": sym, "lane": lane, "limit": lim})
             self._event(self.events_path, {"event": "post_only_limit", **self.state["pending"][lane]})
 
+    # ---- ONE synthesized strategy: 1h trend + 30m momentum + 15m breakout trigger ----
+    def mtf_state(self, sym):
+        b15, b30, b60 = self.bars(sym, 15), self.bars(sym, 30), self.bars(sym, 60)
+        if len(b15) < 40 or len(b30) < 40 or len(b60) < 210:
+            return None, f"warmup 15m={len(b15)} 30m={len(b30)} 1h={len(b60)}"
+        h = b60.close
+        he20, he50, he200 = ema(h, 20), ema(h, 50), ema(h, 200)
+        m_rsi, m_e20 = rsi(b30.close), ema(b30.close, 20)
+        a = atr(b15); hi = b15.high.rolling(20).max().shift()
+        vr = b15.volume / b15.volume.rolling(20).mean().shift()
+        st = {"bar": b15.index[-1].isoformat(), "close": float(b15.close.iloc[-1]), "atr": float(a.iloc[-1]),
+              "h_up": bool(he20.iloc[-1] > he50.iloc[-1] and h.iloc[-1] > he200.iloc[-1]),
+              "h_close": float(h.iloc[-1]), "h_e20": float(he20.iloc[-1]), "h_bar": b60.index[-1].isoformat(),
+              "m_rsi": float(m_rsi.iloc[-1]), "m_ok": bool(b30.close.iloc[-1] > m_e20.iloc[-1]),
+              "brk": bool(b15.close.iloc[-1] > hi.iloc[-1]), "vr": float(vr.iloc[-1])}
+        fails = [k for k, ok in (("1h_trend", st["h_up"]), ("30m>ema20", st["m_ok"]),
+                                 ("30m_rsi45-68", 45 <= st["m_rsi"] <= 68), ("15m_20bar_breakout", st["brk"]),
+                                 ("15m_vol>=1.1x", st["vr"] >= 1.10)) if not ok]
+        st["fire"] = not fails
+        return st, ("FIRE" if not fails else "wait: " + ",".join(fails))
+
+    def _evaluate_mtf(self, sym, out, marks):
+        st, why = self.mtf_state(sym)
+        if st is None:
+            out["signals"][f"{sym}@15/30/60m"] = why
+            return
+        out["signals"][f"{sym}@15/30/60m"] = (f"bar={st['bar'][11:16]}Z close={st['close']:.2f} 1h_up={st['h_up']} "
+                                             f"30m_rsi={st['m_rsi']:.0f} vol={st['vr']:.2f}x {why}")
+        lane = f"mtf_synth|15|{sym}"
+        if self.state["last_bar"].get(lane) == st["bar"]:
+            return
+        self.state["last_bar"][lane] = st["bar"]
+        if not st["fire"] or lane in self.state["positions"] or lane in self.state["pending"]:
+            return
+        if len(self.state["positions"]) + len(self.state["pending"]) >= self.max_open or self._halted(marks):
+            out["actions"].append({"event": "skip_limits", "symbol": sym, "lane": lane})
+            return
+        lim, risk_d = st["close"], 1.5 * st["atr"]
+        eq = self.equity(marks)
+        qty = min(eq * self.risk / risk_d, eq * self.cap / lim)
+        if qty * lim < 5 or not math.isfinite(qty):
+            return
+        self.state["pending"][lane] = {"lane": lane, "variant": "mtf_synth", "tf": 15, "symbol": sym, "limit": lim,
+                                       "qty": qty, "risk": risk_d, "placed": self.now(), "expires": self.now() + 900,
+                                       "bar": st["bar"], "ladder": [1, 2]}
+        out["actions"].append({"event": "post_only_limit", "symbol": sym, "lane": lane, "limit": lim})
+        self._event(self.events_path, {"event": "post_only_limit", **self.state["pending"][lane]})
+
+    def _runner_exit(self, out, marks):
+        for lane, pos in list(self.state["positions"].items()):
+            if pos.get("variant") != "mtf_synth" or pos["hit"] < 1 or pos["qty"] <= 1e-12:
+                continue
+            b60 = self.bars(pos["symbol"], 60)
+            if len(b60) > 25 and b60.close.iloc[-1] < ema(b60.close, 20).iloc[-1] \
+                    and b60.index[-1].timestamp() + 3600 > pos["opened"]:
+                px = marks.get(pos["symbol"], float(b60.close.iloc[-1])) * (1 - self.slip / 1e4)
+                self._sell(pos, pos["qty"], px, self.taker, "runner_1h_close<ema20", out)
+                self._close_if_done(lane, pos)
+
     def _work_pending(self, out):
         for lane, p in list(self.state["pending"].items()):
             m = self.minute_path(p["symbol"], p["placed"])
@@ -270,7 +341,7 @@ class IntradaySleeve:
                     continue
                 self.state["cash"] -= cost
                 pos = {**p, "entry": p["limit"], "stop": p["limit"] - p["risk"],
-                       "tps": [p["limit"] + p["risk"] * k for k in (1, 2, 3)], "hit": 0,
+                       "tps": [p["limit"] + p["risk"] * k for k in p.get("ladder", (1, 2, 3))], "hit": 0,
                        "qty0": p["qty"], "opened": float(hit.index[0].timestamp()),
                        "checked": float(hit.index[0].timestamp()) + 60, "realized": -p["qty"] * p["limit"] * self.maker / 1e4}
                 self.state["positions"][lane] = pos
@@ -305,7 +376,7 @@ class IntradaySleeve:
                     self._sell(pos, pos["qty"], px, self.taker,
                                "stop_breakeven" if pos["hit"] else "stop_loss", out)
                     break
-                while pos["hit"] < 3 and bar.high > pos["tps"][pos["hit"]]:
+                while pos["hit"] < len(pos["tps"]) and bar.high > pos["tps"][pos["hit"]]:
                     q = pos["qty0"] / 3 if pos["hit"] < 2 else pos["qty"]
                     self._sell(pos, q, pos["tps"][pos["hit"]], self.maker, f"tp{pos['hit'] + 1}", out)
                     pos["hit"] += 1
@@ -314,12 +385,15 @@ class IntradaySleeve:
                 pos["checked"] = ts.timestamp() + 60
             if pos["qty"] > 1e-12 and self.now() - pos["opened"] > self.time_stop_h * 3600 and pos["symbol"] in marks:
                 self._sell(pos, pos["qty"], marks[pos["symbol"]] * (1 - self.slip / 1e4), self.taker, "time_stop", out)
-            if pos["qty"] <= 1e-12:
-                notional = pos["qty0"] * pos["entry"]
-                rec = {"lane": lane, "variant": pos["variant"], "tf": pos["tf"], "symbol": pos["symbol"],
-                       "entry": pos["entry"], "opened": pos["opened"], "closed": self.now(),
-                       "tps_hit": pos["hit"], "pnl_usd": round(pos["realized"], 4),
-                       "net_bps": round(pos["realized"] / notional * 1e4, 1)}
-                self._event(self.trades_path, rec)
-                self.state["stats"]["closed"] += 1
-                del self.state["positions"][lane]
+            self._close_if_done(lane, pos)
+
+    def _close_if_done(self, lane, pos):
+        if lane in self.state["positions"] and pos["qty"] <= 1e-12:
+            notional = pos["qty0"] * pos["entry"]
+            rec = {"lane": lane, "variant": pos["variant"], "tf": pos["tf"], "symbol": pos["symbol"],
+                   "entry": pos["entry"], "opened": pos["opened"], "closed": self.now(),
+                   "tps_hit": pos["hit"], "pnl_usd": round(pos["realized"], 4),
+                   "net_bps": round(pos["realized"] / notional * 1e4, 1)}
+            self._event(self.trades_path, rec)
+            self.state["stats"]["closed"] += 1
+            del self.state["positions"][lane]

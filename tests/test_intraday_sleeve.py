@@ -57,3 +57,25 @@ def test_refuses_when_not_paper(tmp_path, monkeypatch):
     monkeypatch.setenv("INTRADAY_SLEEVE_ENABLED", "true")
     monkeypatch.setenv("ALLOW_LIVE_TRADING", "true")
     assert m.sleeve_active()[0] is False
+
+
+def test_mtf_synth_single_strategy_fires_and_ladders(tmp_path, monkeypatch):
+    monkeypatch.setenv("INTRADAY_SLEEVE_ENABLED", "true")
+    monkeypatch.setenv("INTRADAY_VARIANTS", "mtf_synth")
+    now = [pd.Timestamp("2026-10-20 12:00", tz="UTC").timestamp()]
+    s = m.IntradaySleeve(root=tmp_path, now_fn=lambda: now[0])
+
+    def bars(sym, tf):
+        b = _bars(n=400, tf=tf, drift=0.05)
+        b = b.set_axis(b.index - b.index[-1] + pd.Timestamp(now[0] - tf * 60, unit="s", tz="UTC"))
+        if tf == 15:
+            b.iloc[-1, b.columns.get_loc("close")] += 2; b.iloc[-1, b.columns.get_loc("high")] += 2
+            b.iloc[-1, b.columns.get_loc("volume")] = 40
+        return b
+    monkeypatch.setattr(s, "bars", bars)
+    monkeypatch.setattr(m, "rsi", lambda c, n=14: pd.Series(55.0, index=c.index))
+    path = {"p": pd.DataFrame(columns=["open", "high", "low", "close"])}
+    monkeypatch.setattr(s, "minute_path", lambda sym, since: path["p"])
+    out = s.run_cycle()
+    assert sum(a["event"] == "post_only_limit" for a in out["actions"]) == 3
+    assert all(k.startswith("mtf_synth|15|") for k in s.state["pending"])

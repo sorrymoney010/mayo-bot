@@ -114,20 +114,21 @@ PAPER_ENV=(
   PIPELINE_STALE_SECONDS=600
   # SHADOW perp sleeves (virtual ledger only; no paper fills, no orders, no lock changes).
   FUTURES_SHADOW_D1FLIP_ENABLED=false   # disabled 2026-10-23 (audit v2); code kept
-  FUTURES_SHADOW_DONCHIAN_ENABLED=true
+  FUTURES_SHADOW_DONCHIAN_ENABLED=false   # disabled 2026-10-24 (single active sleeve); code kept
   # 2026-10-24 INTRADAY RESET (user's original strategy on 15m/30m/1h; PAPER sub-book logs/intraday/).
   PAPER_LOOP_SECONDS=60
   PRIMARY_ENGINE_ENABLED=false   # regime_trend@60m off; code kept
   ALT_REGIME_ENABLED=false       # alt_regime_4h off; code kept
+  ALT_REGIME_SHADOW_ENABLED=false   # alt shadow off (single active sleeve); code kept
   INTRADAY_SLEEVE_ENABLED=true
   INTRADAY_TFS=15,30,60
-  INTRADAY_VARIANTS=user_breakout,user_emacross,pullback_trend
+  INTRADAY_VARIANTS=mtf_synth   # ONE synthesized strategy (1h trend + 30m momentum + 15m breakout)
   INTRADAY_MAKER_FEE_BPS=40      # Kraken Pro Tier 1 (verified kraken.com/features/fee-schedule 2026-10-24)
   INTRADAY_TAKER_FEE_BPS=80
   INTRADAY_SLIPPAGE_BPS=10
   INTRADAY_RISK_PER_TRADE=0.01
-  INTRADAY_MAX_POSITION_FRACTION=0.10
-  INTRADAY_MAX_OPEN=9
+  INTRADAY_MAX_POSITION_FRACTION=0.25
+  INTRADAY_MAX_OPEN=3
   INTRADAY_START_EQUITY_USD=466.81
 )
 blog() { local f=$1; shift; echo "$(date "+%F %T %Z") $*" >> "$f"; }
@@ -165,3 +166,6 @@ watch_child() {
   done
   wait "$pid"
 }
+
+# USER URGENT STOP 2026-10-15
+export SAFETY_LOCKED=true PAPER_TRADING=true DRY_RUN=true ALLOW_LIVE_TRADING=false MAX_ORDERS_PER_DAY=10

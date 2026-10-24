@@ -1,0 +1,66 @@
+[
+ {
+  "min_risk_bps": 0,
+  "fees": "40/80",
+  "n": 549,
+  "nofill": 24,
+  "win": 8.0,
+  "gross": -13.6,
+  "net": -124.3,
+  "pf": 0.04,
+  "folds": "0/5",
+  "per_coin": {
+   "PF_XBTUSD": -121.7,
+   "PF_ETHUSD": -127.0,
+   "PF_SOLUSD": -124.4
+  }
+ },
+ {
+  "min_risk_bps": 0,
+  "fees": "22/38",
+  "n": 549,
+  "nofill": 24,
+  "win": 14.6,
+  "gross": -13.6,
+  "net": -69.9,
+  "pf": 0.13,
+  "folds": "0/5",
+  "per_coin": {
+   "PF_XBTUSD": -67.4,
+   "PF_ETHUSD": -72.7,
+   "PF_SOLUSD": -69.9
+  }
+ },
+ {
+  "min_risk_bps": 100,
+  "fees": "40/80",
+  "n": 33,
+  "nofill": 2,
+  "win": 21.2,
+  "gross": -39.5,
+  "net": -151.8,
+  "pf": 0.1,
+  "folds": "0/4",
+  "per_coin": {
+   "PF_XBTUSD": -152.8,
+   "PF_ETHUSD": -150.4,
+   "PF_SOLUSD": -151.9
+  }
+ },
+ {
+  "min_risk_bps": 100,
+  "fees": "22/38",
+  "n": 33,
+  "nofill": 2,
+  "win": 21.2,
+  "gross": -39.5,
+  "net": -96.4,
+  "pf": 0.21,
+  "folds": "0/4",
+  "per_coin": {
+   "PF_XBTUSD": -98.1,
+   "PF_ETHUSD": -95.2,
+   "PF_SOLUSD": -96.4
+  }
+ }
+]
