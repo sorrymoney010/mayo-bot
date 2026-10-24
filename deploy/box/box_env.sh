@@ -166,6 +166,3 @@ watch_child() {
   done
   wait "$pid"
 }
-
-# USER URGENT STOP 2026-10-15
-export SAFETY_LOCKED=true PAPER_TRADING=true DRY_RUN=true ALLOW_LIVE_TRADING=false MAX_ORDERS_PER_DAY=10
