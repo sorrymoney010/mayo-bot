@@ -1518,7 +1518,7 @@ class TradingEngine:
                     position = portfolio.positions.get(self.settings.symbol)
                     quantity = float(position.quantity) if position else 0.0
                     cost_basis = (
-                        quantity * float(position.entry_price) + float(position.fees_paid)
+                        float(position.cost_basis)  # fee-inclusive entry_price
                         if position else 0.0
                     )
                     if quantity > 1e-12:

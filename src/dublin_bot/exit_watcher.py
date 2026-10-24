@@ -136,6 +136,8 @@ def sleeve_strategy_key(settings, sleeve: str) -> str:
         return f"futures_short@{tf}m"
     if sleeve == "alt_regime_4h":
         return "alt_regime@240m"
+    if sleeve == "volbrk_1d":
+        return "volbrk_1d"
     name = str(getattr(settings, "strategy", "regime") or "regime").lower()
     family = {
         "breakout": "breakout", "momentum_breakout": "breakout",
@@ -173,6 +175,11 @@ def spot_exit_levels(settings, symbol: str, entry: float) -> tuple[str, float | 
     tpos = (trend.get("positions") or {}).get(symbol)
     if isinstance(tpos, dict) and float(tpos.get("qty") or 0) > 0:
         return "trendhold_4h", None, None, str(tpos.get("filled_at") or "")
+    vb = _read_json(Path(getattr(settings, "volbrk_state_path", "logs/volbrk_sleeve.json")), {})
+    vpos = (vb.get("positions") or {}).get(symbol) if isinstance(vb, dict) else None
+    if isinstance(vpos, dict) and float(vpos.get("qty") or 0) > 0:
+        # volbrk_1d has no hard stop/TP (time stop only, on the slow cycle)
+        return "volbrk_1d", None, None, str(vpos.get("filled_at") or "")
     stop = entry * (1.0 - float(settings.stop_loss_pct))
     tp = entry * (1.0 + float(settings.take_profit_pct))
     return "primary", stop, tp, ""
@@ -185,8 +192,9 @@ def _drop_sleeve_position(settings, symbol: str, sleeve: str, *, lots_path: Path
         if isinstance(data, dict):
             (data.get("positions") or {}).pop(symbol, None)
             _write_json(path, data)
-    elif sleeve == "trendhold_4h":
-        path = Path(getattr(settings, "trendhold_state_path", "logs/trendhold_sleeve.json"))
+    elif sleeve in ("trendhold_4h", "volbrk_1d"):
+        path = Path(getattr(settings, "trendhold_state_path", "logs/trendhold_sleeve.json")) \
+            if sleeve == "trendhold_4h" else Path(getattr(settings, "volbrk_state_path", "logs/volbrk_sleeve.json"))
         data = _read_json(path, {})
         if isinstance(data, dict):
             (data.get("positions") or {}).pop(symbol, None)

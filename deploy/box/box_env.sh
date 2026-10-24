@@ -102,7 +102,9 @@ PAPER_ENV=(
   MEANREV_SLEEVE_ENABLED=true
   REGIME_DAILY_FILTER=true
   MEANREV_DAILY_FILTER=true
-  TRENDHOLD_SLEEVE_ENABLED=true
+  TRENDHOLD_SLEEVE_ENABLED=false   # disabled 2026-10-23 (audit v2); code kept
+  VOLBRK_SLEEVE_ENABLED=true
+  VOLBRK_K=1.25
   TRENDHOLD_POSITION_FRACTION=0.25
   MAX_CONCURRENT_POSITIONS=3
   MAX_POSITION_FRACTION=0.25
@@ -111,7 +113,7 @@ PAPER_ENV=(
   PIPELINE_DATA_DIR="$REPO/data"
   PIPELINE_STALE_SECONDS=600
   # SHADOW perp sleeves (virtual ledger only; no paper fills, no orders, no lock changes).
-  FUTURES_SHADOW_D1FLIP_ENABLED=true
+  FUTURES_SHADOW_D1FLIP_ENABLED=false   # disabled 2026-10-23 (audit v2); code kept
   FUTURES_SHADOW_DONCHIAN_ENABLED=true
 )
 blog() { local f=$1; shift; echo "$(date "+%F %T %Z") $*" >> "$f"; }

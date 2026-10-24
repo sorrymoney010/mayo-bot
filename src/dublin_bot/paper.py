@@ -63,7 +63,10 @@ class Position:
 
     @property
     def cost_basis(self) -> float:
-        return self.quantity * self.entry_price + self.fees_paid
+        # record_buy folds the entry fee INTO entry_price (fee-inclusive average
+        # cost); fees_paid is informational. Adding it again double-counted the
+        # entry fee in realized/unrealized P&L (closed_trades vs cash gap).
+        return self.quantity * self.entry_price
 
 
 @dataclass
@@ -279,8 +282,7 @@ class PaperPortfolio:
                 if position is None or position.quantity <= 1e-12:
                     raise ValueError(f"No open paper position for {symbol}")
                 close_quantity = min(quantity, position.quantity)
-                cost_basis = (close_quantity / max(position.quantity, 1e-12)) * (
-                    position.quantity * position.entry_price + position.fees_paid)
+                cost_basis = close_quantity * position.entry_price  # fee-inclusive (see Position.cost_basis)
                 proceeds = close_quantity * fill_price - fee
                 realized_pl = proceeds - cost_basis
                 position.quantity -= close_quantity

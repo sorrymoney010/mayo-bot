@@ -199,6 +199,24 @@ class Settings(BaseSettings):
     trendhold_ema_slow: int = Field(default=100, ge=10)
     trendhold_daily_filter: bool = Field(default=True)
     trendhold_state_path: Path = Path("logs/trendhold_sleeve.json")
+    # ── volbrk_1d PAPER sleeve (audit v2 2026-10-23, /workspace/mayo-audit/v2_20261023) ──
+    # Daily volatility breakout on BTC/ETH/SOL: on a completed 1d candle with
+    # close > prev_close + k*ATR14(prev bar, simple mean TR) AND close > SMA100
+    # -> paper market buy next cycle (= next open); time-stop exit after 10
+    # daily bars. No hard stop / TP (as tested). Size: risk-style
+    # equity*volbrk_risk_per_trade / (volbrk_sizing_atr_mult*ATR/price),
+    # capped by max_position_fraction. Fills: own taker/slippage (26+10 bps).
+    volbrk_sleeve_enabled: bool = Field(default=True)
+    volbrk_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"])
+    volbrk_k: float = Field(default=1.25, ge=1.0, le=1.5)
+    volbrk_atr_period: int = Field(default=14, ge=2)
+    volbrk_sma_period: int = Field(default=100, ge=10)
+    volbrk_hold_bars: int = Field(default=10, ge=1, le=60)
+    volbrk_risk_per_trade: float = Field(default=0.0025, gt=0, le=0.01)
+    volbrk_sizing_atr_mult: float = Field(default=2.0, gt=0, le=10.0)
+    volbrk_taker_fee_bps: float = Field(default=26.0, ge=0)
+    volbrk_slippage_bps: float = Field(default=10.0, ge=0)
+    volbrk_state_path: Path = Path("logs/volbrk_sleeve.json")
     # ── Alt-coin regime CANDIDATE (research only; NOT wired, OFF) ──
     # regime_trend@240m, ADX 25/20, lookback 20, D1 filter OFF, pooled over
     # 8 alts cleared the promotion bar on the last-60d holdout at 40/25/10 bps

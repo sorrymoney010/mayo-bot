@@ -69,6 +69,8 @@ def main() -> None:
     from dublin_bot.meanrev_sleeve import MeanRevSleeve, sleeve_active
     from dublin_bot.trendhold_sleeve import TrendHoldSleeve
     from dublin_bot.trendhold_sleeve import sleeve_active as trendhold_active
+    from dublin_bot.volbrk_sleeve import VolBrkSleeve
+    from dublin_bot.volbrk_sleeve import sleeve_active as volbrk_active
 
     # Only the ledger-owner machine (the Mac wrapper) may write the paper book.
     if not ledger_owner_ok():
@@ -139,6 +141,15 @@ def main() -> None:
         f"| D1 regime={settings.regime_daily_filter} meanrev={settings.meanrev_daily_filter} "
         f"trendhold={settings.trendhold_daily_filter} | caps max_pos={settings.max_concurrent_positions} "
         f"exposure<={settings.max_exposure_fraction:.0%} (shared, all sleeves)"
+    )
+
+    vb_on, vb_why = volbrk_active(settings)
+    log(
+        f"SLEEVES volbrk_1d={'on' if vb_on else 'off'} ({vb_why}) key=volbrk_1d tf=1440m "
+        f"symbols={','.join(settings.volbrk_symbols)} k={settings.volbrk_k:g}*ATR{settings.volbrk_atr_period} "
+        f"close>SMA{settings.volbrk_sma_period} exit=time_stop {settings.volbrk_hold_bars}d stop=none "
+        f"risk={settings.volbrk_risk_per_trade:.2%}/({settings.volbrk_sizing_atr_mult:g}*ATR) "
+        f"fills=taker{settings.volbrk_taker_fee_bps:g}+slip{settings.volbrk_slippage_bps:g}bps"
     )
 
     if getattr(settings, "pipeline_enabled", False):
@@ -343,6 +354,25 @@ def main() -> None:
                 )
             except Exception as exc:  # noqa: BLE001
                 log(f"ERROR sleeve=trendhold_4h {type(exc).__name__}: {exc}")
+                traceback.print_exc()
+
+        # volbrk_1d PAPER sleeve (daily vol breakout, time-stop exit). Isolated.
+        if vb_on:
+            try:
+                res = VolBrkSleeve(settings).run_cycle()
+                d = res.to_dict()
+                telemetry.sleeve(d)
+                acts = ",".join(f"{a['event']}:{a['symbol']}" for a in d["actions"]) or "none"
+                syms = " | ".join(f"{k}: {v}" for k, v in d["symbols"].items())
+                log(f"CYCLE sleeve=volbrk_1d active={d['active']} actions={acts} errors={len(d['errors'])} "
+                    f"| {syms}"[:1200])
+                for err in d["errors"]:
+                    log(f"WARN sleeve=volbrk_1d {err}"[:300])
+                (ROOT / "logs" / "last_cycle_volbrk.json").write_text(
+                    json.dumps(d, default=str, indent=2), encoding="utf-8"
+                )
+            except Exception as exc:  # noqa: BLE001
+                log(f"ERROR sleeve=volbrk_1d {type(exc).__name__}: {exc}")
                 traceback.print_exc()
 
         telemetry.tick()
