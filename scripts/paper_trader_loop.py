@@ -62,6 +62,10 @@ def _as_dict(result):
 LOCK = ROOT / "logs" / "paper_trader.lock"
 
 
+class _SkipPrimary(Exception):
+    pass
+
+
 def main() -> None:
     from dublin_bot.config import Settings, paper_live_choice_ok
     from dublin_bot.engine import TradingEngine
@@ -277,8 +281,33 @@ def main() -> None:
         except Exception as exc:  # noqa: BLE001
             log(f"WARN sleeve=alt_regime_4h {type(exc).__name__}: {exc}"[:400])
 
+    primary_on = os.environ.get("PRIMARY_ENGINE_ENABLED", "true").lower() == "true"
+    from dublin_bot.intraday_sleeve import IntradaySleeve
+    from dublin_bot.intraday_sleeve import sleeve_active as intraday_active
+    id_on, id_why = intraday_active()
+    log(f"SLEEVES primary={settings.strategy}@{settings.timeframe_minutes}m={'on' if primary_on else 'off'} "
+        f"intraday={'on' if id_on else 'off'} ({id_why}) tfs={os.environ.get('INTRADAY_TFS', '15,30,60')} "
+        f"variants={os.environ.get('INTRADAY_VARIANTS', 'user_breakout,user_emacross,pullback_trend')} "
+        f"fees=maker{os.environ.get('INTRADAY_MAKER_FEE_BPS', '40')}/taker{os.environ.get('INTRADAY_TAKER_FEE_BPS', '80')}"
+        f"+slip{os.environ.get('INTRADAY_SLIPPAGE_BPS', '10')}bps book=logs/intraday/")
     while _running:
+        if id_on:
+            try:
+                d = IntradaySleeve().run_cycle()
+                acts = ",".join(f"{a['event']}:{a.get('lane')}" for a in d["actions"]) or "none"
+                sig = " | ".join(f"{k}: {v}" for k, v in d["signals"].items())
+                log(f"CYCLE sleeve=intraday paper=True equity={d.get('equity')} open={d.get('open')} "
+                    f"pending={d.get('pending')} actions={acts} errors={len(d['errors'])} | {sig}"[:3000])
+                for err in d["errors"][:5]:
+                    log(f"WARN sleeve=intraday {err}"[:300])
+                (ROOT / "logs" / "last_cycle_intraday.json").write_text(
+                    json.dumps(d, default=str, indent=2), encoding="utf-8")
+            except Exception as exc:  # noqa: BLE001
+                log(f"ERROR sleeve=intraday {type(exc).__name__}: {exc}")
+                traceback.print_exc()
         try:
+            if not primary_on:
+                raise _SkipPrimary
             engine = TradingEngine(settings)
             result = engine.run_once()
             telemetry.engine(engine)
@@ -313,6 +342,8 @@ def main() -> None:
             (ROOT / "logs" / "last_cycle.json").write_text(
                 json.dumps(payload, default=str, indent=2), encoding="utf-8"
             )
+        except _SkipPrimary:
+            pass
         except Exception as exc:  # noqa: BLE001
             log(f"ERROR sleeve={settings.strategy} {type(exc).__name__}: {exc}")
             traceback.print_exc()

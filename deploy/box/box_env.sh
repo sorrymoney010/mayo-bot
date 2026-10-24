@@ -21,8 +21,8 @@ BASE_ENV=(
 PAPER_ENV=(
   "${BASE_ENV[@]}"
   # Non-secret strategy/risk settings the Mac read from its .env (values copied by name;
-  # no keys, no secrets, no locks). PAPER_LOOP_SECONDS deliberately NOT set: the loop
-  # reads it from the process env only, and the Mac loop ran at the 300 s default.
+  # no keys, no secrets, no locks). PAPER_LOOP_SECONDS is set to 60 below (2026-10-24 intraday reset); the loop
+  # reads it from the process env only, (the Mac loop ran at the 300 s default).
   BROKER=kraken
   KRAKEN_TIER=starter
   SYMBOL=BTC/USD
@@ -99,11 +99,11 @@ PAPER_ENV=(
   LEARNER_GATE_ENABLED=true
   LEARNER_MIN_SAMPLE=30
   LEARNER_BENCH_HOURS=72
-  MEANREV_SLEEVE_ENABLED=true
+  MEANREV_SLEEVE_ENABLED=false   # disabled 2026-10-24 (intraday reset); code kept
   REGIME_DAILY_FILTER=true
   MEANREV_DAILY_FILTER=true
   TRENDHOLD_SLEEVE_ENABLED=false   # disabled 2026-10-23 (audit v2); code kept
-  VOLBRK_SLEEVE_ENABLED=true
+  VOLBRK_SLEEVE_ENABLED=false   # disabled 2026-10-24 (intraday reset); code kept
   VOLBRK_K=1.25
   TRENDHOLD_POSITION_FRACTION=0.25
   MAX_CONCURRENT_POSITIONS=3
@@ -115,6 +115,20 @@ PAPER_ENV=(
   # SHADOW perp sleeves (virtual ledger only; no paper fills, no orders, no lock changes).
   FUTURES_SHADOW_D1FLIP_ENABLED=false   # disabled 2026-10-23 (audit v2); code kept
   FUTURES_SHADOW_DONCHIAN_ENABLED=true
+  # 2026-10-24 INTRADAY RESET (user's original strategy on 15m/30m/1h; PAPER sub-book logs/intraday/).
+  PAPER_LOOP_SECONDS=60
+  PRIMARY_ENGINE_ENABLED=false   # regime_trend@60m off; code kept
+  ALT_REGIME_ENABLED=false       # alt_regime_4h off; code kept
+  INTRADAY_SLEEVE_ENABLED=true
+  INTRADAY_TFS=15,30,60
+  INTRADAY_VARIANTS=user_breakout,user_emacross,pullback_trend
+  INTRADAY_MAKER_FEE_BPS=40      # Kraken Pro Tier 1 (verified kraken.com/features/fee-schedule 2026-10-24)
+  INTRADAY_TAKER_FEE_BPS=80
+  INTRADAY_SLIPPAGE_BPS=10
+  INTRADAY_RISK_PER_TRADE=0.01
+  INTRADAY_MAX_POSITION_FRACTION=0.10
+  INTRADAY_MAX_OPEN=9
+  INTRADAY_START_EQUITY_USD=466.81
 )
 blog() { local f=$1; shift; echo "$(date "+%F %T %Z") $*" >> "$f"; }
 # Refuse to run if a .env ever appears in the repo (Settings would read it).

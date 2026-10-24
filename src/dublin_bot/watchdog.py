@@ -35,7 +35,7 @@ from typing import Callable
 
 PAPER = "com.mayo.kraken.paper"
 TICKS = "com.mayo.kraken.ticks"
-PAPER_MAX_AGE = 15 * 60
+PAPER_MAX_AGE = 5 * 60   # paper loop cycles every 60 s (intraday 15m/30m/1h sleeves)
 TICKS_MAX_AGE = 2 * 60
 COOLDOWN = 15 * 60
 WAKE_GAP = 15 * 60
