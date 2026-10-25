@@ -77,7 +77,7 @@ def test_mtf_v2_fewer_longer_limits_and_ladder(tmp_path, monkeypatch):
     # max 2 open / 2 entries per Chicago day across all pairs (3 pairs fire)
     assert sum(a["event"] == "post_only_limit" for a in out["actions"]) == 2
     p = next(iter(s.state["pending"].values()))
-    assert p["risk"] == 2.5 * 1.2 and p["ladder"] == [3.0] and p["time_stop_h"] == 24.0
+    assert p["risk"] == 2.5 * 1.2 and p["ladder"] == [3.0] and p["time_stop_h"] == 48.0
     # fill, then rally through 3R (=109): half off at 3R maker, stop to entry+0.2%
     t = pd.date_range(pd.Timestamp(now[0], unit="s", tz="UTC"), periods=2, freq="1min")
     path["p"] = pd.DataFrame({"open": [100, 101], "high": [100.1, 109.5], "low": [99.9, 100.9],

@@ -285,11 +285,11 @@ def main() -> None:
     from dublin_bot.intraday_sleeve import IntradaySleeve
     from dublin_bot.intraday_sleeve import sleeve_active as intraday_active
     id_on, id_why = intraday_active()
+    _ids = IntradaySleeve()
     log(f"SLEEVES primary={settings.strategy}@{settings.timeframe_minutes}m={'on' if primary_on else 'off'} "
         f"intraday={'on' if id_on else 'off'} ({id_why}) tfs={os.environ.get('INTRADAY_TFS', '15,30,60')} "
         f"variants={os.environ.get('INTRADAY_VARIANTS', 'user_breakout,user_emacross,pullback_trend')} "
-        f"fees=maker{os.environ.get('INTRADAY_MAKER_FEE_BPS', '40')}/taker{os.environ.get('INTRADAY_TAKER_FEE_BPS', '80')}"
-        f"+slip{os.environ.get('INTRADAY_SLIPPAGE_BPS', '10')}bps book=logs/intraday/")
+        f"venue={_ids.venue} fees=maker{_ids.maker:g}/taker{_ids.taker:g}+slip{_ids.slip:g}bps book=logs/intraday/")
     while _running:
         if id_on:
             try:
@@ -447,7 +447,9 @@ def main() -> None:
             try:
                 from dublin_bot.pipeline.source import get_source, pipeline_summary
 
-                src = get_source(settings.pipeline_data_dir,
+                from dublin_bot.pipeline.binanceus import venue_data_dir
+
+                src = get_source(venue_data_dir(settings.pipeline_data_dir),
                                  stale_seconds=float(settings.pipeline_stale_seconds),
                                  symbols=list(settings.pipeline_symbols))
                 log(f"PIPELINE {pipeline_summary(src)}"[:900])

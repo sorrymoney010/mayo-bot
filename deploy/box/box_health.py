@@ -24,6 +24,10 @@ from dublin_bot.watchdog import (  # noqa: E402
 
 LOGS = REPO / "logs"
 DATA = REPO / "data"
+from dublin_bot.pipeline.binanceus import venue, venue_data_dir  # noqa: E402
+
+VENUE = venue()
+TICK_DATA = venue_data_dir(DATA, VENUE)
 STATE = LOGS / ".box_health_state.json"
 BOX = REPO / "deploy" / "box"
 COOLDOWN = 15 * 60
@@ -153,7 +157,7 @@ def main() -> None:
 
     # 4. ticks
     tp = pids(f"^[^ ]*/python[^ ]* {REPO}/scripts/tick_collector.py --data-dir {DATA}")
-    ts = tick_state(DATA)
+    ts = tick_state(TICK_DATA)  # venue tick store (Binance.US: data/binanceus)
     t_age = None if ts["heartbeat"] is None else now - ts["heartbeat"]
     t_fresh = t_age is not None and t_age < TICKS_MAX_AGE
     if len(tp) != 1:
@@ -168,7 +172,8 @@ def main() -> None:
 
     # 5. gap fill + daily scorecard (repo watchdog logic)
     wd = Watchdog(repo=REPO, data_dir=DATA, python=sys.executable)
-    if ((woke or not t_fresh or ts["gaps_open"] > 0)
+    # Kraken REST gap-fill only applies to the Kraken store; the Binance.US collector fills its own gaps.
+    if (VENUE == "kraken" and (woke or not t_fresh or ts["gaps_open"] > 0)
             and now - float(st.get("last_gapfill", 0)) >= GAPFILL_EVERY):
         st["last_gapfill"] = now
         actions.append(wd.gap_fill())

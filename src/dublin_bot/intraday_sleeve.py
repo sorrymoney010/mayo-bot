@@ -38,7 +38,8 @@ ROOT = Path(__file__).resolve().parents[2]
 PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
 VARIANTS = ("user_breakout", "user_emacross", "pullback_trend", "mtf_synth")
 # mtf_synth v2 "fewer, longer" (walk-forward pick in research/intraday/bt3.py; few params on purpose)
-MTF = {"stop_atr": 2.5, "tp_r": 3.0, "part": 0.5, "min_target": 0.025, "be_bps": 20, "time_stop_h": 24.0,
+MTF = {"stop_atr": 2.5, "tp_r": 3.0, "part": 0.5, "min_target": 0.025, "be_bps": 20, "time_stop_h": 48.0,
+       "atr_x": False,  # Binance.US re-run (bt4.py): walk-forward picked no ATR-expansion filter, 48h time stop
        "rsi": (50, 70), "brk_bars": 48, "max_open": 2, "per_day": 2, "cooldown_h": 12.0}
 
 
@@ -124,9 +125,16 @@ class IntradaySleeve:
         self.now = now_fn
         self.tfs = [int(x) for x in _env("INTRADAY_TFS", "15,30,60").split(",")]
         self.variants = [v for v in _env("INTRADAY_VARIANTS", ",".join(VARIANTS)).split(",") if v in VARIANTS]
-        self.maker = float(_env("INTRADAY_MAKER_FEE_BPS", "40"))
-        self.taker = float(_env("INTRADAY_TAKER_FEE_BPS", "80"))
-        self.slip = float(_env("INTRADAY_SLIPPAGE_BPS", "10"))
+        from dublin_bot.pipeline.binanceus import venue
+        self.venue = venue()
+        if self.venue == "binanceus":  # Binance.US zero-fee schedule: 0 maker / 2 taker (blog.binance.us/zero-fee-trading)
+            self.maker = float(_env("BINANCEUS_MAKER_FEE_BPS", "0"))
+            self.taker = float(_env("BINANCEUS_TAKER_FEE_BPS", "2"))
+            self.slip = float(_env("BINANCEUS_SLIPPAGE_BPS", "3"))
+        else:
+            self.maker = float(_env("INTRADAY_MAKER_FEE_BPS", "40"))
+            self.taker = float(_env("INTRADAY_TAKER_FEE_BPS", "80"))
+            self.slip = float(_env("INTRADAY_SLIPPAGE_BPS", "10"))
         self.risk = float(_env("INTRADAY_RISK_PER_TRADE", "0.01"))
         self.cap = float(_env("INTRADAY_MAX_POSITION_FRACTION", "0.10"))
         self.max_open = int(_env("INTRADAY_MAX_OPEN", "3"))
@@ -150,7 +158,7 @@ class IntradaySleeve:
         tmp.replace(self.state_path)
 
     def _event(self, path: Path, rec: dict):
-        rec = {"ts": pd.Timestamp(self.now(), unit="s", tz="UTC").isoformat(), **rec}
+        rec = {"ts": pd.Timestamp(self.now(), unit="s", tz="UTC").isoformat(), "venue": self.venue, **rec}
         with path.open("a") as f:
             f.write(json.dumps(rec, default=str) + "\n")
 
@@ -158,13 +166,19 @@ class IntradaySleeve:
     def _source(self):
         if self._src is None:
             from dublin_bot.pipeline.source import get_source
-            self._src = get_source(self.root / "data", stale_seconds=600.0)
+            from dublin_bot.pipeline.binanceus import venue_data_dir
+            self._src = get_source(venue_data_dir(self.root / "data", self.venue), stale_seconds=600.0)
         return self._src
 
     def bars(self, symbol: str, tf: int) -> pd.DataFrame:
         base = 15 if tf == 30 else tf
         src = self._source()
-        b = src.get_bars(symbol, base, 600, rest_fetch=lambda: rest_ohlc(symbol, base))
+        if self.venue == "binanceus":
+            from dublin_bot.pipeline.binanceus import BinanceUSPublic
+            fetch = lambda: BinanceUSPublic(now_fn=self.now).klines(symbol, base, 720)  # noqa: E731
+        else:
+            fetch = lambda: rest_ohlc(symbol, base)  # noqa: E731
+        b = src.get_bars(symbol, base, 600, rest_fetch=fetch)
         b = b[["open", "high", "low", "close", "volume"]].astype(float)
         if tf == 30:
             b = b.resample("30min").agg({"open": "first", "high": "max", "low": "min",
@@ -286,7 +300,7 @@ class IntradaySleeve:
         he20, he50, he200 = ema(h, 20), ema(h, 50), ema(h, 200)
         m_rsi, m_e20 = rsi(b30.close), ema(b30.close, 20)
         a = atr(b60); hi = b15.high.rolling(MTF["brk_bars"]).max().shift()
-        a_x = bool(a.iloc[-1] > a.rolling(100).mean().iloc[-1])
+        a_x = bool(a.iloc[-1] > a.rolling(100).mean().iloc[-1]) if MTF["atr_x"] else True
         strong = bool(he50.iloc[-1] > he50.iloc[-13] and he20.iloc[-1] > he20.iloc[-7])
         vr = b15.volume / b15.volume.rolling(20).mean().shift()
         st = {"bar": b15.index[-1].isoformat(), "close": float(b15.close.iloc[-1]), "atr": float(a.iloc[-1]),
