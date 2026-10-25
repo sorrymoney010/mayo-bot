@@ -59,23 +59,52 @@ def test_refuses_when_not_paper(tmp_path, monkeypatch):
     assert m.sleeve_active()[0] is False
 
 
-def test_mtf_synth_single_strategy_fires_and_ladders(tmp_path, monkeypatch):
+def _fire_state(close=100.0, atr=1.2):
+    return {"bar": "2026-10-20T11:45:00+00:00", "close": close, "atr": atr, "fire": True, "h_up": True,
+            "h_strong": True, "atr_x": True, "m_rsi": 60.0, "vr": 1.5, "tgt_pct": 0.09}, "FIRE"
+
+
+def test_mtf_v2_fewer_longer_limits_and_ladder(tmp_path, monkeypatch):
     monkeypatch.setenv("INTRADAY_SLEEVE_ENABLED", "true")
     monkeypatch.setenv("INTRADAY_VARIANTS", "mtf_synth")
     now = [pd.Timestamp("2026-10-20 12:00", tz="UTC").timestamp()]
     s = m.IntradaySleeve(root=tmp_path, now_fn=lambda: now[0])
-
-    def bars(sym, tf):
-        b = _bars(n=400, tf=tf, drift=0.05)
-        b = b.set_axis(b.index - b.index[-1] + pd.Timestamp(now[0] - tf * 60, unit="s", tz="UTC"))
-        if tf == 15:
-            b.iloc[-1, b.columns.get_loc("close")] += 2; b.iloc[-1, b.columns.get_loc("high")] += 2
-            b.iloc[-1, b.columns.get_loc("volume")] = 40
-        return b
-    monkeypatch.setattr(s, "bars", bars)
-    monkeypatch.setattr(m, "rsi", lambda c, n=14: pd.Series(55.0, index=c.index))
+    monkeypatch.setattr(s, "mtf_state", lambda sym: _fire_state())
+    monkeypatch.setattr(s, "bars", lambda sym, tf: pd.DataFrame())
     path = {"p": pd.DataFrame(columns=["open", "high", "low", "close"])}
     monkeypatch.setattr(s, "minute_path", lambda sym, since: path["p"])
     out = s.run_cycle()
-    assert sum(a["event"] == "post_only_limit" for a in out["actions"]) == 3
-    assert all(k.startswith("mtf_synth|15|") for k in s.state["pending"])
+    # max 2 open / 2 entries per Chicago day across all pairs (3 pairs fire)
+    assert sum(a["event"] == "post_only_limit" for a in out["actions"]) == 2
+    p = next(iter(s.state["pending"].values()))
+    assert p["risk"] == 2.5 * 1.2 and p["ladder"] == [3.0] and p["time_stop_h"] == 24.0
+    # fill, then rally through 3R (=109): half off at 3R maker, stop to entry+0.2%
+    t = pd.date_range(pd.Timestamp(now[0], unit="s", tz="UTC"), periods=2, freq="1min")
+    path["p"] = pd.DataFrame({"open": [100, 101], "high": [100.1, 109.5], "low": [99.9, 100.9],
+                              "close": [100, 109.2]}, index=t)
+    now[0] += 180
+    out = s.run_cycle()
+    ev = [a["event"] for a in out["actions"]]
+    assert ev.count("maker_fill") == 2 and ev.count("tp1") == 2
+    pos = next(iter(s.state["positions"].values()))
+    assert abs(pos["qty"] - pos["qty0"] / 2) < 1e-9 and abs(pos["stop"] - 100.2) < 1e-9
+    # entries cap: no new limits same day even after slots free up
+    assert not s.state["pending"]
+
+
+def test_mtf_v2_cooldown_after_loss(tmp_path, monkeypatch):
+    monkeypatch.setenv("INTRADAY_SLEEVE_ENABLED", "true")
+    monkeypatch.setenv("INTRADAY_VARIANTS", "mtf_synth")
+    now = [pd.Timestamp("2026-10-20 12:00", tz="UTC").timestamp()]
+    s = m.IntradaySleeve(root=tmp_path, now_fn=lambda: now[0])
+    pos = {"lane": "mtf_synth|15|BTC/USD", "variant": "mtf_synth", "tf": 15, "symbol": "BTC/USD", "entry": 100.0,
+           "qty": 0.0, "qty0": 1.0, "hit": 0, "opened": now[0] - 3600, "realized": -3.0}
+    s.state["positions"][pos["lane"]] = pos
+    s._close_if_done(pos["lane"], pos)
+    assert s.state["cooldown"]["BTC/USD"] == now[0] + 12 * 3600
+
+
+def test_mtf_v2_skips_small_target(tmp_path, monkeypatch):
+    b = pd.Series([1.0])
+    st = {"close": 100.0, "atr": 0.2}
+    assert m.MTF["tp_r"] * m.MTF["stop_atr"] * st["atr"] / st["close"] < m.MTF["min_target"]

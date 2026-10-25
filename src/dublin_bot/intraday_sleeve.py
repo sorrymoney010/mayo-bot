@@ -1,8 +1,11 @@
-"""Intraday PAPER sleeve for BTC/ETH/SOL. ACTIVE strategy (2026-10-24): ``mtf_synth`` — ONE strategy
-synthesized from all user sources + research (reports/intraday_reset_2026-10-24.md):
-1h trend (EMA20>EMA50, close>EMA200) + 30m momentum (close>EMA20, RSI14 45-68) + 15m trigger (close >
-prior 20-bar high, volume >= 1.10x avg); post-only limit entry; stop 1.5xATR14(15m); 1/3 off at 1R and
-2R (maker), stop to breakeven after TP1, runner exits on 1h close < 1h EMA20; 12h time stop.
+"""Intraday PAPER sleeve for BTC/ETH/SOL. ACTIVE strategy (v2 "fewer, longer", 2026-10-24): ``mtf_synth`` —
+ONE strategy on 15m/30m/1h only (reports/intraday_fewer_longer_2026-10-24.md, research/intraday/bt3.py):
+1h STRONG trend (EMA20>EMA50, close>EMA200, EMA50 rising over 12h, EMA20 rising over 6h) + 1h volatility
+expansion (ATR14(1h) > its 100-bar mean) + 30m momentum (close>EMA20, RSI14 50-70) + 15m trigger (close >
+prior 48-bar/12h high, volume >= 1.10x avg); post-only limit entry good 15 min; stop 2.5xATR14(1h);
+first (and only) target = 3R, must be >= 2.5% away (else skip); half off there (maker), stop to entry+0.2%,
+runner exits on 1h close < 1h EMA20; 24h time stop; max 2 open, max 2 entries/day (Chicago), 12h per-pair
+cooldown after a losing trade. v1 (1.5xATR15m stop, 1/3@1R+2R, 12h) lost: PF 0.04 at 40/80 bps.
 Legacy single-timeframe variants below are kept for research only.
 
 PAPER ONLY: no gateway, no keys, no private API, no orders. Public Kraken OHLC + the box tick
@@ -34,6 +37,9 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
 VARIANTS = ("user_breakout", "user_emacross", "pullback_trend", "mtf_synth")
+# mtf_synth v2 "fewer, longer" (walk-forward pick in research/intraday/bt3.py; few params on purpose)
+MTF = {"stop_atr": 2.5, "tp_r": 3.0, "part": 0.5, "min_target": 0.025, "be_bps": 20, "time_stop_h": 24.0,
+       "rsi": (50, 70), "brk_bars": 48, "max_open": 2, "per_day": 2, "cooldown_h": 12.0}
 
 
 def _env(name, default):
@@ -127,6 +133,7 @@ class IntradaySleeve:
         self.daily_loss = float(_env("INTRADAY_MAX_DAILY_LOSS_FRACTION", "0.03"))
         self.time_stop_h = float(_env("INTRADAY_TIME_STOP_HOURS", "12"))
         self.state = self._load()
+        self.state.setdefault("entries_day", {}); self.state.setdefault("cooldown", {})
         self._src = None
 
     # ---- state ----
@@ -278,16 +285,22 @@ class IntradaySleeve:
         h = b60.close
         he20, he50, he200 = ema(h, 20), ema(h, 50), ema(h, 200)
         m_rsi, m_e20 = rsi(b30.close), ema(b30.close, 20)
-        a = atr(b15); hi = b15.high.rolling(20).max().shift()
+        a = atr(b60); hi = b15.high.rolling(MTF["brk_bars"]).max().shift()
+        a_x = bool(a.iloc[-1] > a.rolling(100).mean().iloc[-1])
+        strong = bool(he50.iloc[-1] > he50.iloc[-13] and he20.iloc[-1] > he20.iloc[-7])
         vr = b15.volume / b15.volume.rolling(20).mean().shift()
         st = {"bar": b15.index[-1].isoformat(), "close": float(b15.close.iloc[-1]), "atr": float(a.iloc[-1]),
               "h_up": bool(he20.iloc[-1] > he50.iloc[-1] and h.iloc[-1] > he200.iloc[-1]),
+              "h_strong": strong, "atr_x": a_x,
               "h_close": float(h.iloc[-1]), "h_e20": float(he20.iloc[-1]), "h_bar": b60.index[-1].isoformat(),
               "m_rsi": float(m_rsi.iloc[-1]), "m_ok": bool(b30.close.iloc[-1] > m_e20.iloc[-1]),
               "brk": bool(b15.close.iloc[-1] > hi.iloc[-1]), "vr": float(vr.iloc[-1])}
-        fails = [k for k, ok in (("1h_trend", st["h_up"]), ("30m>ema20", st["m_ok"]),
-                                 ("30m_rsi45-68", 45 <= st["m_rsi"] <= 68), ("15m_20bar_breakout", st["brk"]),
-                                 ("15m_vol>=1.1x", st["vr"] >= 1.10)) if not ok]
+        st["tgt_pct"] = MTF["tp_r"] * MTF["stop_atr"] * st["atr"] / st["close"]
+        lo, hi_ = MTF["rsi"]
+        fails = [k for k, ok in (("1h_trend", st["h_up"]), ("1h_strong", st["h_strong"]), ("1h_atr_expansion", a_x),
+                                 ("30m>ema20", st["m_ok"]), (f"30m_rsi{lo}-{hi_}", lo <= st["m_rsi"] <= hi_),
+                                 ("15m_48bar_breakout", st["brk"]), ("15m_vol>=1.1x", st["vr"] >= 1.10),
+                                 ("target>=2.5%", st["tgt_pct"] >= MTF["min_target"])) if not ok]
         st["fire"] = not fails
         return st, ("FIRE" if not fails else "wait: " + ",".join(fails))
 
@@ -297,24 +310,30 @@ class IntradaySleeve:
             out["signals"][f"{sym}@15/30/60m"] = why
             return
         out["signals"][f"{sym}@15/30/60m"] = (f"bar={st['bar'][11:16]}Z close={st['close']:.2f} 1h_up={st['h_up']} "
-                                             f"30m_rsi={st['m_rsi']:.0f} vol={st['vr']:.2f}x {why}")
+                                             f"strong={st['h_strong']} atr_x={st['atr_x']} 30m_rsi={st['m_rsi']:.0f} "
+                                             f"vol={st['vr']:.2f}x tgt={st['tgt_pct'] * 100:.2f}% {why}")
         lane = f"mtf_synth|15|{sym}"
         if self.state["last_bar"].get(lane) == st["bar"]:
             return
         self.state["last_bar"][lane] = st["bar"]
         if not st["fire"] or lane in self.state["positions"] or lane in self.state["pending"]:
             return
-        if len(self.state["positions"]) + len(self.state["pending"]) >= self.max_open or self._halted(marks):
+        day = pd.Timestamp(self.now(), unit="s", tz="UTC").tz_convert("America/Chicago").strftime("%Y-%m-%d")
+        if len(self.state["positions"]) + len(self.state["pending"]) >= min(self.max_open, MTF["max_open"]) \
+                or self._halted(marks) or self.state["entries_day"].get(day, 0) >= MTF["per_day"] \
+                or self.state["cooldown"].get(sym, 0) > self.now():
             out["actions"].append({"event": "skip_limits", "symbol": sym, "lane": lane})
             return
-        lim, risk_d = st["close"], 1.5 * st["atr"]
+        lim, risk_d = st["close"], MTF["stop_atr"] * st["atr"]
         eq = self.equity(marks)
         qty = min(eq * self.risk / risk_d, eq * self.cap / lim)
         if qty * lim < 5 or not math.isfinite(qty):
             return
         self.state["pending"][lane] = {"lane": lane, "variant": "mtf_synth", "tf": 15, "symbol": sym, "limit": lim,
                                        "qty": qty, "risk": risk_d, "placed": self.now(), "expires": self.now() + 900,
-                                       "bar": st["bar"], "ladder": [1, 2]}
+                                       "bar": st["bar"], "ladder": [MTF["tp_r"]], "part": MTF["part"],
+                                       "be_bps": MTF["be_bps"], "time_stop_h": MTF["time_stop_h"]}
+        self.state["entries_day"] = {day: self.state["entries_day"].get(day, 0) + 1}
         out["actions"].append({"event": "post_only_limit", "symbol": sym, "lane": lane, "limit": lim})
         self._event(self.events_path, {"event": "post_only_limit", **self.state["pending"][lane]})
 
@@ -377,13 +396,16 @@ class IntradaySleeve:
                                "stop_breakeven" if pos["hit"] else "stop_loss", out)
                     break
                 while pos["hit"] < len(pos["tps"]) and bar.high > pos["tps"][pos["hit"]]:
-                    q = pos["qty0"] / 3 if pos["hit"] < 2 else pos["qty"]
+                    if "part" in pos:
+                        q = min(pos["qty"], pos["qty0"] * pos["part"]) if pos["hit"] < len(pos["tps"]) - 1 or pos["part"] < 1 else pos["qty"]
+                    else:
+                        q = pos["qty0"] / 3 if pos["hit"] < 2 else pos["qty"]
                     self._sell(pos, q, pos["tps"][pos["hit"]], self.maker, f"tp{pos['hit'] + 1}", out)
                     pos["hit"] += 1
                     if pos["hit"] == 1:
-                        pos["stop"] = pos["entry"]
+                        pos["stop"] = pos["entry"] * (1 + pos.get("be_bps", 0) / 1e4)
                 pos["checked"] = ts.timestamp() + 60
-            if pos["qty"] > 1e-12 and self.now() - pos["opened"] > self.time_stop_h * 3600 and pos["symbol"] in marks:
+            if pos["qty"] > 1e-12 and self.now() - pos["opened"] > pos.get("time_stop_h", self.time_stop_h) * 3600 and pos["symbol"] in marks:
                 self._sell(pos, pos["qty"], marks[pos["symbol"]] * (1 - self.slip / 1e4), self.taker, "time_stop", out)
             self._close_if_done(lane, pos)
 
@@ -395,5 +417,7 @@ class IntradaySleeve:
                    "tps_hit": pos["hit"], "pnl_usd": round(pos["realized"], 4),
                    "net_bps": round(pos["realized"] / notional * 1e4, 1)}
             self._event(self.trades_path, rec)
+            if pos["realized"] < 0 and pos.get("variant") == "mtf_synth":
+                self.state.setdefault("cooldown", {})[pos["symbol"]] = self.now() + MTF["cooldown_h"] * 3600
             self.state["stats"]["closed"] += 1
             del self.state["positions"][lane]
