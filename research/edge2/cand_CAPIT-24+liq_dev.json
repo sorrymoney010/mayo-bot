@@ -1,0 +1,131 @@
+{
+ "label": "CAPIT-24+liq dev",
+ "n": 41,
+ "bus_base": {
+  "pf": 2.935,
+  "mean_bps": 313.5,
+  "win": 0.707,
+  "folds_traded_pos": "9/12",
+  "port_return_pct": 64.3,
+  "max_dd_pct": 17.5
+ },
+ "bus_stress": {
+  "pf": 2.897,
+  "mean_bps": 309.5,
+  "win": 0.707,
+  "folds_traded_pos": "9/12",
+  "port_return_pct": 63.5,
+  "max_dd_pct": 17.7
+ },
+ "krk_maker": {
+  "pf": 2.32,
+  "mean_bps": 243.5,
+  "win": 0.659,
+  "folds_traded_pos": "9/12",
+  "port_return_pct": 49.9,
+  "max_dd_pct": 20.7
+ },
+ "krk_taker": {
+  "pf": 1.703,
+  "mean_bps": 153.5,
+  "win": 0.561,
+  "folds_traded_pos": "7/12",
+  "port_return_pct": 31.5,
+  "max_dd_pct": 24.7
+ },
+ "worst_trade_pct": -24.1,
+ "worst_mae_pct": -24.7,
+ "by_year": {
+  "2023": [
+   8,
+   655.1
+  ],
+  "2024": [
+   9,
+   634.9
+  ],
+  "2025": [
+   13,
+   359.0
+  ],
+  "2026": [
+   11,
+   -251.6
+  ]
+ },
+ "by_coin": {
+  "ADA": [
+   3,
+   27.4
+  ],
+  "AVAX": [
+   4,
+   170.2
+  ],
+  "BNB": [
+   3,
+   497.4
+  ],
+  "BTC": [
+   3,
+   39.1
+  ],
+  "DOGE": [
+   2,
+   1152.6
+  ],
+  "DOT": [
+   4,
+   54.9
+  ],
+  "ETH": [
+   6,
+   -232.8
+  ],
+  "LINK": [
+   2,
+   656.0
+  ],
+  "LTC": [
+   3,
+   1287.8
+  ],
+  "SOL": [
+   3,
+   220.5
+  ],
+  "TRX": [
+   4,
+   415.5
+  ],
+  "XRP": [
+   4,
+   463.9
+  ]
+ },
+ "fold_pos_all15": "9/15 (empty quarters count as not positive)",
+ "fold_sums_bps": {
+  "2023Q1": 3777,
+  "2023Q2": 954,
+  "2023Q3": 509,
+  "2023Q4": 0,
+  "2024Q1": 0,
+  "2024Q2": 1190,
+  "2024Q3": 4385,
+  "2024Q4": 139,
+  "2025Q1": 2306,
+  "2025Q2": 379,
+  "2025Q3": -254,
+  "2025Q4": 2236,
+  "2026Q1": -1763,
+  "2026Q2": -1005,
+  "2026Q3": 0
+ },
+ "dsr_dayclustered_N376": 0.254,
+ "clusters": 28,
+ "net_sum_bps_all/ex_top3/ex_top5_days": [
+  12855,
+  4988,
+  1839
+ ]
+}

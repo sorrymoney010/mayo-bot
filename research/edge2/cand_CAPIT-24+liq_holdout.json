@@ -1,0 +1,72 @@
+{
+ "label": "CAPIT-24+liq HOLDOUT",
+ "n": 2,
+ "bus_base": {
+  "pf": 2.67,
+  "mean_bps": 52.4,
+  "win": 0.5,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 0.5,
+  "max_dd_pct": 0.3
+ },
+ "bus_stress": {
+  "pf": 2.45,
+  "mean_bps": 48.4,
+  "win": 0.5,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 0.5,
+  "max_dd_pct": 0.3
+ },
+ "krk_maker": {
+  "pf": 0.735,
+  "mean_bps": -17.6,
+  "win": 0.5,
+  "folds_traded_pos": "0/1",
+  "port_return_pct": -0.2,
+  "max_dd_pct": 0.7
+ },
+ "krk_taker": {
+  "pf": 0.034,
+  "mean_bps": -107.6,
+  "win": 0.5,
+  "folds_traded_pos": "0/1",
+  "port_return_pct": -1.1,
+  "max_dd_pct": 1.1
+ },
+ "worst_trade_pct": -0.5,
+ "worst_mae_pct": -3.5,
+ "by_year": {
+  "2026": [
+   2,
+   52.4
+  ]
+ },
+ "by_coin": {
+  "BNB": [
+   1,
+   -62.8
+  ],
+  "ETH": [
+   1,
+   167.6
+  ]
+ },
+ "trades": [
+  [
+   "BNB",
+   "2026-10-29 23:00:00+00:00",
+   "2026-10-31 23:00:00+00:00",
+   "-3.1418982232931167",
+   "-0.005275365598393256",
+   "-0.03521624756032016"
+  ],
+  [
+   "ETH",
+   "2026-10-30 16:00:00+00:00",
+   "2026-11-01 16:00:00+00:00",
+   "-2.596684479812082",
+   "0.01775596878900232",
+   "-0.004471541065447893"
+  ]
+ ]
+}

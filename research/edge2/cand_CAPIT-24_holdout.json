@@ -1,0 +1,72 @@
+{
+ "label": "CAPIT-24 HOLDOUT",
+ "n": 2,
+ "bus_base": {
+  "pf": Infinity,
+  "mean_bps": 590.1,
+  "win": 1.0,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 5.9,
+  "max_dd_pct": 0.0
+ },
+ "bus_stress": {
+  "pf": Infinity,
+  "mean_bps": 586.1,
+  "win": 1.0,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 5.9,
+  "max_dd_pct": 0.0
+ },
+ "krk_maker": {
+  "pf": Infinity,
+  "mean_bps": 520.1,
+  "win": 1.0,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 5.2,
+  "max_dd_pct": 0.0
+ },
+ "krk_taker": {
+  "pf": 11.985,
+  "mean_bps": 430.1,
+  "win": 0.5,
+  "folds_traded_pos": "1/1",
+  "port_return_pct": 4.3,
+  "max_dd_pct": 0.4
+ },
+ "worst_trade_pct": 0.9,
+ "worst_mae_pct": -2.3,
+ "by_year": {
+  "2026": [
+   2,
+   590.1
+  ]
+ },
+ "by_coin": {
+  "BNB": [
+   1,
+   81.7
+  ],
+  "LINK": [
+   1,
+   1098.6
+  ]
+ },
+ "trades": [
+  [
+   "BNB",
+   "2026-10-29 21:00:00+00:00",
+   "2026-10-31 21:00:00+00:00",
+   "-4.429070773227353",
+   "0.009168923081331215",
+   "-0.022707411068609407"
+  ],
+  [
+   "LINK",
+   "2026-10-30 01:00:00+00:00",
+   "2026-11-01 01:00:00+00:00",
+   "-3.247204900204791",
+   "0.11085736035778848",
+   "-0.008564087924636032"
+  ]
+ ]
+}
