@@ -1,0 +1,7 @@
+state.json
+signals.jsonl
+trades.jsonl
+status.json
+run.log
+loop.pid
+*.tmp
