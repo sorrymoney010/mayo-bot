@@ -1,0 +1,850 @@
+{
+ "CAPIT-24|none": {
+  "label": "CAPIT-24|none",
+  "n": 125,
+  "bus_base": {
+   "pf": 1.63,
+   "mean_bps": 123.9,
+   "win": 0.56,
+   "folds_traded_pos": "10/15",
+   "port_return_pct": 77.4,
+   "max_dd_pct": 38.1
+  },
+  "bus_stress": {
+   "pf": 1.604,
+   "mean_bps": 119.9,
+   "win": 0.56,
+   "folds_traded_pos": "10/15",
+   "port_return_pct": 74.9,
+   "max_dd_pct": 38.5
+  },
+  "krk_maker": {
+   "pf": 1.235,
+   "mean_bps": 53.9,
+   "win": 0.504,
+   "folds_traded_pos": "9/15",
+   "port_return_pct": 33.7,
+   "max_dd_pct": 44.8
+  },
+  "krk_taker": {
+   "pf": 0.87,
+   "mean_bps": -36.1,
+   "win": 0.44,
+   "folds_traded_pos": "9/15",
+   "port_return_pct": -22.6,
+   "max_dd_pct": 53.3
+  },
+  "worst_trade_pct": -12.8,
+  "worst_mae_pct": -59.5,
+  "by_year": {
+   "2023": [
+    35,
+    -14.7
+   ],
+   "2024": [
+    35,
+    320.2
+   ],
+   "2025": [
+    32,
+    303.1
+   ],
+   "2026": [
+    23,
+    -213.1
+   ]
+  },
+  "folds_pos_of15": 10,
+  "perm_dev_bus": {
+   "actual_mean_bps": 123.9,
+   "null_mean_bps": 12.1,
+   "null_p99_bps": 119.4,
+   "p_value": 0.01098901098901099,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 53.9,
+   "null_mean_bps": -57.9,
+   "null_p99_bps": 49.4,
+   "p_value": 0.01098901098901099,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 77.4,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": -2.6,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 56.0,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 48.5,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": -24.5,
+    "bh_pct": -9.5,
+    "beats": false
+   },
+   "holdout": {
+    "strat_pct": 5.9,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 30,
+    "bus_base": {
+     "pf": 0.77,
+     "mean_bps": -54.8
+    },
+    "krk_maker": {
+     "pf": 0.56,
+     "mean_bps": -124.8
+    }
+   },
+   "bull": {
+    "n": 43,
+    "bus_base": {
+     "pf": 3.01,
+     "mean_bps": 296.1
+    },
+    "krk_maker": {
+     "pf": 2.29,
+     "mean_bps": 226.1
+    }
+   },
+   "flat": {
+    "n": 52,
+    "bus_base": {
+     "pf": 1.4,
+     "mean_bps": 84.6
+    },
+    "krk_maker": {
+     "pf": 1.06,
+     "mean_bps": 14.6
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 590.1
+  }
+ },
+ "CAPIT-24|R1": {
+  "label": "CAPIT-24|R1",
+  "n": 87,
+  "bus_base": {
+   "pf": 2.024,
+   "mean_bps": 186.3,
+   "win": 0.586,
+   "folds_traded_pos": "10/13",
+   "port_return_pct": 81.1,
+   "max_dd_pct": 35.5
+  },
+  "bus_stress": {
+   "pf": 1.993,
+   "mean_bps": 182.3,
+   "win": 0.586,
+   "folds_traded_pos": "10/13",
+   "port_return_pct": 79.3,
+   "max_dd_pct": 35.8
+  },
+  "krk_maker": {
+   "pf": 1.548,
+   "mean_bps": 116.3,
+   "win": 0.54,
+   "folds_traded_pos": "8/13",
+   "port_return_pct": 50.6,
+   "max_dd_pct": 40.8
+  },
+  "krk_taker": {
+   "pf": 1.103,
+   "mean_bps": 26.3,
+   "win": 0.471,
+   "folds_traded_pos": "8/13",
+   "port_return_pct": 11.5,
+   "max_dd_pct": 47.5
+  },
+  "worst_trade_pct": -12.8,
+  "worst_mae_pct": -59.5,
+  "by_year": {
+   "2023": [
+    31,
+    0.3
+   ],
+   "2024": [
+    27,
+    304.6
+   ],
+   "2025": [
+    25,
+    312.2
+   ],
+   "2026": [
+    4,
+    42.5
+   ]
+  },
+  "folds_pos_of15": 10,
+  "perm_dev_bus": {
+   "actual_mean_bps": 186.3,
+   "null_mean_bps": 13.6,
+   "null_p99_bps": 170.0,
+   "p_value": 0.002997002997002997,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 116.3,
+   "null_mean_bps": -56.4,
+   "null_p99_bps": 100.0,
+   "p_value": 0.002997002997002997,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 81.1,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": 0.0,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 41.1,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 39.0,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": 0.8,
+    "bh_pct": -9.5,
+    "beats": true
+   },
+   "holdout": {
+    "strat_pct": 5.9,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 10,
+    "bus_base": {
+     "pf": 3.3,
+     "mean_bps": 167.6
+    },
+    "krk_maker": {
+     "pf": 2.11,
+     "mean_bps": 97.6
+    }
+   },
+   "bull": {
+    "n": 40,
+    "bus_base": {
+     "pf": 3.09,
+     "mean_bps": 314.7
+    },
+    "krk_maker": {
+     "pf": 2.37,
+     "mean_bps": 244.7
+    }
+   },
+   "flat": {
+    "n": 37,
+    "bus_base": {
+     "pf": 1.21,
+     "mean_bps": 52.6
+    },
+    "krk_maker": {
+     "pf": 0.94,
+     "mean_bps": -17.4
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 590.1
+  }
+ },
+ "CAPIT-24|R2": {
+  "label": "CAPIT-24|R2",
+  "n": 103,
+  "bus_base": {
+   "pf": 2.066,
+   "mean_bps": 191.1,
+   "win": 0.592,
+   "folds_traded_pos": "11/14",
+   "port_return_pct": 98.4,
+   "max_dd_pct": 38.0
+  },
+  "bus_stress": {
+   "pf": 2.034,
+   "mean_bps": 187.1,
+   "win": 0.592,
+   "folds_traded_pos": "11/14",
+   "port_return_pct": 96.4,
+   "max_dd_pct": 38.3
+  },
+  "krk_maker": {
+   "pf": 1.58,
+   "mean_bps": 121.1,
+   "win": 0.553,
+   "folds_traded_pos": "10/14",
+   "port_return_pct": 62.4,
+   "max_dd_pct": 44.3
+  },
+  "krk_taker": {
+   "pf": 1.124,
+   "mean_bps": 31.1,
+   "win": 0.485,
+   "folds_traded_pos": "8/14",
+   "port_return_pct": 16.0,
+   "max_dd_pct": 52.4
+  },
+  "worst_trade_pct": -12.8,
+  "worst_mae_pct": -59.5,
+  "by_year": {
+   "2023": [
+    34,
+    -14.1
+   ],
+   "2024": [
+    34,
+    311.2
+   ],
+   "2025": [
+    28,
+    319.8
+   ],
+   "2026": [
+    7,
+    89.4
+   ]
+  },
+  "folds_pos_of15": 11,
+  "perm_dev_bus": {
+   "actual_mean_bps": 191.1,
+   "null_mean_bps": 11.5,
+   "null_p99_bps": 131.8,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 121.1,
+   "null_mean_bps": -58.5,
+   "null_p99_bps": 61.8,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 98.4,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": -2.4,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 52.9,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 44.8,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": 3.1,
+    "bh_pct": -9.5,
+    "beats": true
+   },
+   "holdout": {
+    "strat_pct": 5.9,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 17,
+    "bus_base": {
+     "pf": 2.21,
+     "mean_bps": 188.4
+    },
+    "krk_maker": {
+     "pf": 1.65,
+     "mean_bps": 118.4
+    }
+   },
+   "bull": {
+    "n": 42,
+    "bus_base": {
+     "pf": 2.92,
+     "mean_bps": 288.5
+    },
+    "krk_maker": {
+     "pf": 2.22,
+     "mean_bps": 218.5
+    }
+   },
+   "flat": {
+    "n": 44,
+    "bus_base": {
+     "pf": 1.46,
+     "mean_bps": 99.2
+    },
+    "krk_maker": {
+     "pf": 1.12,
+     "mean_bps": 29.2
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 590.1
+  }
+ },
+ "CAPIT-24+liq|none": {
+  "label": "CAPIT-24+liq|none",
+  "n": 41,
+  "bus_base": {
+   "pf": 2.935,
+   "mean_bps": 313.5,
+   "win": 0.707,
+   "folds_traded_pos": "9/12",
+   "port_return_pct": 64.3,
+   "max_dd_pct": 17.5
+  },
+  "bus_stress": {
+   "pf": 2.897,
+   "mean_bps": 309.5,
+   "win": 0.707,
+   "folds_traded_pos": "9/12",
+   "port_return_pct": 63.5,
+   "max_dd_pct": 17.7
+  },
+  "krk_maker": {
+   "pf": 2.32,
+   "mean_bps": 243.5,
+   "win": 0.659,
+   "folds_traded_pos": "9/12",
+   "port_return_pct": 49.9,
+   "max_dd_pct": 20.7
+  },
+  "krk_taker": {
+   "pf": 1.703,
+   "mean_bps": 153.5,
+   "win": 0.561,
+   "folds_traded_pos": "7/12",
+   "port_return_pct": 31.5,
+   "max_dd_pct": 24.7
+  },
+  "worst_trade_pct": -24.1,
+  "worst_mae_pct": -24.7,
+  "by_year": {
+   "2023": [
+    8,
+    655.1
+   ],
+   "2024": [
+    9,
+    634.9
+   ],
+   "2025": [
+    13,
+    359.0
+   ],
+   "2026": [
+    11,
+    -251.6
+   ]
+  },
+  "folds_pos_of15": 9,
+  "perm_dev_bus": {
+   "actual_mean_bps": 313.5,
+   "null_mean_bps": 9.2,
+   "null_p99_bps": 216.6,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 243.5,
+   "null_mean_bps": -60.8,
+   "null_p99_bps": 146.6,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 64.3,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": 26.2,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 28.6,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 23.3,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": -13.8,
+    "bh_pct": -9.5,
+    "beats": false
+   },
+   "holdout": {
+    "strat_pct": 0.5,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 18,
+    "bus_base": {
+     "pf": 1.56,
+     "mean_bps": 181.7
+    },
+    "krk_maker": {
+     "pf": 1.31,
+     "mean_bps": 111.7
+    }
+   },
+   "bull": {
+    "n": 11,
+    "bus_base": {
+     "pf": 5.92,
+     "mean_bps": 312.1
+    },
+    "krk_maker": {
+     "pf": 3.86,
+     "mean_bps": 242.1
+    }
+   },
+   "flat": {
+    "n": 12,
+    "bus_base": {
+     "pf": 95.55,
+     "mean_bps": 512.7
+    },
+    "krk_maker": {
+     "pf": 40.33,
+     "mean_bps": 442.7
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 52.4
+  }
+ },
+ "CAPIT-24+liq|R1": {
+  "label": "CAPIT-24+liq|R1",
+  "n": 19,
+  "bus_base": {
+   "pf": 9.717,
+   "mean_bps": 514.1,
+   "win": 0.789,
+   "folds_traded_pos": "5/6",
+   "port_return_pct": 48.8,
+   "max_dd_pct": 3.8
+  },
+  "bus_stress": {
+   "pf": 9.528,
+   "mean_bps": 510.1,
+   "win": 0.789,
+   "folds_traded_pos": "5/6",
+   "port_return_pct": 48.5,
+   "max_dd_pct": 3.9
+  },
+  "krk_maker": {
+   "pf": 6.689,
+   "mean_bps": 444.1,
+   "win": 0.684,
+   "folds_traded_pos": "5/6",
+   "port_return_pct": 42.2,
+   "max_dd_pct": 4.8
+  },
+  "krk_taker": {
+   "pf": 4.193,
+   "mean_bps": 354.1,
+   "win": 0.579,
+   "folds_traded_pos": "5/6",
+   "port_return_pct": 33.6,
+   "max_dd_pct": 6.2
+  },
+  "worst_trade_pct": -4.1,
+  "worst_mae_pct": -24.7,
+  "by_year": {
+   "2023": [
+    6,
+    788.6
+   ],
+   "2024": [
+    4,
+    297.6
+   ],
+   "2025": [
+    9,
+    427.3
+   ]
+  },
+  "folds_pos_of15": 5,
+  "perm_dev_bus": {
+   "actual_mean_bps": 514.1,
+   "null_mean_bps": 4.0,
+   "null_p99_bps": 286.6,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 444.1,
+   "null_mean_bps": -66.0,
+   "null_p99_bps": 216.6,
+   "p_value": 0.000999000999000999,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 48.8,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": 23.7,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 6.0,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 19.2,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": 0.0,
+    "bh_pct": -9.5,
+    "beats": true
+   },
+   "holdout": {
+    "strat_pct": 0.5,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 4,
+    "bus_base": {
+     "pf": 7.3,
+     "mean_bps": 664.7
+    },
+    "krk_maker": {
+     "pf": 5.3,
+     "mean_bps": 594.7
+    }
+   },
+   "bull": {
+    "n": 8,
+    "bus_base": {
+     "pf": 4.58,
+     "mean_bps": 312.7
+    },
+    "krk_maker": {
+     "pf": 3.09,
+     "mean_bps": 242.7
+    }
+   },
+   "flat": {
+    "n": 7,
+    "bus_base": {
+     "pf": Infinity,
+     "mean_bps": 658.2
+    },
+    "krk_maker": {
+     "pf": Infinity,
+     "mean_bps": 588.2
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 52.4
+  }
+ },
+ "CAPIT-24+liq|R2": {
+  "label": "CAPIT-24+liq|R2",
+  "n": 29,
+  "bus_base": {
+   "pf": 7.852,
+   "mean_bps": 473.6,
+   "win": 0.793,
+   "folds_traded_pos": "10/11",
+   "port_return_pct": 68.7,
+   "max_dd_pct": 4.1
+  },
+  "bus_stress": {
+   "pf": 7.714,
+   "mean_bps": 469.6,
+   "win": 0.793,
+   "folds_traded_pos": "10/11",
+   "port_return_pct": 68.1,
+   "max_dd_pct": 4.1
+  },
+  "krk_maker": {
+   "pf": 5.668,
+   "mean_bps": 403.6,
+   "win": 0.724,
+   "folds_traded_pos": "9/11",
+   "port_return_pct": 58.5,
+   "max_dd_pct": 4.5
+  },
+  "krk_taker": {
+   "pf": 3.715,
+   "mean_bps": 313.6,
+   "win": 0.586,
+   "folds_traded_pos": "8/11",
+   "port_return_pct": 45.5,
+   "max_dd_pct": 5.5
+  },
+  "worst_trade_pct": -8.1,
+  "worst_mae_pct": -24.7,
+  "by_year": {
+   "2023": [
+    7,
+    484.0
+   ],
+   "2024": [
+    9,
+    634.9
+   ],
+   "2025": [
+    11,
+    359.8
+   ],
+   "2026": [
+    2,
+    338.1
+   ]
+  },
+  "folds_pos_of15": 10,
+  "perm_dev_bus": {
+   "actual_mean_bps": 473.6,
+   "null_mean_bps": 6.8,
+   "null_p99_bps": 255.3,
+   "p_value": 0.001998001998001998,
+   "runs": 1000
+  },
+  "perm_dev_krk": {
+   "actual_mean_bps": 403.6,
+   "null_mean_bps": -63.2,
+   "null_p99_bps": 185.3,
+   "p_value": 0.001998001998001998,
+   "runs": 1000
+  },
+  "buy_hold_bus": {
+   "dev": {
+    "strat_pct": 68.7,
+    "bh_pct": 124.6,
+    "beats": false
+   },
+   "2023": {
+    "strat_pct": 16.9,
+    "bh_pct": 68.9,
+    "beats": false
+   },
+   "2024": {
+    "strat_pct": 28.6,
+    "bh_pct": 91.4,
+    "beats": false
+   },
+   "2025": {
+    "strat_pct": 19.8,
+    "bh_pct": -29.6,
+    "beats": true
+   },
+   "2026": {
+    "strat_pct": 3.4,
+    "bh_pct": -9.5,
+    "beats": true
+   },
+   "holdout": {
+    "strat_pct": 0.5,
+    "bh_pct": -26.9,
+    "beats": true
+   }
+  },
+  "regime_split_dev": {
+   "bear": {
+    "n": 9,
+    "bus_base": {
+     "pf": 6.23,
+     "mean_bps": 720.7
+    },
+    "krk_maker": {
+     "pf": 5.06,
+     "mean_bps": 650.7
+    }
+   },
+   "bull": {
+    "n": 10,
+    "bus_base": {
+     "pf": 5.61,
+     "mean_bps": 321.8
+    },
+    "krk_maker": {
+     "pf": 3.71,
+     "mean_bps": 251.8
+    }
+   },
+   "flat": {
+    "n": 10,
+    "bus_base": {
+     "pf": 62.96,
+     "mean_bps": 403.2
+    },
+    "krk_maker": {
+     "pf": 25.67,
+     "mean_bps": 333.2
+    }
+   }
+  },
+  "holdout": {
+   "n": 2,
+   "mean_bus_bps": 52.4
+  }
+ }
+}

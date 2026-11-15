@@ -114,6 +114,10 @@ def run():
     json.dump(status, open(f"{OUT}/status.json.tmp", "w"), indent=1); os.replace(f"{OUT}/status.json.tmp", f"{OUT}/status.json")
     print(now().isoformat(), "ok cursor", st["cursor"], "open", len(st["open"]), "closed", len(tr), "signals", len(sig_ids), flush=True)
 if __name__ == "__main__":
+    import fcntl
+    os.makedirs(OUT, exist_ok=True); _lk = open(f"{OUT}/cycle.lock", "w")
+    try: fcntl.flock(_lk, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError: print(now().isoformat(), "another cycle is running; skip", flush=True); sys.exit(0)
     try: run()
     except Exception as e:
         print(now().isoformat(), "ERROR", repr(e), flush=True); sys.exit(1)
