@@ -150,7 +150,7 @@ def test_trendhold_exit_writes_rich_closed_trade():
     row = json.loads(Path("logs/closed_trades.jsonl").read_text().strip().splitlines()[-1])
     assert row["sleeve"] == "trendhold@240m" and row["exit_reason"] == "below_ema100"
     for k in ("entry_signal_px", "entry_fill_px", "exit_signal_px", "exit_fill_px", "fees_usd",
-              "entry_maker", "exit_maker", "mae_bps", "mfe_bps", "hold_s", "net_bps"):
+              "entry_maker", "exit_maker", "mae_bps", "mfe_bps", "hold_s", "net_bps", "trade_id"):
         assert row.get(k) is not None, k
     assert row["hold_s"] == 2 * TF and row["mae_bps"] < 0 and row["mae_bps"] <= row["mfe_bps"]
     card = write_scorecard(Path("logs"))
@@ -191,12 +191,72 @@ def _rows(bps, sleeve="regime@60m"):
 def test_promotion_bar_rules():
     ok = promotion.check_strategy(_rows([120, 80, 100, 90, 110, 95] * 5))
     assert ok["passes"] and ok["trades"] == 30
+    assert ok["checks"]["profit_factor"]["pass"] and ok["checks"]["profit_factor"]["value"] == "inf"
     few = promotion.check_strategy(_rows([100] * 29))
     assert not few["passes"] and few["failed"] == ["min_trades"]
     noisy = promotion.check_strategy(_rows([900, -400, -300] * 10))  # mean +67, too noisy
     assert not noisy["passes"] and "lower_bound_positive" in noisy["failed"]
     lucky = promotion.check_strategy(_rows([-20] * 28 + [3000, 3000]))
     assert "ex_best_2_positive" in lucky["failed"]
+    # PF = 2000/1900 = 1.05 < 1.10 (also fails some mean/lb checks; PF must be listed)
+    weak_pf = promotion.check_strategy(_rows([100] * 20 + [-190] * 10))
+    assert not weak_pf["passes"] and "profit_factor" in weak_pf["failed"]
+    assert weak_pf["checks"]["profit_factor"]["value"] == 1.05
+
+
+def test_promotion_profit_factor():
+    assert promotion.profit_factor([]) is None
+    assert promotion.profit_factor([10.0, 5.0, 0.0]) == float("inf")
+    assert promotion.profit_factor([-1.0, -2.0]) == 0.0
+    assert abs(promotion.profit_factor([100.0, 50.0, -80.0]) - 150 / 80) < 1e-12
+    # pnl fallback when net_bps is missing
+    rows = [{"symbol": "BTC/USD", "ts": 1e9 + i, "pnl": p, "sleeve": "x"}
+            for i, p in enumerate([2.0, 1.0, -1.5])]
+    r = promotion.check_strategy(rows)
+    assert r["trades"] == 0  # no net_bps → other checks see n=0
+    assert r["checks"]["profit_factor"]["value"] == round((2 + 1) / 1.5, 2)
+    assert r["checks"]["profit_factor"]["pass"] is True  # 2.0 >= 1.10
+
+
+def test_dedup_trades_prefers_stable_id():
+    # Same legacy symbol|ts|pnl, two distinct ids → two trades
+    a = {"symbol": "ETH/USD", "ts": 1000.0, "pnl": -0.147467, "net_bps": -10, "trade_id": "aaa",
+         "source": "fill"}
+    b = {"symbol": "ETH/USD", "ts": 1000.0, "pnl": -0.147467, "net_bps": -11, "trade_id": "bbb",
+         "source": "fill"}
+    out = promotion.dedup_trades([a, b])
+    assert {r["trade_id"] for r in out} == {"aaa", "bbb"}
+
+    # No-id lean row + identified fill with the same legacy key → one row, fill wins
+    lean = {"symbol": "BTC/USD", "ts": 50.0, "pnl": 1.5, "net_bps": 150, "sleeve": "s"}
+    fill = {"symbol": "BTC/USD", "ts": 50.0, "pnl": 1.5, "net_bps": 150, "sleeve": "s",
+            "source": "fill", "trade_id": "tid-1", "exit_reason": "trail"}
+    out = promotion.dedup_trades([lean, fill])
+    assert len(out) == 1 and out[0]["trade_id"] == "tid-1" and out[0]["source"] == "fill"
+    out = promotion.dedup_trades([fill, lean])
+    assert len(out) == 1 and out[0]["trade_id"] == "tid-1" and out[0]["source"] == "fill"
+
+    # Two no-id rows, same legacy key: fill wins (old behavior)
+    out = promotion.dedup_trades([
+        {"symbol": "SOL/USD", "ts": 9.0, "pnl": 0.1, "net_bps": 1},
+        {"symbol": "SOL/USD", "ts": 9.0, "pnl": 0.1, "net_bps": 1, "source": "fill", "fees_usd": 0.2},
+    ])
+    assert len(out) == 1 and out[0]["source"] == "fill" and out[0]["fees_usd"] == 0.2
+
+    # Different id fields (order_id / txid / lot_id) also count
+    out = promotion.dedup_trades([
+        {"symbol": "X/USD", "ts": 1, "pnl": 1, "order_id": "o1"},
+        {"symbol": "X/USD", "ts": 1, "pnl": 1, "source": "fill", "order_id": "o1"},
+    ])
+    assert len(out) == 1 and out[0]["source"] == "fill"
+
+    # Unrelated trades stay separate
+    out = promotion.dedup_trades([
+        {"symbol": "BTC/USD", "ts": 1, "pnl": 1, "trade_id": "t1"},
+        {"symbol": "ETH/USD", "ts": 2, "pnl": 2, "id": "t2"},
+        {"symbol": "SOL/USD", "ts": 3, "pnl": 3},
+    ])
+    assert len(out) == 3
 
 
 def test_promotion_report_is_report_only(tmp_path):
@@ -208,6 +268,8 @@ def test_promotion_report_is_report_only(tmp_path):
             fh.write(json.dumps(r) + "\n")
     rep = promotion.write_report(logs)
     assert rep["report_only"] is True and rep["strategies"]["regime@60m"]["passes"] is True
+    assert rep["bar"]["min_profit_factor"] == 1.10
+    assert "profit factor >= 1.10" in " ".join(rep["bar"]["rules"])
     assert sorted(p.name for p in logs.iterdir()) == ["closed_trades.jsonl", "promotion_report.json"]
     assert dict(os.environ) == before
     src = Path(promotion.__file__).read_text()

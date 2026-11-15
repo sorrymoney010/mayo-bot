@@ -4,7 +4,7 @@ Source of truth for closed trades is the learner history in
 ``logs/learner.json`` (each entry: realized ``pnl`` after fees, ``net_bps`` vs
 cost basis, ``strategy`` = sleeve key, ``ts``). The learner keeps only the last
 200 trades per coin, so every run first appends new trades to an append-only
-``logs/closed_trades.jsonl`` (dedup by symbol/ts/pnl) and the scorecard is
+``logs/closed_trades.jsonl`` (dedup by trade_id when present, else symbol/ts/pnl) and the scorecard is
 computed from that ledger — history survives the learner cap.
 
 Rich rows (``source: "fill"``, written by the learner at the close) carry
@@ -44,10 +44,14 @@ def learner_trades(learner_path: Path) -> list[dict]:
             if not math.isfinite(pnl):
                 continue
             nb = h.get("net_bps")
-            out.append({"symbol": sym, "ts": float(h.get("ts") or 0.0), "pnl": pnl,
-                        "net_bps": None if nb is None else float(nb),
-                        "sleeve": str(h.get("strategy") or data.get("strategy_key") or "unknown"),
-                        "regime": h.get("regime", "unknown")})
+            row = {"symbol": sym, "ts": float(h.get("ts") or 0.0), "pnl": pnl,
+                   "net_bps": None if nb is None else float(nb),
+                   "sleeve": str(h.get("strategy") or data.get("strategy_key") or "unknown"),
+                   "regime": h.get("regime", "unknown")}
+            tid = h.get("trade_id") or h.get("id") or h.get("order_id") or h.get("txid") or h.get("lot_id")
+            if tid is not None and str(tid).strip() != "":
+                row["trade_id"] = str(tid)
+            out.append(row)
     return sorted(out, key=lambda t: t["ts"])
 
 

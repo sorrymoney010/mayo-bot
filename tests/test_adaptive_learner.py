@@ -234,6 +234,13 @@ def test_trade_detail_writes_rich_closed_trade_row(tmp_path):
     assert row["net_bps"] == 150.0 and row["fees_usd"] == 0.81 and row["exit_reason"] == "trail"
     assert row["entry_slip_bps"] == 10.0 and round(row["exit_slip_bps"], 1) == 9.8
     assert row["sleeve"] == KEY and row["source"] == "fill" and "git" in row
+    assert row.get("trade_id")
+    # detail-supplied id is preserved
+    la.record_trade("ETH/USD", 0.5, "trend", notional=100.0, ts=1_800_000_001.0,
+                    detail={"trade_id": "custom-id-1", "entry_signal_px": 1.0, "entry_fill_px": 1.0,
+                            "exit_signal_px": 1.0, "exit_fill_px": 1.0, "entry_fee": 0.0, "exit_fee": 0.0})
+    rows = [json.loads(l) for l in (tmp_path / "closed_trades.jsonl").read_text().splitlines() if l.strip()]
+    assert rows[-1]["trade_id"] == "custom-id-1"
 
 
 def test_old_small_sample_benches_are_dropped_on_load(tmp_path):

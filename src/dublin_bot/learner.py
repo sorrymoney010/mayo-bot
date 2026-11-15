@@ -18,6 +18,7 @@ import json
 import math
 import threading
 import time
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -109,6 +110,20 @@ def mean_bounds(xs: list[float], conf: float = BENCH_CONFIDENCE) -> tuple[float 
     sd = math.sqrt(sum((x - m) ** 2 for x in xs) / (n - 1))
     half = t_quantile(conf, n - 1) * sd / math.sqrt(n)
     return m, m - half, m + half
+
+
+
+_ID_FIELDS = ("trade_id", "id", "order_id", "txid", "lot_id")
+
+
+def _trade_id_from(detail: dict | None) -> str:
+    """Stable id from a fill-detail dict, or a fresh uuid if none is present."""
+    if detail:
+        for f in _ID_FIELDS:
+            v = detail.get(f)
+            if v is not None and str(v).strip() != "":
+                return str(v)
+    return uuid.uuid4().hex
 
 
 @dataclass
@@ -373,12 +388,14 @@ class LearningAgent:
         if notional is not None and notional > 0 and math.isfinite(float(pnl)):
             net_bps = float(pnl) / float(notional) * 1e4
         ts_f = float(ts if ts is not None else time.time())
+        tid = _trade_id_from(detail)
         c.history.append({
             "pnl": round(float(pnl), 6),
             "net_bps": None if net_bps is None else round(net_bps, 2),
             "regime": regime,
             "ts": ts_f,
             "strategy": strategy or self.strategy_key,
+            "trade_id": tid,
         })
         if detail is not None:
             self._write_closed_trade(sym, c.history[-1], detail)
@@ -593,12 +610,18 @@ class LearningAgent:
         self.save()
 
     def _write_closed_trade(self, sym: str, h: dict, detail: dict) -> None:
-        """Rich row in ``closed_trades.jsonl`` (same symbol/ts/pnl key the scorecard dedups on)."""
+        """Rich row in ``closed_trades.jsonl``.
+
+        Each row carries a stable ``trade_id`` (from the history entry, or from
+        detail, or a new uuid) so the promotion/scorecard dedup can key on it.
+        Does not change trading behavior — this is a paper log write only.
+        """
         from .telemetry import append_jsonl, git_hash, iso
 
         row = {"symbol": sym, "ts": h["ts"], "pnl": h["pnl"], "net_bps": h["net_bps"],
                "sleeve": h["strategy"], "regime": h["regime"], "source": "fill",
-               "closed_at": iso(h["ts"]), "git": git_hash()}
+               "closed_at": iso(h["ts"]), "git": git_hash(),
+               "trade_id": h.get("trade_id") or _trade_id_from(detail)}
         for k, v in detail.items():
             row.setdefault(k, v)
         fees = [detail.get("entry_fee"), detail.get("exit_fee")]

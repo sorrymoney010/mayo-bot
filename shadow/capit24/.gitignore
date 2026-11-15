@@ -1,8 +1,15 @@
 state.json
 signals.jsonl
+signals_r2.jsonl
+signals_oiflush.jsonl
 trades.jsonl
+trades_r2.jsonl
+trades_oiflush.jsonl
 status.json
 run.log
 loop.pid
 *.tmp
 cycle.lock
+metrics/
+oi_1h.pkl
+*.404
