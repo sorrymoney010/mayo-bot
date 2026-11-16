@@ -1,0 +1,1163 @@
+{
+ "data": "Binance spot 1h, 2022-01-01 00:00:00+00:00 .. 2026-11-15 23:00:00+00:00",
+ "costs_round_trip": {
+  "binanceus_10bps": 0.001,
+  "kraken_limit_mkt_125bps": 0.0125,
+  "kraken_taker_160bps": 0.016
+ },
+ "rules": [
+  {
+   "rule": "A_1h_bottomdecile_lowvol_hold4",
+   "desc": "1h return <= trailing 10th pct (30d window) and 1h quote volume < trailing median; buy next open, hold 4h",
+   "hold_h": 4,
+   "gross_long_bps": 5.1,
+   "short_mirror_gross_bps": -5.1,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 2546,
+     "mean_bps": -4.9,
+     "pf": 0.93,
+     "win": 0.485
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 2546,
+     "mean_bps": -119.9,
+     "pf": 0.17,
+     "win": 0.196
+    },
+    "kraken_taker_160bps": {
+     "n": 2546,
+     "mean_bps": -154.9,
+     "pf": 0.11,
+     "win": 0.15
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     658,
+     2.9
+    ],
+    "HBAR": [
+     560,
+     12.9
+    ],
+    "ALGO": [
+     660,
+     6.1
+    ],
+    "XLM": [
+     668,
+     -0.3
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     252,
+     18.4
+    ],
+    [
+     "2022H2",
+     216,
+     -7.1
+    ],
+    [
+     "2023H1",
+     252,
+     17.9
+    ],
+    [
+     "2023H2",
+     205,
+     7.9
+    ],
+    [
+     "2024H1",
+     271,
+     7.4
+    ],
+    [
+     "2024H2",
+     255,
+     13.5
+    ],
+    [
+     "2025H1",
+     287,
+     10.7
+    ],
+    [
+     "2025H2",
+     288,
+     -4.2
+    ],
+    [
+     "2026H1",
+     284,
+     -6.2
+    ],
+    [
+     "2026H2",
+     236,
+     -8.0
+    ]
+   ],
+   "half_years_positive_gross": "6/10",
+   "half_years_positive_net10": "4/10",
+   "perm_p_gross": 0.1069,
+   "unconditional_drift_bps": -0.1
+  },
+  {
+   "rule": "A_1h_bottomdecile_highvol_hold4",
+   "desc": "1h return <= trailing 10th pct (30d window) and 1h quote volume >= trailing median; buy next open, hold 4h",
+   "hold_h": 4,
+   "gross_long_bps": 9.5,
+   "short_mirror_gross_bps": -9.5,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 9216,
+     "mean_bps": -0.5,
+     "pf": 0.99,
+     "win": 0.502
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 9216,
+     "mean_bps": -115.5,
+     "pf": 0.25,
+     "win": 0.23
+    },
+    "kraken_taker_160bps": {
+     "n": 9216,
+     "mean_bps": -150.5,
+     "pf": 0.17,
+     "win": 0.178
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     2293,
+     13.5
+    ],
+    "HBAR": [
+     2348,
+     10.6
+    ],
+    "ALGO": [
+     2296,
+     5.8
+    ],
+    "XLM": [
+     2279,
+     8.2
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     788,
+     -18.8
+    ],
+    [
+     "2022H2",
+     910,
+     5.6
+    ],
+    [
+     "2023H1",
+     1054,
+     13.4
+    ],
+    [
+     "2023H2",
+     1069,
+     17.4
+    ],
+    [
+     "2024H1",
+     892,
+     6.7
+    ],
+    [
+     "2024H2",
+     1111,
+     44.1
+    ],
+    [
+     "2025H1",
+     837,
+     8.5
+    ],
+    [
+     "2025H2",
+     895,
+     -9.8
+    ],
+    [
+     "2026H1",
+     986,
+     6.0
+    ],
+    [
+     "2026H2",
+     674,
+     8.3
+    ]
+   ],
+   "half_years_positive_gross": "8/10",
+   "half_years_positive_net10": "3/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": -0.1
+  },
+  {
+   "rule": "A_24h_bottomdecile_lowvol_hold24",
+   "desc": "24h return <= trailing 10th pct (90d window) and 24h quote volume < trailing median; buy next open, hold 24h",
+   "hold_h": 24,
+   "gross_long_bps": 41.6,
+   "short_mirror_gross_bps": -41.6,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 722,
+     "mean_bps": 31.6,
+     "pf": 1.23,
+     "win": 0.532
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 722,
+     "mean_bps": -83.4,
+     "pf": 0.58,
+     "win": 0.4
+    },
+    "kraken_taker_160bps": {
+     "n": 722,
+     "mean_bps": -118.4,
+     "pf": 0.46,
+     "win": 0.357
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     188,
+     33.4
+    ],
+    "HBAR": [
+     188,
+     34.4
+    ],
+    "ALGO": [
+     189,
+     52.7
+    ],
+    "XLM": [
+     157,
+     46.5
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     85,
+     79.1
+    ],
+    [
+     "2022H2",
+     74,
+     75.5
+    ],
+    [
+     "2023H1",
+     44,
+     1.9
+    ],
+    [
+     "2023H2",
+     29,
+     76.8
+    ],
+    [
+     "2024H1",
+     63,
+     94.7
+    ],
+    [
+     "2024H2",
+     62,
+     -78.4
+    ],
+    [
+     "2025H1",
+     100,
+     39.1
+    ],
+    [
+     "2025H2",
+     101,
+     -11.9
+    ],
+    [
+     "2026H1",
+     109,
+     87.4
+    ],
+    [
+     "2026H2",
+     55,
+     37.1
+    ]
+   ],
+   "half_years_positive_gross": "8/10",
+   "half_years_positive_net10": "7/10",
+   "perm_p_gross": 0.014,
+   "unconditional_drift_bps": -0.9
+  },
+  {
+   "rule": "A_24h_bottomdecile_highvol_hold24",
+   "desc": "24h return <= trailing 10th pct (90d window) and 24h quote volume >= trailing median; buy next open, hold 24h",
+   "hold_h": 24,
+   "gross_long_bps": 72.7,
+   "short_mirror_gross_bps": -72.7,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 1164,
+     "mean_bps": 62.7,
+     "pf": 1.38,
+     "win": 0.534
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 1164,
+     "mean_bps": -52.3,
+     "pf": 0.77,
+     "win": 0.43
+    },
+    "kraken_taker_160bps": {
+     "n": 1164,
+     "mean_bps": -87.3,
+     "pf": 0.64,
+     "win": 0.401
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     277,
+     81.8
+    ],
+    "HBAR": [
+     299,
+     71.9
+    ],
+    "ALGO": [
+     286,
+     52.2
+    ],
+    "XLM": [
+     302,
+     84.6
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     57,
+     20.8
+    ],
+    [
+     "2022H2",
+     85,
+     7.7
+    ],
+    [
+     "2023H1",
+     129,
+     48.7
+    ],
+    [
+     "2023H2",
+     177,
+     120.9
+    ],
+    [
+     "2024H1",
+     132,
+     55.8
+    ],
+    [
+     "2024H2",
+     170,
+     151.4
+    ],
+    [
+     "2025H1",
+     75,
+     88.2
+    ],
+    [
+     "2025H2",
+     113,
+     83.3
+    ],
+    [
+     "2026H1",
+     118,
+     -2.0
+    ],
+    [
+     "2026H2",
+     108,
+     57.5
+    ]
+   ],
+   "half_years_positive_gross": "9/10",
+   "half_years_positive_net10": "8/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": -0.9
+  },
+  {
+   "rule": "B_BTC_up2sigma_follow_hold1",
+   "desc": "BTC 1h bar return > 2x trailing 30d sigma; buy alt at next bar open, hold 1h",
+   "hold_h": 1,
+   "gross_long_bps": 7.5,
+   "short_mirror_gross_bps": -7.5,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 4080,
+     "mean_bps": -2.5,
+     "pf": 0.94,
+     "win": 0.451
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 4080,
+     "mean_bps": -117.5,
+     "pf": 0.1,
+     "win": 0.111
+    },
+    "kraken_taker_160bps": {
+     "n": 4080,
+     "mean_bps": -152.5,
+     "pf": 0.06,
+     "win": 0.077
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     1020,
+     7.1
+    ],
+    "HBAR": [
+     1020,
+     7.9
+    ],
+    "ALGO": [
+     1020,
+     7.3
+    ],
+    "XLM": [
+     1020,
+     7.8
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     404,
+     8.5
+    ],
+    [
+     "2022H2",
+     328,
+     -5.6
+    ],
+    [
+     "2023H1",
+     468,
+     16.6
+    ],
+    [
+     "2023H2",
+     404,
+     -6.7
+    ],
+    [
+     "2024H1",
+     460,
+     3.5
+    ],
+    [
+     "2024H2",
+     464,
+     17.4
+    ],
+    [
+     "2025H1",
+     384,
+     16.7
+    ],
+    [
+     "2025H2",
+     424,
+     3.7
+    ],
+    [
+     "2026H1",
+     444,
+     4.6
+    ],
+    [
+     "2026H2",
+     300,
+     14.8
+    ]
+   ],
+   "half_years_positive_gross": "8/10",
+   "half_years_positive_net10": "4/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": 0.0
+  },
+  {
+   "rule": "B_BTC_up2sigma_follow_hold4",
+   "desc": "BTC 1h bar return > 2x trailing 30d sigma; buy alt at next bar open, hold 4h",
+   "hold_h": 4,
+   "gross_long_bps": 13.8,
+   "short_mirror_gross_bps": -13.8,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 3576,
+     "mean_bps": 3.8,
+     "pf": 1.05,
+     "win": 0.487
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 3576,
+     "mean_bps": -111.2,
+     "pf": 0.27,
+     "win": 0.236
+    },
+    "kraken_taker_160bps": {
+     "n": 3576,
+     "mean_bps": -146.2,
+     "pf": 0.18,
+     "win": 0.182
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     894,
+     12.5
+    ],
+    "HBAR": [
+     894,
+     14.7
+    ],
+    "ALGO": [
+     894,
+     9.0
+    ],
+    "XLM": [
+     894,
+     19.1
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     344,
+     -20.0
+    ],
+    [
+     "2022H2",
+     292,
+     -10.1
+    ],
+    [
+     "2023H1",
+     392,
+     53.7
+    ],
+    [
+     "2023H2",
+     352,
+     10.2
+    ],
+    [
+     "2024H1",
+     408,
+     18.7
+    ],
+    [
+     "2024H2",
+     420,
+     30.3
+    ],
+    [
+     "2025H1",
+     332,
+     23.1
+    ],
+    [
+     "2025H2",
+     384,
+     18.7
+    ],
+    [
+     "2026H1",
+     392,
+     -18.9
+    ],
+    [
+     "2026H2",
+     260,
+     26.7
+    ]
+   ],
+   "half_years_positive_gross": "7/10",
+   "half_years_positive_net10": "7/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": -0.1
+  },
+  {
+   "rule": "B_ETH_up2sigma_follow_hold1",
+   "desc": "ETH 1h bar return > 2x trailing 30d sigma; buy alt at next bar open, hold 1h",
+   "hold_h": 1,
+   "gross_long_bps": 6.3,
+   "short_mirror_gross_bps": -6.3,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 3908,
+     "mean_bps": -3.7,
+     "pf": 0.92,
+     "win": 0.45
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 3908,
+     "mean_bps": -118.7,
+     "pf": 0.1,
+     "win": 0.117
+    },
+    "kraken_taker_160bps": {
+     "n": 3908,
+     "mean_bps": -153.7,
+     "pf": 0.06,
+     "win": 0.082
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     977,
+     4.4
+    ],
+    "HBAR": [
+     977,
+     7.1
+    ],
+    "ALGO": [
+     977,
+     3.3
+    ],
+    "XLM": [
+     977,
+     10.5
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     396,
+     2.6
+    ],
+    [
+     "2022H2",
+     344,
+     -2.2
+    ],
+    [
+     "2023H1",
+     428,
+     14.9
+    ],
+    [
+     "2023H2",
+     360,
+     2.3
+    ],
+    [
+     "2024H1",
+     444,
+     -1.8
+    ],
+    [
+     "2024H2",
+     492,
+     8.7
+    ],
+    [
+     "2025H1",
+     352,
+     21.9
+    ],
+    [
+     "2025H2",
+     444,
+     4.9
+    ],
+    [
+     "2026H1",
+     416,
+     0.7
+    ],
+    [
+     "2026H2",
+     232,
+     15.5
+    ]
+   ],
+   "half_years_positive_gross": "8/10",
+   "half_years_positive_net10": "3/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": 0.0
+  },
+  {
+   "rule": "B_ETH_up2sigma_follow_hold4",
+   "desc": "ETH 1h bar return > 2x trailing 30d sigma; buy alt at next bar open, hold 4h",
+   "hold_h": 4,
+   "gross_long_bps": 11.6,
+   "short_mirror_gross_bps": -11.6,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 3412,
+     "mean_bps": 1.6,
+     "pf": 1.02,
+     "win": 0.488
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 3412,
+     "mean_bps": -113.4,
+     "pf": 0.26,
+     "win": 0.233
+    },
+    "kraken_taker_160bps": {
+     "n": 3412,
+     "mean_bps": -148.4,
+     "pf": 0.18,
+     "win": 0.184
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     853,
+     11.5
+    ],
+    "HBAR": [
+     853,
+     14.9
+    ],
+    "ALGO": [
+     853,
+     2.6
+    ],
+    "XLM": [
+     853,
+     17.5
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     324,
+     -23.7
+    ],
+    [
+     "2022H2",
+     300,
+     -37.3
+    ],
+    [
+     "2023H1",
+     360,
+     43.1
+    ],
+    [
+     "2023H2",
+     312,
+     13.7
+    ],
+    [
+     "2024H1",
+     384,
+     19.1
+    ],
+    [
+     "2024H2",
+     440,
+     29.3
+    ],
+    [
+     "2025H1",
+     324,
+     42.7
+    ],
+    [
+     "2025H2",
+     404,
+     12.2
+    ],
+    [
+     "2026H1",
+     348,
+     -21.1
+    ],
+    [
+     "2026H2",
+     216,
+     33.1
+    ]
+   ],
+   "half_years_positive_gross": "7/10",
+   "half_years_positive_net10": "7/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": -0.1
+  },
+  {
+   "rule": "B_BTC_up2sigma_altLAGGED_hold1",
+   "desc": "BTC 1h > 2 sigma AND alt same-hour return < half of BTC's; buy alt next open, hold 1h",
+   "hold_h": 1,
+   "gross_long_bps": 12.1,
+   "short_mirror_gross_bps": -12.1,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 868,
+     "mean_bps": 2.1,
+     "pf": 1.05,
+     "win": 0.471
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 868,
+     "mean_bps": -112.9,
+     "pf": 0.1,
+     "win": 0.106
+    },
+    "kraken_taker_160bps": {
+     "n": 868,
+     "mean_bps": -147.9,
+     "pf": 0.06,
+     "win": 0.074
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     176,
+     9.7
+    ],
+    "HBAR": [
+     220,
+     11.6
+    ],
+    "ALGO": [
+     192,
+     27.4
+    ],
+    "XLM": [
+     280,
+     3.6
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     61,
+     7.4
+    ],
+    [
+     "2022H2",
+     105,
+     15.2
+    ],
+    [
+     "2023H1",
+     158,
+     26.6
+    ],
+    [
+     "2023H2",
+     106,
+     -3.4
+    ],
+    [
+     "2024H1",
+     130,
+     -3.9
+    ],
+    [
+     "2024H2",
+     115,
+     23.7
+    ],
+    [
+     "2025H1",
+     31,
+     34.4
+    ],
+    [
+     "2025H2",
+     34,
+     -40.4
+    ],
+    [
+     "2026H1",
+     54,
+     -1.7
+    ],
+    [
+     "2026H2",
+     74,
+     38.0
+    ]
+   ],
+   "half_years_positive_gross": "6/10",
+   "half_years_positive_net10": "5/10",
+   "perm_p_gross": 0.001,
+   "unconditional_drift_bps": 0.0
+  },
+  {
+   "rule": "B_BTC_up2sigma_altLAGGED_hold4",
+   "desc": "BTC 1h > 2 sigma AND alt same-hour return < half of BTC's; buy alt next open, hold 4h",
+   "hold_h": 4,
+   "gross_long_bps": 16.6,
+   "short_mirror_gross_bps": -16.6,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 806,
+     "mean_bps": 6.6,
+     "pf": 1.1,
+     "win": 0.49
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 806,
+     "mean_bps": -108.4,
+     "pf": 0.25,
+     "win": 0.225
+    },
+    "kraken_taker_160bps": {
+     "n": 806,
+     "mean_bps": -143.4,
+     "pf": 0.17,
+     "win": 0.172
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     162,
+     7.5
+    ],
+    "HBAR": [
+     208,
+     20.3
+    ],
+    "ALGO": [
+     176,
+     28.3
+    ],
+    "XLM": [
+     260,
+     11.4
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     61,
+     -54.8
+    ],
+    [
+     "2022H2",
+     98,
+     14.9
+    ],
+    [
+     "2023H1",
+     136,
+     62.7
+    ],
+    [
+     "2023H2",
+     96,
+     -8.2
+    ],
+    [
+     "2024H1",
+     123,
+     -0.4
+    ],
+    [
+     "2024H2",
+     112,
+     55.6
+    ],
+    [
+     "2025H1",
+     30,
+     14.3
+    ],
+    [
+     "2025H2",
+     32,
+     -33.7
+    ],
+    [
+     "2026H1",
+     51,
+     -52.6
+    ],
+    [
+     "2026H2",
+     67,
+     69.8
+    ]
+   ],
+   "half_years_positive_gross": "5/10",
+   "half_years_positive_net10": "5/10",
+   "perm_p_gross": 0.012,
+   "unconditional_drift_bps": -0.1
+  },
+  {
+   "rule": "B_BTC_down2sigma_buyalt_hold4_INFO",
+   "desc": "BTC 1h < -2 sigma; long alt next open hold 4h (sign tells if dumps continue (neg) or bounce (pos))",
+   "hold_h": 4,
+   "gross_long_bps": 7.6,
+   "short_mirror_gross_bps": -7.6,
+   "by_cost": {
+    "binanceus_10bps": {
+     "n": 3512,
+     "mean_bps": -2.4,
+     "pf": 0.97,
+     "win": 0.51
+    },
+    "kraken_limit_mkt_125bps": {
+     "n": 3512,
+     "mean_bps": -117.4,
+     "pf": 0.26,
+     "win": 0.254
+    },
+    "kraken_taker_160bps": {
+     "n": 3512,
+     "mean_bps": -152.4,
+     "pf": 0.18,
+     "win": 0.204
+    }
+   },
+   "per_coin_gross_bps": {
+    "VET": [
+     878,
+     7.5
+    ],
+    "HBAR": [
+     878,
+     6.3
+    ],
+    "ALGO": [
+     878,
+     11.3
+    ],
+    "XLM": [
+     878,
+     5.2
+    ]
+   },
+   "half_years_gross_bps": [
+    [
+     "2022H1",
+     376,
+     -26.3
+    ],
+    [
+     "2022H2",
+     300,
+     27.1
+    ],
+    [
+     "2023H1",
+     348,
+     35.6
+    ],
+    [
+     "2023H2",
+     312,
+     -2.8
+    ],
+    [
+     "2024H1",
+     352,
+     26.4
+    ],
+    [
+     "2024H2",
+     396,
+     21.5
+    ],
+    [
+     "2025H1",
+     320,
+     4.0
+    ],
+    [
+     "2025H2",
+     428,
+     -32.9
+    ],
+    [
+     "2026H1",
+     404,
+     26.6
+    ],
+    [
+     "2026H2",
+     276,
+     4.5
+    ]
+   ],
+   "half_years_positive_gross": "7/10",
+   "half_years_positive_net10": "5/10",
+   "perm_p_gross": 0.013,
+   "unconditional_drift_bps": -0.1
+  }
+ ],
+ "lag_correlations_1h": {
+  "BTC->VET": {
+   "same_hour": 0.705,
+   "leader_t_vs_alt_t+1": -0.0121,
+   "alt_t_vs_leader_t+1": 0.0014
+  },
+  "BTC->HBAR": {
+   "same_hour": 0.617,
+   "leader_t_vs_alt_t+1": -0.0125,
+   "alt_t_vs_leader_t+1": 0.0015
+  },
+  "BTC->ALGO": {
+   "same_hour": 0.66,
+   "leader_t_vs_alt_t+1": -0.0102,
+   "alt_t_vs_leader_t+1": 0.0032
+  },
+  "BTC->XLM": {
+   "same_hour": 0.609,
+   "leader_t_vs_alt_t+1": -0.004,
+   "alt_t_vs_leader_t+1": 0.0017
+  },
+  "ETH->VET": {
+   "same_hour": 0.732,
+   "leader_t_vs_alt_t+1": -0.0133,
+   "alt_t_vs_leader_t+1": 0.0143
+  },
+  "ETH->HBAR": {
+   "same_hour": 0.646,
+   "leader_t_vs_alt_t+1": -0.0153,
+   "alt_t_vs_leader_t+1": 0.0076
+  },
+  "ETH->ALGO": {
+   "same_hour": 0.688,
+   "leader_t_vs_alt_t+1": -0.0134,
+   "alt_t_vs_leader_t+1": 0.0108
+  },
+  "ETH->XLM": {
+   "same_hour": 0.636,
+   "leader_t_vs_alt_t+1": -0.0032,
+   "alt_t_vs_leader_t+1": 0.0084
+  }
+ }
+}

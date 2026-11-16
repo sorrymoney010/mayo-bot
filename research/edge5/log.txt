@@ -1,0 +1,53 @@
+A_1h_bottomdecile_lowvol_hold4             n=2546 gross=    5.1 drift=  -0.1 net10=   -4.9 pf10=0.93 net125= -119.9 pf125=0.17 HYpos=6/10 p=0.1069
+A_1h_bottomdecile_highvol_hold4            n=9216 gross=    9.5 drift=  -0.1 net10=   -0.5 pf10=0.99 net125= -115.5 pf125=0.25 HYpos=8/10 p=0.001
+A_24h_bottomdecile_lowvol_hold24           n= 722 gross=   41.6 drift=  -0.9 net10=   31.6 pf10=1.23 net125=  -83.4 pf125=0.58 HYpos=8/10 p=0.014
+A_24h_bottomdecile_highvol_hold24          n=1164 gross=   72.7 drift=  -0.9 net10=   62.7 pf10=1.38 net125=  -52.3 pf125=0.77 HYpos=9/10 p=0.001
+B_BTC_up2sigma_follow_hold1                n=4080 gross=    7.5 drift=   0.0 net10=   -2.5 pf10=0.94 net125= -117.5 pf125=0.1 HYpos=8/10 p=0.001
+B_BTC_up2sigma_follow_hold4                n=3576 gross=   13.8 drift=  -0.1 net10=    3.8 pf10=1.05 net125= -111.2 pf125=0.27 HYpos=7/10 p=0.001
+B_ETH_up2sigma_follow_hold1                n=3908 gross=    6.3 drift=   0.0 net10=   -3.7 pf10=0.92 net125= -118.7 pf125=0.1 HYpos=8/10 p=0.001
+B_ETH_up2sigma_follow_hold4                n=3412 gross=   11.6 drift=  -0.1 net10=    1.6 pf10=1.02 net125= -113.4 pf125=0.26 HYpos=7/10 p=0.001
+B_BTC_up2sigma_altLAGGED_hold1             n= 868 gross=   12.1 drift=   0.0 net10=    2.1 pf10=1.05 net125= -112.9 pf125=0.1 HYpos=6/10 p=0.001
+B_BTC_up2sigma_altLAGGED_hold4             n= 806 gross=   16.6 drift=  -0.1 net10=    6.6 pf10=1.1 net125= -108.4 pf125=0.25 HYpos=5/10 p=0.012
+B_BTC_down2sigma_buyalt_hold4_INFO         n=3512 gross=    7.6 drift=  -0.1 net10=   -2.4 pf10=0.97 net125= -117.4 pf125=0.26 HYpos=7/10 p=0.013
+{
+"BTC->VET": {
+"same_hour": 0.705,
+"leader_t_vs_alt_t+1": -0.0121,
+"alt_t_vs_leader_t+1": 0.0014
+},
+"BTC->HBAR": {
+"same_hour": 0.617,
+"leader_t_vs_alt_t+1": -0.0125,
+"alt_t_vs_leader_t+1": 0.0015
+},
+"BTC->ALGO": {
+"same_hour": 0.66,
+"leader_t_vs_alt_t+1": -0.0102,
+"alt_t_vs_leader_t+1": 0.0032
+},
+"BTC->XLM": {
+"same_hour": 0.609,
+"leader_t_vs_alt_t+1": -0.004,
+"alt_t_vs_leader_t+1": 0.0017
+},
+"ETH->VET": {
+"same_hour": 0.732,
+"leader_t_vs_alt_t+1": -0.0133,
+"alt_t_vs_leader_t+1": 0.0143
+},
+"ETH->HBAR": {
+"same_hour": 0.646,
+"leader_t_vs_alt_t+1": -0.0153,
+"alt_t_vs_leader_t+1": 0.0076
+},
+"ETH->ALGO": {
+"same_hour": 0.688,
+"leader_t_vs_alt_t+1": -0.0134,
+"alt_t_vs_leader_t+1": 0.0108
+},
+"ETH->XLM": {
+"same_hour": 0.636,
+"leader_t_vs_alt_t+1": -0.0032,
+"alt_t_vs_leader_t+1": 0.0084
+}
+}
