@@ -261,11 +261,11 @@ def test_stop_exit_books_loss_to_learner_under_sleeve_key(dip_world):
     assert ex["reason"] == "stop" and ex["realized"] < 0
     assert _state()["positions"] == {}
     assert "BTC/USD" not in json.loads(Path("logs/paper_bot_positions.json").read_text())
-    la = LearningAgent("logs/learner.json", strategy_key="meanrev_mk@240m")
+    la = LearningAgent(_settings().learner_path, strategy_key="meanrev_mk@240m")
     hist = la.coins["BTC/USD"].history
     assert hist[-1]["strategy"] == "meanrev_mk@240m" and hist[-1]["net_bps"] < 0
     # The regime sleeve's learner does not see this trade in its expectancy.
-    assert LearningAgent("logs/learner.json", strategy_key="regime@60m")._live("BTC/USD")[1] == 0
+    assert LearningAgent(_settings().learner_path, strategy_key="regime@60m")._live("BTC/USD")[1] == 0
     assert SleeveRegistry().owner_of("BTC/USD") == PRIMARY  # released
 
 
