@@ -123,7 +123,7 @@ def snapshot() -> dict:
         if symbol in TREND6_SYMBOLS:
             try:
                 daily = get_public("/api/v3/klines", symbol=symbol,
-                                   interval="1d", limit=230, timeZone="0")
+                                   interval="1d", limit=230)
                 record["trend6"] = trend6_diagnostic(daily, now_ms)
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 record["trend6"] = {"status": "unavailable",
