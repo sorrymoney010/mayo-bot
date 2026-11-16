@@ -21,7 +21,7 @@ production. The only simplifications vs live:
 
 Usage:
     PYTHONPATH=src:. .venv/bin/python scripts/backtest_live.py \
-        --symbol PUMP/USD --days 180 --oospct 25
+        --symbol BTC/USD --days 180 --oospct 25
 """
 
 from __future__ import annotations
@@ -299,7 +299,7 @@ def _print(res: BacktestResult, equity_start: float, label: str = "") -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--symbol", default="PUMP/USD")
+    ap.add_argument("--symbol", default="BTC/USD")
     ap.add_argument("--days", type=int, default=180)
     ap.add_argument("--equity", type=float, default=1000.0)
     ap.add_argument("--oospct", type=float, default=25.0,

@@ -2,7 +2,7 @@
 
 This is a *complementary* positioning mode, not a signal. Where the main
 mean-reversion strategy trades dips, the DCA sleeve mechanically accumulates
-``dca_symbol`` (default PUMP/USD) on a fixed interval, up to a position cap,
+``dca_symbol`` (default BTC/USD) on a fixed interval, up to a position cap,
 subject to the SAME risk breakers as every other order (daily-loss, drawdown,
 exposure cap, sentiment filter, idempotency, precision).
 

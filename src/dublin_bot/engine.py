@@ -570,7 +570,7 @@ class TradingEngine:
             return
         s = self.settings
         # Position awareness is per-symbol and bot-owned only. Raw
-        # gateway.has_position() sees ALL balances (incl. pre-existing PUMP),
+        # gateway.has_position() sees ALL balances (incl. pre-existing external holdings),
         # which would falsely lock the bot into exit-only forever.
         held_sym = s.symbol if self._bot_qty.get(s.symbol, 0.0) > 1e-9 else None
         in_position = held_sym is not None
@@ -946,7 +946,7 @@ class TradingEngine:
         self._raw_signal = None
         self._cycle_bars = None
         # Snapshot the active symbol at cycle start so any temporary swap (e.g.
-        # the DCA sleeve pointing one execution at PUMP/USD) is fully undone by
+        # the DCA sleeve pointing one execution at BTC/USD) is fully undone by
         # the end of the cycle, independent of in-cycle rotation.
         self._cycle_symbol_snapshot = self.settings.symbol
 
@@ -1164,14 +1164,14 @@ class TradingEngine:
 
             # Gate 5.7 — DCA accumulator sleeve (complementary to MR).
             # If the main strategy is not entering this bar and DCA is due for its
-            # configured coin (default PUMP/USD), build a fixed-USD BUY signal that
+            # configured coin (default BTC/USD), build a fixed-USD BUY signal that
             # still flows through Gate 6 (risk) and the shared execution path.
             if self.settings.dca_enabled and signal.action is not Action.BUY:
                 try:
                     dca_sym = self.settings.dca_symbol
                     # Guard: only size the DCA buy if the configured coin can
                     # actually be ordered at this account size. A coin below
-                    # Kraken's lot minimum (e.g. PUMP/USD at this balance) would
+                    # Kraken's lot minimum (e.g. a small order at this balance) would
                     # otherwise raise PrecisionError mid-execution and crash the
                     # cycle. Skip silently when it cannot be sized.
                     if not self._can_size(dca_sym, self.settings.dca_fixed_usd):
@@ -1180,10 +1180,10 @@ class TradingEngine:
                             "reason": "below Kraken minimum order for this account size",
                         })
                     else:
-                        pump_price = self.gateway.get_ticker_for(dca_sym)["last"]
+                        dca_price = self.gateway.get_ticker_for(dca_sym)["last"]
                         dca_signal = self.dca.maybe_signal(
                             self._dca_state,
-                            price=pump_price,
+                            price=dca_price,
                             in_position=in_position,
                             mr_action_is_buy=(signal.action is Action.BUY),
                         )
@@ -1201,7 +1201,7 @@ class TradingEngine:
                             self._dca_notional = self.settings.dca_fixed_usd
                             self.audit.record(AuditEvent.SIGNAL, {
                                 "event": "dca_signal", "symbol": dca_sym,
-                                "reason": dca_signal.reason, "price": pump_price,
+                                "reason": dca_signal.reason, "price": dca_price,
                             })
                 except BrokerError as exc:
                     self.audit.record(AuditEvent.BROKER_ERROR,
@@ -1343,7 +1343,7 @@ class TradingEngine:
 
         # Restore the cycle's primary symbol if the DCA sleeve had swapped it.
         # Uses the cycle-start snapshot so in-cycle rotation is preserved and a
-        # rejected DCA order does NOT leave the engine pinned to PUMP/USD.
+        # rejected DCA order does NOT leave the engine pinned to the DCA symbol.
         if getattr(self, "_dca_executed_this_cycle", False):
             self.settings.symbol = self._cycle_symbol_snapshot
             self._dca_executed_this_cycle = False

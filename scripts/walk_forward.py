@@ -1,6 +1,6 @@
-"""Walk-forward CLI. Default target: PUMP/USD. No orders.
+"""Walk-forward CLI. Default target: BTC/USD. No orders.
 
-    PYTHONPATH=src:. python scripts/walk_forward.py --symbol PUMP/USD --days 365 --interval 60
+    PYTHONPATH=src:. python scripts/walk_forward.py --symbol BTC/USD --days 365 --interval 60
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from dublin_bot.walk_forward import run_walk_forward, write_deploy
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Walk-forward optimizer (stitched OOS curve)")
-    ap.add_argument("--symbol", default="PUMP/USD")
+    ap.add_argument("--symbol", default="BTC/USD")
     ap.add_argument("--days", type=int, default=365)
     ap.add_argument("--interval", type=int, default=60, help="minutes")
     ap.add_argument("--equity", type=float, default=1000.0)

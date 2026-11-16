@@ -3,7 +3,7 @@
 The bot records every *closed trade* (a sell that realizes P&L on a prior buy)
 keyed by coin + market regime into a small persistent store. Selection then
 biases toward coins with proven positive expectancy and away from bleeders,
-exactly how we hand-tuned PUMP focus — but now learned automatically from the
+which previously relied on manual coin selection — now learned from the
 bot's own results instead of a hardcoded constant.
 
 This is deliberately conservative: a coin is only trusted enough to *bias*

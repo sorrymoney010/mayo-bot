@@ -254,7 +254,7 @@ class Settings(BaseSettings):
     # When the bot holds a position on one coin but a DIFFERENT allowed coin
     # shows a clearly stronger momentum setup, it rotates: sells the weaker
     # bot-owned lot and enters the stronger. This is what lets the bot "trade
-    # all things" (e.g. rotate PUMP -> BTC) instead of sitting in one coin
+    # all things" (e.g. rotate ETH -> BTC) instead of sitting in one coin
     # forever. The exit always sells only the bot's own accumulated lot, and
     # the new entry still runs through every risk gate. Turn off to keep the
     # bot pinned to whichever coin it is currently holding.

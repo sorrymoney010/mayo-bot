@@ -246,10 +246,11 @@ def test_three_sleeves_fit_under_shared_caps():
 
     s = Settings(_env_file=None)
     assert s.trendhold_position_fraction * s.max_concurrent_positions <= 0.75 + 1e-9
-    assert s.trendhold_sleeve_enabled and s.regime_daily_filter and s.meanrev_daily_filter
+    assert not s.trendhold_sleeve_enabled and s.regime_daily_filter and s.meanrev_daily_filter
     wrapper = (Path(__file__).resolve().parents[1] / "scripts" / "run_paper_mac.sh").read_text()
-    for line in ("MAX_CONCURRENT_POSITIONS=3", "MAX_EXPOSURE_FRACTION=0.75", "TRENDHOLD_SLEEVE_ENABLED=true",
-                 "REGIME_DAILY_FILTER=true", "MEANREV_DAILY_FILTER=true"):
+    for line in ("MAX_CONCURRENT_POSITIONS=3", "MAX_EXPOSURE_FRACTION=0.75", "TRENDHOLD_SLEEVE_ENABLED=false",
+                 "REGIME_DAILY_FILTER=true", "MEANREV_DAILY_FILTER=true",
+                 "MEANREV_SLEEVE_ENABLED=false"):
         assert line in wrapper
 
 

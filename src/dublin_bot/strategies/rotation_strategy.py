@@ -387,7 +387,7 @@ class RotationStrategy:
         - record_exit("XRP") records T=0 as last exit
         - Next cycle: evaluate_all_coins sees BUY signal for XRP
         - But last_exit_time["XRP"] = T=0, current time < T+600s
-        - So XRP is blocked, bot must pick BTC or PUMP instead
+        - So XRP is blocked, bot must pick BTC or ETH instead
         """
         if self._position != symbol:
             raise ValueError("Exit symbol does not match confirmed position")

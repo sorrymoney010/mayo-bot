@@ -11,7 +11,7 @@ def test_safe_defaults_are_paper_and_dry_run():
     assert settings.strategy_equity_usd == 100.0
     assert settings.risk_per_trade == 0.01
     assert settings.max_position_fraction == 0.25
-    assert settings.max_orders_per_day == 3
+    assert settings.max_orders_per_day == 0
     assert settings.universe_mode == "basket"
     assert settings.strategy == "regime_trend"
     assert settings.max_leverage == 1.0

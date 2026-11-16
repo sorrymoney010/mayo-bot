@@ -21,7 +21,7 @@ sys.path.insert(0, ".")
 
 import backtest_live as bl  # noqa: E402
 
-COINS = ["PUMP/USD", "BTC/USD", "XRP/USD", "DOGE/USD", "SOL/USD"]
+COINS = ["BTC/USD", "ETH/USD", "SOL/USD"]
 WINDOWS = [60, 120, 200]
 STRATEGIES = ["momentum", "mean_reversion"]
 # Maker entries pay half the taker fee (40 vs 80 bps on this tier), so entry

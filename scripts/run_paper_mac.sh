@@ -10,7 +10,7 @@ export LIVE_RISK_ACKNOWLEDGEMENT=
 export MAYO_LEDGER_OWNER=1
 # Paper never calls private Kraken endpoints (book equity comes from the ledger).
 export PAPER_BLOCK_PRIVATE_API=true
-# Strategy picked by walk-forward (docs/WALKFORWARD.md, data/walkforward_report.txt):
+# Strategy picked by walk-forward (docs/ACTIVE_STRATEGY.md):
 # regime-switch trend sleeve on 1h bars — ADX/vol gated, flat in chop, chandelier exit.
 # Edge is marginal and outlier-dependent; this is a paper experiment, not a proven edge.
 export STRATEGY=regime_trend
@@ -45,7 +45,7 @@ export LEARNER_PRIORS_PATH=data/regime_trend_v1_priors.json
 # Not active: do not load its old trades into the regime V1 ledger.
 export MEANREV_SLEEVE_ENABLED=false
 # Daily risk-on filter (close_d > SMA50_d, SMA50 rising 5d) on ENTRIES of both
-# sleeves; never forces exits (data/d1_trendhold_report.txt).
+# sleeves; never forces exits (docs/ACTIVE_STRATEGY.md).
 export REGIME_DAILY_FILTER=true
 export MEANREV_DAILY_FILTER=true
 # RETIRED for V1: 4h trend-hold (D1 on, close>EMA100, EMA20>EMA100; exit

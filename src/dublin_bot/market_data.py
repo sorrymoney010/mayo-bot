@@ -42,7 +42,7 @@ class MultiSymbolGateway:
         Fetch OHLC bars for a specific symbol.
         
         Args:
-            symbol: Trading symbol like "PUMP/USD" or "BTC/USD"
+            symbol: Trading symbol like "ETH/USD" or "BTC/USD"
         
         Returns:
             pandas DataFrame with OHLCV data, or None on failure
