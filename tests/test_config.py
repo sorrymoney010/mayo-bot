@@ -19,7 +19,7 @@ def test_safe_defaults_are_paper_and_dry_run():
     assert settings.auto_start_monitor is False
     assert settings.timeframe_minutes == 60
     assert settings.monitor_interval_seconds == 900
-    assert settings.cooldown_minutes == 15
+    assert settings.cooldown_minutes == 10
     assert settings.rapid_mode is True
     # Conservative risk defaults (ported from the Dublin repo).
     assert settings.max_leverage == 1.0
