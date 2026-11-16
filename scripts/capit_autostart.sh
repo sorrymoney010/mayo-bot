@@ -1,10 +1,11 @@
 #!/bin/bash
-# Reboot-safe auto-restart for the two USER-APPROVED CAPIT-24 processes ONLY:
-#   paper/capit_binanceus (paper runner)  and  shadow/capit24 (shadow signal loop).
+# Reboot-safe auto-restart for the USER-APPROVED paper processes ONLY:
+#   paper/capit_binanceus (CAPIT-24 paper runner), shadow/capit24 (shadow signal loop),
+#   paper/trend6_binanceus (TREND-6 paper runner, owner-approved 2026-11-16).
 # Never starts the old main paper loop, supervisors, health loop or ensure_box.
 # Idempotent: each start.sh refuses to launch a second copy. Skips a process whose dir has
 # NO_AUTOSTART (written by its stop.sh). Honors no keys, no .env: everything runs under env -i.
-# Usage: scripts/capit_autostart.sh          # check both now (used by the update routine)
+# Usage: scripts/capit_autostart.sh          # check all now (used by the update routine)
 #        scripts/capit_autostart.sh --boot   # only once per box boot (used by ~/.profile / ~/.bashrc hook)
 R=/workspace/mayo-bot
 LOG=$R/logs/capit_autostart.log
@@ -18,7 +19,7 @@ if [ "$1" = "--boot" ]; then
 fi
 # CAPIT-24L main-plan runner (paper/capit24l_binanceus) is deliberately NOT in this list yet.
 # Add it here ONLY after the owner OKs starting it (docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md).
-for d in paper/capit_binanceus shadow/capit24; do
+for d in paper/capit_binanceus shadow/capit24 paper/trend6_binanceus; do
   if [ -f "$R/$d/NO_AUTOSTART" ]; then msg="skip (NO_AUTOSTART)"
   else msg=$(env -i PATH=/usr/bin:/bin HOME=/home/box /bin/bash "$R/$d/start.sh" --auto 2>&1 8>&- | tail -1); fi
   echo "$(date '+%F %T %Z') ${1:-check} $d: $msg" >> "$LOG" 2>/dev/null
