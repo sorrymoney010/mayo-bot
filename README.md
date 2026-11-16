@@ -6,7 +6,7 @@ A private, **paper-only** crypto trading system built around strict risk control
 > `ALLOW_LIVE_TRADING=false`, futures/margin live flags off. The bot cannot place a real order.
 > See [SAFETY.md](SAFETY.md) before changing anything.
 
-## Current state (15 Nov 2026) — one strategy, paper only, not validated forward
+## Current state (16 Nov 2026) — one strategy, paper only, not validated forward
 
 After two months of strategies that did not survive fees, the repo was reset to **one** strategy:
 
@@ -31,14 +31,16 @@ After two months of strategies that did not survive fees, the repo was reset to 
 | [reports/edge_search_2026-11-14.md](reports/edge_search_2026-11-14.md) | How CAPIT-24 was found (and its weaknesses) |
 | [reports/venue_fees_2026-11-15.md](reports/venue_fees_2026-11-15.md) | US exchange fees for $100 trades |
 | [archive/2026-11-pre-capit/README.md](archive/2026-11-pre-capit/README.md) | Everything retired on 15 Nov 2026, and why |
-| `shadow/capit24/` | Separate research shadow of CAPIT-24 on the old 12-coin set (signal log only) |
+| `shadow/capit24/` | Separate research shadow of CAPIT-24 on the old 12-coin set (signal log only; variants base / r2 / oiflush) |
+| [reports/oiflush_lookahead_fix_2026-11-16.md](reports/oiflush_lookahead_fix_2026-11-16.md) | OI-flush re-test with OI timestamps shifted: no look-ahead damage, but it is mostly CAPIT and fails deflated Sharpe |
+| [RUNBOOK.md](RUNBOOK.md) | Start / stop / status, reboot auto-restart, kill rules, update routine |
 
 ## Documentation
 
 | Document | Purpose |
 |---|---|
 | [SAFETY.md](SAFETY.md) | Safety model, residual risks, pre-live checklist |
-| [RUNBOOK.md](RUNBOOK.md) | Daily operation, incident response, state files (parts describe the retired loop) |
+| [RUNBOOK.md](RUNBOOK.md) | Operating the CAPIT-24 paper runner and shadow loop |
 | [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner |
 | [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin |
 

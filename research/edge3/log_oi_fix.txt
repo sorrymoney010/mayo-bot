@@ -1,0 +1,7 @@
+orig vs metrics_1h.pkl max abs diff: 0.0
+orig bus_base WF n 188 pf 3.72 win 0.707 8/11 dsr 0.148 p 0.000999000999000999 | frozen n 232 pf 3.87 12/15
+orig krk_maker WF n 188 pf 2.86 win 0.676 8/11 dsr 0.027 p 0.000999000999000999 | frozen n 232 pf 2.96 11/15
+p5m bus_base WF n 190 pf 3.97 win 0.716 9/11 dsr 0.159 p 0.000999000999000999 | frozen n 234 pf 4.03 13/15
+p5m krk_maker WF n 190 pf 3.04 win 0.684 8/11 dsr 0.029 p 0.000999000999000999 | frozen n 234 pf 3.08 11/15
+p1h bus_base WF n 185 pf 4.10 win 0.735 9/11 dsr 0.189 p 0.000999000999000999 | frozen n 226 pf 4.18 12/15
+p1h krk_maker WF n 185 pf 3.14 win 0.692 8/11 dsr 0.042 p 0.000999000999000999 | frozen n 226 pf 3.20 12/15

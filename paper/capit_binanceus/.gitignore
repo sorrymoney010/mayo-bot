@@ -5,3 +5,5 @@
 *.pid
 *.lock
 *.tmp
+NO_AUTOSTART
+start.lock

@@ -59,3 +59,6 @@ Review is **per variant**, at ≥30 forward closed trades for that variant. All 
 Kraken **taker** costs (170 bps round trip) are reported in `status.json` for reference only. A variant that cannot clear 80 bps maker PF is not viable at Kraken taker fees either.
 
 Even on a pass, going to paper or live execution needs the user's explicit OK. No flags change automatically. The three variants are scored separately; one passing does not promote the others.
+
+## Start / stop
+`shadow/capit24/start.sh` (idempotent) · `shadow/capit24/stop.sh` (writes NO_AUTOSTART) · reboot auto-restart via `scripts/capit_autostart.sh` (RUNBOOK.md §3).

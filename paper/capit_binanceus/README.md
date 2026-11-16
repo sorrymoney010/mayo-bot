@@ -35,8 +35,8 @@ beats cash and buy-and-hold of the same four coins. Backtest reference (2022-01-
 ## Run
 
 ```bash
-paper/capit_binanceus/start.sh     # background: nohup setsid env -i ... capit_paper.py --loop
-paper/capit_binanceus/stop.sh
+paper/capit_binanceus/start.sh     # idempotent; background: nohup setsid env -i ... capit_paper.py --loop
+paper/capit_binanceus/stop.sh      # also writes NO_AUTOSTART so the reboot hook leaves it stopped
 env -i PATH=/usr/bin:/bin HOME=$HOME /workspace/mayo-runtime/pyenv/bin/python scripts/capit_paper.py --once
 ```
 
@@ -44,3 +44,5 @@ Runtime files here (gitignored): `status.json` (latest cycle, open positions, pe
 kill-rule state), `state.json` (cursor + open positions), `signals.jsonl`, `closed_trades.jsonl`
 (one row per closed trade per fee book, stable `trade_id`, readable by `dublin_bot.promotion`),
 `equity.jsonl`, `events.jsonl`, `promotion_report.json`, `run.log`, `runner.pid`.
+
+Reboot auto-restart: `scripts/capit_autostart.sh` (see RUNBOOK.md §3).

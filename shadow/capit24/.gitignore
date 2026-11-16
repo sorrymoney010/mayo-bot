@@ -13,3 +13,5 @@ cycle.lock
 metrics/
 oi_1h.pkl
 *.404
+NO_AUTOSTART
+start.lock
