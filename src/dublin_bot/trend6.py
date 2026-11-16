@@ -29,9 +29,10 @@ Rule (verified in reports/trend6_verification_2026-11-16.md, commit ff9bbc9):
            K-REL (only once >= 30 closed round trips exist) ALL of:
                  (a) strategy return since paper start < 50/50 buy-and-hold return, same period;
                  (b) equity more than 10% below its running peak;
-                 (c) equity lower than 30 days earlier (still drawing down).
-           (Owner-approved 2026-11-16; replaces the CAPIT-style PF < 1.10 after 30 rule, which
-           would have falsely killed TREND-6 from 7 of 26 historical start dates.)
+                 (c) equity lower than 30 days earlier (still drawing down);
+                 (d) equity below the $100 starting equity.
+           (Owner-approved 2026-11-16, with (d) added the same day; replaces the CAPIT-style
+           PF < 1.10 after 30 rule. History check: without (d) 15/26 start dates, with (d) 3/26.)
   Trades   a round trip = units go from 0 to > 0 and back to 0 in one coin (one book).
   Benchmark 50/50 BTC/ETH bought at the first execution open, held, no cost.
 """
@@ -114,17 +115,19 @@ def kill_check(closed_trades: int, equity: float, peak: float, max_dd: float, be
     behind = bench_ret is not None and strat_ret < bench_ret
     deep = dd < -KILL_REL_DD
     falling = equity_30d_ago is not None and equity < equity_30d_ago
+    below_start = equity < START_EQUITY
     armed = closed_trades >= KILL_MIN_TRADES
     inputs = {"closed_trades": int(closed_trades), "strat_ret": round(strat_ret, 6),
               "bench_ret": None if bench_ret is None else round(bench_ret, 6),
               "dd_from_peak": round(dd, 6), "max_dd": round(max_dd, 6),
               "equity_30d_ago": None if equity_30d_ago is None else round(equity_30d_ago, 6),
-              "rel_armed": armed, "behind_bench": behind, "dd_over_10pct": deep, "below_30d_ago": falling}
+              "rel_armed": armed, "behind_bench": behind, "dd_over_10pct": deep,
+              "below_30d_ago": falling, "below_start": below_start}
     reasons = []
     if max_dd < -KILL_DD:
         reasons.append("K-DD: max drawdown > 45%")
-    if armed and behind and deep and falling:
-        reasons.append("K-REL: >=30 trades, behind buy-and-hold, >10% below peak, below 30 days ago")
+    if armed and behind and deep and falling and below_start:
+        reasons.append("K-REL: >=30 trades, behind buy-and-hold, >10% below peak, below 30 days ago, equity below start")
     return {"rule": "; ".join(reasons) or None, "reasons": reasons, "inputs": inputs}
 
 
@@ -493,7 +496,8 @@ class Trend6Paper:
                 "kill_inputs_last_decision": state.get("kill_inputs"),
                 "kill_rules": {"K-DD": f"max drawdown > {KILL_DD:.0%} (any time)",
                                "K-REL": (f">= {KILL_MIN_TRADES} closed round trips AND return < 50/50 buy-and-hold "
-                                         f"AND > {KILL_REL_DD:.0%} below peak AND equity < {KILL_LOOKBACK_DAYS} days ago"),
+                                         f"AND > {KILL_REL_DD:.0%} below peak AND equity < {KILL_LOOKBACK_DAYS} days ago "
+                                         f"AND equity below ${START_EQUITY:.0f} start"),
                                "replaced": "PF < 1.10 after 30 (removed 2026-11-16, owner-approved)"}}
 
 

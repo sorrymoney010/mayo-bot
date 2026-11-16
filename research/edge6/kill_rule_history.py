@@ -2,7 +2,7 @@
 (src/dublin_bot/trend6.py) replayed on Binance global daily data (data.binance.vision cache).
 26 quarterly paper-start dates 2019-01 .. 2025-04, each replayed for up to 2 years (to 2026-10-31).
 Old rule (removed): >= 30 closed round trips and PF < 1.10 (checked after every close).
-New rules: K-REL (>= 30 trips AND behind 50/50 B&H AND > 10% below peak AND below 30 days ago), K-DD 45%."""
+New rules: K-REL (>= 30 trips AND behind 50/50 B&H AND > 10% below peak AND below 30 days ago AND equity below the $100 start), K-DD 45%."""
 import json, shutil, sys
 from pathlib import Path
 import pandas as pd

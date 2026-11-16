@@ -111,7 +111,7 @@ def test_idempotent_and_catch_up(tmp_path):
     s1 = (tmp_path / "state.json").read_text()
     st_again = r.run_cycle()
     assert (tmp_path / "state.json").read_text() == s1  # same day: nothing new
-    assert st_again["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st_again["kill_inputs"]
+    assert st_again["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st_again["kill_inputs"] and "below_start" in st_again["kill_inputs"]
     clock["now"] = data["BTC"].index[300] + pd.Timedelta("1h")  # 40 days later in one go
     st = r.run_cycle()
     assert len(st["new_decisions_this_cycle"]) == 40
@@ -218,7 +218,7 @@ def test_krel_behind_and_drawing_down_kills():
     k = T.kill_check(31, 85.0, 100.0, -0.15, 110.0, 90.0)
     assert k["rule"].startswith("K-REL")
     i = k["inputs"]
-    assert i["behind_bench"] and i["dd_over_10pct"] and i["below_30d_ago"]
+    assert i["behind_bench"] and i["dd_over_10pct"] and i["below_30d_ago"] and i["below_start"]
     assert i["strat_ret"] == -0.15 and i["bench_ret"] == 0.10 and i["dd_from_peak"] == -0.15
 
 
@@ -239,6 +239,23 @@ def test_krel_shallow_drawdown_no_kill():
 
 def test_krel_no_30d_history_no_kill():
     assert T.kill_check(40, 85.0, 100.0, -0.15, 110.0, None)["rule"] is None
+
+
+def test_krel_above_or_at_start_equity_no_kill():
+    """K-REL requires equity strictly below the $100 start; 45% K-DD is unchanged."""
+    # behind, >10% off peak, falling, armed, but equity still above the $100 start
+    k = T.kill_check(40, 110.0, 130.0, -0.15, 150.0, 120.0)
+    assert k["rule"] is None and k["inputs"]["below_start"] is False
+    assert k["inputs"]["behind_bench"] and k["inputs"]["dd_over_10pct"] and k["inputs"]["below_30d_ago"]
+    # exactly at the $100 start is not below it
+    k2 = T.kill_check(40, 100.0, 120.0, -0.20, 130.0, 110.0)
+    assert k2["rule"] is None and k2["inputs"]["below_start"] is False
+    # just below the start, all other K-REL conditions held: fires
+    k3 = T.kill_check(40, 99.99, 120.0, -0.20, 130.0, 110.0)
+    assert k3["rule"].startswith("K-REL") and k3["inputs"]["below_start"] is True
+    # K-DD still fires on its own even when equity is above the start
+    k4 = T.kill_check(0, 110.0, 200.0, -0.46, 150.0, 120.0)
+    assert k4["reasons"] == ["K-DD: max drawdown > 45%"]
 
 
 def test_equity_at_or_before():
@@ -269,7 +286,7 @@ def test_krel_latches_and_stops_buys_in_runner(tmp_path, monkeypatch):
     killed_at = pd.Timestamp(st["killed"]["at"])
     fills = [json.loads(x) for x in (tmp_path / "fills.jsonl").read_text().splitlines()]
     assert not [f for f in fills if f["side"] == "buy" and pd.Timestamp(f["exec_at"]) > killed_at]
-    assert st["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st["kill_inputs"]
+    assert st["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st["kill_inputs"] and "below_start" in st["kill_inputs"]
 
 
 def test_state_migration_rebuilds_equity_history(tmp_path):
@@ -296,9 +313,11 @@ def test_status_fields_and_paper_only(tmp_path):
     assert st["equity_primary"] == 100.0 and st["cash_pct_primary"] == 1.0
     assert st["venue"].startswith("binanceus")
     ki = st["kill_inputs"]
-    for k in ("closed_trades", "strat_ret", "bench_ret", "dd_from_peak", "equity_30d_ago"):
+    for k in ("closed_trades", "strat_ret", "bench_ret", "dd_from_peak", "equity_30d_ago", "below_start"):
         assert k in ki
+    assert ki["below_start"] is False  # $100 cash, at the start
     assert st["killed"] is None and "K-REL" in st["kill_rules"] and "PF" not in st["kill_rules"]["K-REL"]
+    assert "equity below $100 start" in st["kill_rules"]["K-REL"]
 
 
 def test_no_order_endpoints_or_keys():

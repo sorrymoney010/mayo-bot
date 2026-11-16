@@ -2,11 +2,11 @@
  "rows": [
   {
    "start": "2019-01-01",
-   "trips": 30,
+   "trips": 41,
    "pf_first30": 2.74,
    "old_fires": null,
-   "new_fires": "2019-12-06 K-REL",
-   "eq": 154.2645,
+   "new_fires": null,
+   "eq": 548.9486,
    "bench": 670.8441
   },
   {
@@ -14,26 +14,26 @@
    "trips": 31,
    "pf_first30": 3.4,
    "old_fires": null,
-   "new_fires": "2020-09-13 K-REL",
-   "eq": 535.5063,
+   "new_fires": null,
+   "eq": 1148.7361,
    "bench": 1394.5764
   },
   {
    "start": "2019-07-01",
-   "trips": 33,
+   "trips": 39,
    "pf_first30": 0.28,
    "old_fires": "2020-03-23",
-   "new_fires": "2021-03-23 K-REL",
-   "eq": 480.8343,
+   "new_fires": null,
+   "eq": 503.904,
    "bench": 549.9238
   },
   {
    "start": "2019-10-01",
-   "trips": 31,
+   "trips": 38,
    "pf_first30": 7.08,
    "old_fires": null,
-   "new_fires": "2021-06-08 K-REL",
-   "eq": 645.8915,
+   "new_fires": null,
+   "eq": 773.8673,
    "bench": 1093.7219
   },
   {
@@ -56,29 +56,29 @@
   },
   {
    "start": "2020-07-01",
-   "trips": 31,
+   "trips": 43,
    "pf_first30": 6.07,
    "old_fires": null,
-   "new_fires": "2022-04-27 K-REL",
-   "eq": 647.2151,
+   "new_fires": null,
+   "eq": 602.3257,
    "bench": 340.3712
   },
   {
    "start": "2020-10-01",
-   "trips": 31,
+   "trips": 57,
    "pf_first30": 5.85,
    "old_fires": null,
-   "new_fires": "2022-04-27 K-REL",
-   "eq": 521.3674,
+   "new_fires": null,
+   "eq": 474.2291,
    "bench": 271.8759
   },
   {
    "start": "2021-01-01",
-   "trips": 31,
+   "trips": 73,
    "pf_first30": 4.46,
    "old_fires": null,
-   "new_fires": "2022-04-27 K-REL",
-   "eq": 235.4132,
+   "new_fires": null,
+   "eq": 196.5696,
    "bench": 110.2235
   },
   {
@@ -137,11 +137,11 @@
   },
   {
    "start": "2022-10-01",
-   "trips": 31,
+   "trips": 42,
    "pf_first30": 6.15,
    "old_fires": null,
-   "new_fires": "2024-07-05 K-REL",
-   "eq": 204.5856,
+   "new_fires": null,
+   "eq": 189.7311,
    "bench": 260.9486
   },
   {
@@ -155,38 +155,38 @@
   },
   {
    "start": "2023-04-01",
-   "trips": 31,
+   "trips": 36,
    "pf_first30": 2.24,
    "old_fires": null,
-   "new_fires": "2025-02-25 K-REL",
-   "eq": 166.0374,
+   "new_fires": null,
+   "eq": 159.5092,
    "bench": 195.0258
   },
   {
    "start": "2023-07-01",
-   "trips": 31,
+   "trips": 42,
    "pf_first30": 2.36,
    "old_fires": null,
-   "new_fires": "2025-02-25 K-REL",
-   "eq": 168.9166,
+   "new_fires": null,
+   "eq": 191.8691,
    "bench": 240.0753
   },
   {
    "start": "2023-10-01",
-   "trips": 30,
+   "trips": 32,
    "pf_first30": 3.23,
    "old_fires": null,
-   "new_fires": "2025-04-11 K-REL",
-   "eq": 175.9342,
+   "new_fires": null,
+   "eq": 261.921,
    "bench": 335.5351
   },
   {
    "start": "2024-01-01",
-   "trips": 31,
+   "trips": 45,
    "pf_first30": 2.15,
    "old_fires": null,
-   "new_fires": "2025-04-20 K-REL",
-   "eq": 134.1033,
+   "new_fires": null,
+   "eq": 170.9339,
    "bench": 168.7575
   },
   {
@@ -238,8 +238,8 @@
  "summary": {
   "starts": 26,
   "old_fires": 9,
-  "new_fires": 15,
+  "new_fires": 3,
   "new_kdd": 0,
-  "ahead_of_bench_2y": 13
+  "ahead_of_bench_2y": 14
  }
 }
