@@ -1,5 +1,5 @@
 """TREND-6 paper runner: signals, sizing, next-open execution / no look-ahead, band + min notional,
-fee books, round trips, kills, Binance global warm-up across the Binance.US gap, idempotency,
+fee books, round trips, kills (K-DD 45% + benchmark-relative K-REL), Binance global warm-up across the Binance.US gap, idempotency,
 catch-up, no order endpoints. No network."""
 from __future__ import annotations
 
@@ -186,13 +186,14 @@ def _crash_world():
 
 
 def test_drawdown_kill_stops_buys(tmp_path, monkeypatch):
+    """K-DD (45%, any time) is unchanged; here the threshold is lowered so the crash world trips it."""
     monkeypatch.setattr(T, "KILL_DD", 0.05)
     data = _crash_world()
     r, clock = runner(tmp_path, data, data["BTC"].index[259] + pd.Timedelta("1h"))
     r.run_cycle()
     clock["now"] = data["BTC"].index[-1] + pd.Timedelta("1h")
     st = r.run_cycle()
-    assert st["killed"]["rule"].startswith("drawdown")
+    assert st["killed"]["reasons"][0].startswith("K-DD")
     killed_at = pd.Timestamp(st["killed"]["at"])
     fills = [json.loads(x) for x in (tmp_path / "fills.jsonl").read_text().splitlines()]
     assert not [f for f in fills if f["side"] == "buy" and pd.Timestamp(f["exec_at"]) > killed_at]
@@ -200,17 +201,90 @@ def test_drawdown_kill_stops_buys(tmp_path, monkeypatch):
     assert any(x["status"] == "skipped_killed" for x in skipped)  # the rebound buys were refused
 
 
-def test_pf_kill_rule(tmp_path, monkeypatch):
-    monkeypatch.setattr(T, "KILL_MIN_TRADES", 1)
-    monkeypatch.setattr(T, "KILL_DD", 0.99)
+def test_kdd_fires_at_45pct_without_trades():
+    k = T.kill_check(0, 50.0, 100.0, -0.46, 200.0, 60.0)
+    assert k["rule"] and k["reasons"] == ["K-DD: max drawdown > 45%"]
+    assert T.kill_check(0, 56.0, 100.0, -0.44, 200.0, 60.0)["rule"] is None
+
+
+def test_krel_not_before_30_trades():
+    k = T.kill_check(29, 80.0, 100.0, -0.2, 120.0, 90.0)  # behind, -20% from peak, falling
+    assert k["rule"] is None and k["inputs"]["rel_armed"] is False
+    assert T.kill_check(30, 80.0, 100.0, -0.2, 120.0, 90.0)["rule"].startswith("K-REL")
+
+
+def test_krel_behind_and_drawing_down_kills():
+    k = T.kill_check(31, 85.0, 100.0, -0.15, 110.0, 90.0)
+    assert k["rule"].startswith("K-REL")
+    i = k["inputs"]
+    assert i["behind_bench"] and i["dd_over_10pct"] and i["below_30d_ago"]
+    assert i["strat_ret"] == -0.15 and i["bench_ret"] == 0.10 and i["dd_from_peak"] == -0.15
+
+
+def test_krel_behind_but_recovering_no_kill():
+    k = T.kill_check(40, 85.0, 100.0, -0.15, 110.0, 80.0)  # equity above 30 days ago
+    assert k["rule"] is None and not k["inputs"]["below_30d_ago"]
+
+
+def test_krel_ahead_of_benchmark_in_drawdown_no_kill():
+    k = T.kill_check(40, 85.0, 100.0, -0.15, 60.0, 95.0)  # bench -40%, strategy -15%
+    assert k["rule"] is None and not k["inputs"]["behind_bench"]
+
+
+def test_krel_shallow_drawdown_no_kill():
+    k = T.kill_check(40, 95.0, 100.0, -0.05, 120.0, 97.0)
+    assert k["rule"] is None and not k["inputs"]["dd_over_10pct"]
+
+
+def test_krel_no_30d_history_no_kill():
+    assert T.kill_check(40, 85.0, 100.0, -0.15, 110.0, None)["rule"] is None
+
+
+def test_equity_at_or_before():
+    h = [["2026-01-01 00:00:00+00:00", 100.0, 100.0], ["2026-01-10 00:00:00+00:00", 90.0, 95.0]]
+    assert T.equity_at_or_before(h, pd.Timestamp("2025-12-31", tz="UTC")) is None
+    assert T.equity_at_or_before(h, pd.Timestamp("2026-01-05", tz="UTC")) == 100.0
+    assert T.equity_at_or_before(h, pd.Timestamp("2026-02-01", tz="UTC")) == 90.0
+
+
+def test_krel_latches_and_stops_buys_in_runner(tmp_path, monkeypatch):
+    real = T.kill_check
+    calls = {"n": 0}
+
+    def fake(*a, **k):
+        out = real(*a, **k)
+        calls["n"] += 1
+        if calls["n"] == 20:  # mid-crash: force a K-REL verdict once; it must latch
+            out = {**out, "rule": "K-REL: forced", "reasons": ["K-REL: forced"]}
+        return out
+
+    monkeypatch.setattr(T, "kill_check", fake)
     data = _crash_world()
     r, clock = runner(tmp_path, data, data["BTC"].index[259] + pd.Timedelta("1h"))
     r.run_cycle()
-    clock["now"] = data["BTC"].index[310] + pd.Timedelta("1h")
+    clock["now"] = data["BTC"].index[-1] + pd.Timedelta("1h")
     st = r.run_cycle()
-    closed = json.loads((tmp_path / "state.json").read_text())["books"]["binanceus"]["closed"]
-    assert closed and T.profit_factor(closed) < T.KILL_MIN_PF
-    assert st["killed"]["rule"].startswith("PF")
+    assert st["killed"]["rule"] == "K-REL: forced"
+    killed_at = pd.Timestamp(st["killed"]["at"])
+    fills = [json.loads(x) for x in (tmp_path / "fills.jsonl").read_text().splitlines()]
+    assert not [f for f in fills if f["side"] == "buy" and pd.Timestamp(f["exec_at"]) > killed_at]
+    assert st["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st["kill_inputs"]
+
+
+def test_state_migration_rebuilds_equity_history(tmp_path):
+    data = {c: daily(np.linspace(300, 100, 280)) for c in T.COINS}
+    r, clock = runner(tmp_path, data, data["BTC"].index[262] + pd.Timedelta("1h"))
+    r.run_cycle()
+    st = json.loads((tmp_path / "state.json").read_text())
+    n_hist = len(st["equity_hist"])
+    del st["equity_hist"]
+    (tmp_path / "state.json").write_text(json.dumps(st))
+    n_fills_before = (tmp_path / "fills.jsonl").exists()
+    clock["now"] = data["BTC"].index[270] + pd.Timedelta("1h")
+    st2 = r.run_cycle()
+    s2 = json.loads((tmp_path / "state.json").read_text())
+    assert len(s2["equity_hist"]) == n_hist + len(st2["new_decisions_this_cycle"])
+    assert (tmp_path / "fills.jsonl").exists() == n_fills_before
 
 
 def test_status_fields_and_paper_only(tmp_path):
@@ -220,6 +294,10 @@ def test_status_fields_and_paper_only(tmp_path):
     assert st["mode"] == "PAPER" and st["orders_placed"] == 0
     assert st["equity_primary"] == 100.0 and st["cash_pct_primary"] == 1.0
     assert st["venue"].startswith("binanceus")
+    ki = st["kill_inputs"]
+    for k in ("closed_trades", "strat_ret", "bench_ret", "dd_from_peak", "equity_30d_ago"):
+        assert k in ki
+    assert st["killed"] is None and "K-REL" in st["kill_rules"] and "PF" not in st["kill_rules"]["K-REL"]
 
 
 def test_no_order_endpoints_or_keys():

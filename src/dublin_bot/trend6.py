@@ -24,8 +24,14 @@ Rule (verified in reports/trend6_verification_2026-11-16.md, commit ff9bbc9):
            binanceus10  conservative: 5 bps/side (10 bps RT, the verified backtest model)
            ref_kraken80 / ref_kraken160  REFERENCE COLUMNS ONLY (Kraken maker/taker cost); never an
                         execution venue - they show what the same decisions would cost there.
-  Kills    on the PRIMARY book, latched: max drawdown > 45%, or >= 30 closed round trips with
-           PF < 1.10. When killed: no new buys (sells/exits still run), status flags it.
+  Kills    on the PRIMARY book, latched. When killed: no new buys (sells/exits still run).
+           K-DD  (any time) max drawdown at the daily opens > 45%.
+           K-REL (only once >= 30 closed round trips exist) ALL of:
+                 (a) strategy return since paper start < 50/50 buy-and-hold return, same period;
+                 (b) equity more than 10% below its running peak;
+                 (c) equity lower than 30 days earlier (still drawing down).
+           (Owner-approved 2026-11-16; replaces the CAPIT-style PF < 1.10 after 30 rule, which
+           would have falsely killed TREND-6 from 7 of 26 historical start dates.)
   Trades   a round trip = units go from 0 to > 0 and back to 0 in one coin (one book).
   Benchmark 50/50 BTC/ETH bought at the first execution open, held, no cost.
 """
@@ -60,7 +66,9 @@ SIDE_COST = {"binanceus": 0.0004, "binanceus10": 0.0005, "ref_kraken80": 0.0040,
 PRIMARY = "binanceus"
 REFERENCE_ONLY = ("ref_kraken80", "ref_kraken160")
 KILL_DD = 0.45
-KILL_MIN_TRADES, KILL_MIN_PF = 30, 1.10
+KILL_MIN_TRADES = 30
+KILL_REL_DD = 0.10
+KILL_LOOKBACK_DAYS = 30
 D1 = pd.Timedelta("1D")
 
 
@@ -95,6 +103,40 @@ def profit_factor(vals: list[float]) -> float | None:
     w = sum(v for v in vals if v > 0)
     lo = -sum(v for v in vals if v < 0)
     return math.inf if lo == 0 else w / lo
+
+
+def kill_check(closed_trades: int, equity: float, peak: float, max_dd: float, bench: float | None,
+               equity_30d_ago: float | None) -> dict:
+    """Kill inputs + verdict for the primary book. Returns {'rule': str|None, 'inputs': {...}}."""
+    strat_ret = equity / START_EQUITY - 1
+    bench_ret = (bench / START_EQUITY - 1) if bench is not None else None
+    dd = equity / peak - 1 if peak > 0 else 0.0
+    behind = bench_ret is not None and strat_ret < bench_ret
+    deep = dd < -KILL_REL_DD
+    falling = equity_30d_ago is not None and equity < equity_30d_ago
+    armed = closed_trades >= KILL_MIN_TRADES
+    inputs = {"closed_trades": int(closed_trades), "strat_ret": round(strat_ret, 6),
+              "bench_ret": None if bench_ret is None else round(bench_ret, 6),
+              "dd_from_peak": round(dd, 6), "max_dd": round(max_dd, 6),
+              "equity_30d_ago": None if equity_30d_ago is None else round(equity_30d_ago, 6),
+              "rel_armed": armed, "behind_bench": behind, "dd_over_10pct": deep, "below_30d_ago": falling}
+    reasons = []
+    if max_dd < -KILL_DD:
+        reasons.append("K-DD: max drawdown > 45%")
+    if armed and behind and deep and falling:
+        reasons.append("K-REL: >=30 trades, behind buy-and-hold, >10% below peak, below 30 days ago")
+    return {"rule": "; ".join(reasons) or None, "reasons": reasons, "inputs": inputs}
+
+
+def equity_at_or_before(hist: list, when: pd.Timestamp) -> float | None:
+    """hist: [[iso_time, equity, bench], ...] in time order."""
+    out = None
+    for t, e, _b in hist:
+        if pd.Timestamp(t) <= when:
+            out = e
+        else:
+            break
+    return out
 
 
 def contiguous_tail(idx: pd.DatetimeIndex) -> pd.DatetimeIndex:
@@ -328,9 +370,14 @@ class Trend6Paper:
         if state is None:  # forward-only start: first decision = the latest closed bar
             state = {"strategy": STRATEGY, "created": str(now), "cursor": str(last_closed - D1),
                      "books": {b: _new_book() for b in SIDE_COST}, "last_target": {c: 0.0 for c in COINS},
-                     "bench_units": None, "killed": None, "decisions": 0}
+                     "bench_units": None, "killed": None, "decisions": 0, "equity_hist": []}
             _append(self.out / "events.jsonl", {"event": "start", "at": str(now), "cursor": state["cursor"],
                                                 "paper_only": True})
+        if "equity_hist" not in state:  # state from before the K-REL rule: rebuild from the ledger
+            state["equity_hist"] = [[r["at"], r[PRIMARY], r["bench_5050_hold"]]
+                                    for r in _jsonl(self.out / "equity.jsonl") if PRIMARY in r]
+            _append(self.out / "events.jsonl", {"event": "kill_rule_migrated", "at": str(now),
+                                                "rule": "K-REL replaces PF<1.10", "hist": len(state["equity_hist"])})
         cursor = _day(state["cursor"])
         warm_cache: dict = {}
         new = []
@@ -389,14 +436,15 @@ class Trend6Paper:
                 state["bench_units"] = {c: START_EQUITY * 0.5 / px[c] for c in COINS}
             bench = sum(state["bench_units"][c] * px[c] for c in COINS)
             prim = state["books"][PRIMARY]
-            if state["killed"] is None:
-                pf = profit_factor(prim["closed"])
-                if prim["max_dd"] < -KILL_DD:
-                    state["killed"] = {"rule": "drawdown>45%", "at": str(exec_day), "max_dd": prim["max_dd"]}
-                elif len(prim["closed"]) >= KILL_MIN_TRADES and pf is not None and pf < KILL_MIN_PF:
-                    state["killed"] = {"rule": "PF<1.10 after 30", "at": str(exec_day), "pf": pf}
-                if state["killed"]:
-                    _append(self.out / "events.jsonl", {"event": "KILLED", **state["killed"]})
+            hist = state["equity_hist"]
+            e30 = equity_at_or_before(hist, exec_day - pd.Timedelta(days=KILL_LOOKBACK_DAYS))
+            hist.append([str(exec_day), round(prim["equity"], 6), round(bench, 6)])
+            kc = kill_check(len(prim["closed"]), prim["equity"], prim["peak"], prim["max_dd"], bench, e30)
+            state["kill_inputs"] = {**kc["inputs"], "at": str(exec_day)}
+            if state["killed"] is None and kc["rule"]:
+                state["killed"] = {"rule": kc["rule"], "reasons": kc["reasons"], "at": str(exec_day),
+                                   "inputs": kc["inputs"]}
+                _append(self.out / "events.jsonl", {"event": "KILLED", **state["killed"]})
             dec["targets"] = targets
             dec["fills"] = len(fills)
             _append(self.out / "decisions.jsonl", dec)
@@ -438,7 +486,25 @@ class Trend6Paper:
                 "exposure_primary": round(exp, 4), "cash_pct_primary": round(1 - exp, 4),
                 "bench_5050_hold": round(bench, 4) if bench is not None else None,
                 "last_price": last_px, "books": books, "killed": state["killed"],
-                "kill_rules": {"max_dd": KILL_DD, "min_trades": KILL_MIN_TRADES, "min_pf": KILL_MIN_PF}}
+                "kill_inputs": state.get("kill_inputs"),
+                "kill_rules": {"K-DD": f"max drawdown > {KILL_DD:.0%} (any time)",
+                               "K-REL": (f">= {KILL_MIN_TRADES} closed round trips AND return < 50/50 buy-and-hold "
+                                         f"AND > {KILL_REL_DD:.0%} below peak AND equity < {KILL_LOOKBACK_DAYS} days ago"),
+                               "replaced": "PF < 1.10 after 30 (removed 2026-11-16, owner-approved)"}}
+
+
+def _jsonl(p: Path) -> list[dict]:
+    out: list[dict] = []
+    try:
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    out.append(json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        pass
+    return out
 
 
 def _read_last(p: Path):

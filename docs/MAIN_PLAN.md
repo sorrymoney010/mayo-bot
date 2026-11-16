@@ -38,18 +38,28 @@ TREND-6 is **separate from CAPIT**: its own $100 paper book, its own ledger, no 
 | Execution | At the **open of day D+1** (Binance.US 1d open; fallback first 1h open). Catch-up after downtime decides every missed day in order |
 | Band | A coin trades **only when its target changes**. Drift is never traded. Changes under the Binance.US **$1 minimum** are skipped and logged (`skipped.jsonl`) |
 | Fee books | **`binanceus` PRIMARY**: 0.02% taker + 2 bps slip per side (8 bps RT); 0% maker is the best case and isn't assumed. **`binanceus10`**: conservative, 10 bps RT (the verified backtest model). `ref_kraken80`, `ref_kraken160`: **reference columns only** |
-| Kills (primary book, latched) | Max drawdown **> 45%**, or **≥ 30 closed round trips with PF < 1.10**. Killed: no new buys, exits still run, status shows `killed`. The owner reviews; no auto-restart of a killed config |
+| Kills (primary book, latched) | **K-DD**: max drawdown **> 45%**, any time (unchanged). **K-REL** (owner-approved 2026-11-16, replaces "PF < 1.10 after 30"), only once **≥ 30 closed round trips** exist, fires when ALL hold: (a) return since paper start < the 50/50 buy-and-hold return over the same period, (b) equity **> 10% below its running peak**, (c) equity **below its level 30 days earlier**. Evaluated at each daily open. Killed: no new buys, exits still run, status shows `killed` + `kill_inputs`. The owner reviews; no auto-restart of a killed config |
 | Trade | A round trip = a coin goes from 0 to held and back to 0 in one book |
 | Benchmark | 50/50 BTC/ETH bought at the first execution open, held, no cost (`bench_5050_hold`) |
 
-**Known weakness of the PF kill (found while building the runner):** across 26 quarterly start dates
-2019-2025 on Binance global data, PF over the *first 30* round trips was below 1.10 in **7 of 26**
-starts (27%), mostly starts in 2021-Q4 → 2022 and 2024-Q2/Q3, even though full-period PF is ≈ 5. The
-rule's PF comes from a few long trends, and 30 trades can fall inside one chop or bear. A replay
-of Binance.US 2025-09-15 → 2026-03-31 also tripped it (31 trips, PF 0.05) while TREND-6 was −19% vs
-B&H −48%. The 45% drawdown kill never tripped from any start (worst −42%). **If K-PF fires, read it
-next to `bench_5050_hold` before deciding.** The rule is kept exactly as specified; changing it
-(e.g. benchmark-relative) is the owner's call.
+**Kill-rule history check (`research/edge6/kill_rule_history.py`, the actual runner replayed on
+Binance global daily data, 26 quarterly paper starts 2019-01 → 2025-04, first 2 years each):**
+
+| Rule | Fired within 2 years |
+|---|---|
+| Old: PF < 1.10 over the *first 30* round trips | 7 / 26 |
+| Old: PF < 1.10 checked after every close from trip 30 on (as the runner had it) | 9 / 26 |
+| **New K-REL as approved (now live in the runner)** | **15 / 26** |
+| K-REL + "equity below the $100 start" (not adopted; tested for comparison) | 3 / 26 |
+| K-DD 45% | 0 / 26 |
+
+**The approved K-REL fires more often than the rule it replaced.** Most of its kills come in bull
+markets: 2019-07 start, strategy +381% vs B&H +436% with a 12% pullback; 2021-01 start, +135% vs
++157% in the May-2022 slide. Trailing buy-and-hold in strong up years is normal for TREND-6 (it beat
+B&H in only 4 of 8 years), so "behind B&H + >10% off peak + falling" happens in almost every bull-run
+correction once 30 trips exist. In practice it can't fire for about 13 months (0 trips today). Adding
+one condition, **strategy equity below its $100 start**, cuts it to 3/26. Changing the rule is the
+owner's call.
 
 ## 3. TREND-6 verification verdict (commit `ff9bbc9`, `reports/trend6_verification_2026-11-16.md`)
 - **Most credible strategy found in this project. Worth a Binance.US paper run. Not ready for live.**

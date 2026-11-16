@@ -16,7 +16,7 @@ Code: `src/dublin_bot/trend6.py`, `scripts/trend6_paper.py`. Tests: `tests/test_
 | Band | trade a coin only when its target changes; skip < $1 notional (logged) |
 | SMA warm-up | Binance.US contiguous history; if < 201 days (2023-07..2025-02 gap), earlier closes from Binance global `data.binance.vision` archives. Each decision logs `data.source` |
 | Books | `binanceus` (primary, 8 bps RT), `binanceus10` (10 bps), `ref_kraken80`, `ref_kraken160` (reference only) |
-| Kills | primary book: max DD > 45%, or ≥ 30 closed round trips with PF < 1.10 (latched; no new buys) |
+| Kills | primary book, latched (no new buys; exits still run). **K-DD**: max DD > 45% any time. **K-REL** (replaced PF < 1.10 on 2026-11-16): once ≥ 30 closed round trips, kill if return < 50/50 B&H return since start AND equity > 10% below peak AND equity below 30 days ago. Inputs in `status.json` → `kill_inputs`. History check: [docs/MAIN_PLAN.md](../../docs/MAIN_PLAN.md) §2 |
 | Benchmark | 50/50 BTC/ETH bought at the first fill open, held |
 | Start | forward only: the first decision is the latest closed day |
 | Cycle | hourly, ~180 s past each UTC hour (wall-clock sliced sleep; catches up after box sleep) |

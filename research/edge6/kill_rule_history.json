@@ -1,0 +1,245 @@
+{
+ "rows": [
+  {
+   "start": "2019-01-01",
+   "trips": 30,
+   "pf_first30": 2.74,
+   "old_fires": null,
+   "new_fires": "2019-12-06 K-REL",
+   "eq": 154.2645,
+   "bench": 670.8441
+  },
+  {
+   "start": "2019-04-01",
+   "trips": 31,
+   "pf_first30": 3.4,
+   "old_fires": null,
+   "new_fires": "2020-09-13 K-REL",
+   "eq": 535.5063,
+   "bench": 1394.5764
+  },
+  {
+   "start": "2019-07-01",
+   "trips": 33,
+   "pf_first30": 0.28,
+   "old_fires": "2020-03-23",
+   "new_fires": "2021-03-23 K-REL",
+   "eq": 480.8343,
+   "bench": 549.9238
+  },
+  {
+   "start": "2019-10-01",
+   "trips": 31,
+   "pf_first30": 7.08,
+   "old_fires": null,
+   "new_fires": "2021-06-08 K-REL",
+   "eq": 645.8915,
+   "bench": 1093.7219
+  },
+  {
+   "start": "2020-01-01",
+   "trips": 22,
+   "pf_first30": null,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 931.8372,
+   "bench": 1744.2935
+  },
+  {
+   "start": "2020-04-01",
+   "trips": 26,
+   "pf_first30": null,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 860.3037,
+   "bench": 1662.5967
+  },
+  {
+   "start": "2020-07-01",
+   "trips": 31,
+   "pf_first30": 6.07,
+   "old_fires": null,
+   "new_fires": "2022-04-27 K-REL",
+   "eq": 647.2151,
+   "bench": 340.3712
+  },
+  {
+   "start": "2020-10-01",
+   "trips": 31,
+   "pf_first30": 5.85,
+   "old_fires": null,
+   "new_fires": "2022-04-27 K-REL",
+   "eq": 521.3674,
+   "bench": 271.8759
+  },
+  {
+   "start": "2021-01-01",
+   "trips": 31,
+   "pf_first30": 4.46,
+   "old_fires": null,
+   "new_fires": "2022-04-27 K-REL",
+   "eq": 235.4132,
+   "bench": 110.2235
+  },
+  {
+   "start": "2021-04-01",
+   "trips": 74,
+   "pf_first30": 1.41,
+   "old_fires": "2022-08-20",
+   "new_fires": null,
+   "eq": 133.8253,
+   "bench": 71.6514
+  },
+  {
+   "start": "2021-07-01",
+   "trips": 66,
+   "pf_first30": 1.59,
+   "old_fires": "2022-11-09",
+   "new_fires": null,
+   "eq": 136.0665,
+   "bench": 85.9221
+  },
+  {
+   "start": "2021-10-01",
+   "trips": 71,
+   "pf_first30": 0.54,
+   "old_fires": "2022-07-01",
+   "new_fires": null,
+   "eq": 104.8878,
+   "bench": 60.8309
+  },
+  {
+   "start": "2022-01-01",
+   "trips": 70,
+   "pf_first30": 0.14,
+   "old_fires": "2022-07-04",
+   "new_fires": null,
+   "eq": 137.1581,
+   "bench": 79.7858
+  },
+  {
+   "start": "2022-04-01",
+   "trips": 60,
+   "pf_first30": 0.27,
+   "old_fires": "2022-09-22",
+   "new_fires": null,
+   "eq": 205.2383,
+   "bench": 133.8547
+  },
+  {
+   "start": "2022-07-01",
+   "trips": 30,
+   "pf_first30": 0.42,
+   "old_fires": "2022-12-29",
+   "new_fires": "2022-12-29 K-REL",
+   "eq": 89.6416,
+   "bench": 317.8935
+  },
+  {
+   "start": "2022-10-01",
+   "trips": 31,
+   "pf_first30": 6.15,
+   "old_fires": null,
+   "new_fires": "2024-07-05 K-REL",
+   "eq": 204.5856,
+   "bench": 260.9486
+  },
+  {
+   "start": "2023-01-01",
+   "trips": 28,
+   "pf_first30": null,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 261.4688,
+   "bench": 422.3717
+  },
+  {
+   "start": "2023-04-01",
+   "trips": 31,
+   "pf_first30": 2.24,
+   "old_fires": null,
+   "new_fires": "2025-02-25 K-REL",
+   "eq": 166.0374,
+   "bench": 195.0258
+  },
+  {
+   "start": "2023-07-01",
+   "trips": 31,
+   "pf_first30": 2.36,
+   "old_fires": null,
+   "new_fires": "2025-02-25 K-REL",
+   "eq": 168.9166,
+   "bench": 240.0753
+  },
+  {
+   "start": "2023-10-01",
+   "trips": 30,
+   "pf_first30": 3.23,
+   "old_fires": null,
+   "new_fires": "2025-04-11 K-REL",
+   "eq": 175.9342,
+   "bench": 335.5351
+  },
+  {
+   "start": "2024-01-01",
+   "trips": 31,
+   "pf_first30": 2.15,
+   "old_fires": null,
+   "new_fires": "2025-04-20 K-REL",
+   "eq": 134.1033,
+   "bench": 168.7575
+  },
+  {
+   "start": "2024-04-01",
+   "trips": 32,
+   "pf_first30": 0.45,
+   "old_fires": "2025-04-20",
+   "new_fires": "2025-04-22 K-REL",
+   "eq": 95.1979,
+   "bench": 77.1369
+  },
+  {
+   "start": "2024-07-01",
+   "trips": 32,
+   "pf_first30": 0.83,
+   "old_fires": "2025-04-20",
+   "new_fires": "2025-04-23 K-REL",
+   "eq": 115.5595,
+   "bench": 71.2187
+  },
+  {
+   "start": "2024-10-01",
+   "trips": 56,
+   "pf_first30": 3.69,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 171.261,
+   "bench": 119.0184
+  },
+  {
+   "start": "2025-01-01",
+   "trips": 54,
+   "pf_first30": 1.67,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 124.5476,
+   "bench": 75.2438
+  },
+  {
+   "start": "2025-04-01",
+   "trips": 45,
+   "pf_first30": 3.54,
+   "old_fires": null,
+   "new_fires": null,
+   "eq": 145.0643,
+   "bench": 108.877
+  }
+ ],
+ "summary": {
+  "starts": 26,
+  "old_fires": 9,
+  "new_fires": 15,
+  "new_kdd": 0,
+  "ahead_of_bench_2y": 13
+ }
+}
