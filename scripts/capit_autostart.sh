@@ -16,6 +16,8 @@ if [ "$1" = "--boot" ]; then
   [ -n "$BOOT_ID" ] && [ "$(cat "$MARK" 2>/dev/null)" = "$BOOT_ID" ] && exit 0
   mkdir -p "$(dirname "$MARK")"; echo "$BOOT_ID" > "$MARK"
 fi
+# CAPIT-24L main-plan runner (paper/capit24l_binanceus) is deliberately NOT in this list yet.
+# Add it here ONLY after the owner OKs starting it (docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md).
 for d in paper/capit_binanceus shadow/capit24; do
   if [ -f "$R/$d/NO_AUTOSTART" ]; then msg="skip (NO_AUTOSTART)"
   else msg=$(env -i PATH=/usr/bin:/bin HOME=/home/box /bin/bash "$R/$d/start.sh" --auto 2>&1 8>&- | tail -1); fi

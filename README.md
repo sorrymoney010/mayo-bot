@@ -6,7 +6,17 @@ A private, **paper-only** crypto trading system built around strict risk control
 > `ALLOW_LIVE_TRADING=false`, futures/margin live flags off. The bot cannot place a real order.
 > See [SAFETY.md](SAFETY.md) before changing anything.
 
-## Current state (16 Nov 2026) — one strategy, paper only, not validated forward
+## MAIN PLAN (approved 16 Nov 2026): CAPIT-24L on Binance.US — paper only, runner built, not started
+
+**Read [docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md](docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md) first.** Same
+crash-buy signal on **VET, HBAR, ALGO, XLM**, but entry is a post-only **limit buy 0.5% under the
+signal bar's close, valid 60 minutes** (skip if unfilled; paper counts a fill only when price trades
+strictly below the limit), market sell 48 h after the fill, two $50 slots on $100, no new entries at
+equity ≤ $70, kills K1/K2/K4. Runner: `paper/capit24l_binanceus/` (`scripts/capit24l_paper.py`);
+it is **not started** until the owner OKs it. The CAPIT-24 runner below keeps running untouched
+until the new one checks out. Live stays locked.
+
+## Still running (16 Nov 2026) — CAPIT-24, paper only, not validated forward
 
 After two months of strategies that did not survive fees, the repo was reset to **one** strategy:
 

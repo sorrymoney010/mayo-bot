@@ -5,6 +5,12 @@
 reads `.env`. Changing any flag needs the owner's explicit OK **per flag**, plus his own keys.
 Read [SAFETY.md](SAFETY.md) first.
 
+> **MAIN PLAN (approved 2026-11-16): [docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md](docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md)**
+> CAPIT-24L on Binance.US (VET, HBAR, ALGO, XLM; limit entry). Its runner `paper/capit24l_binanceus/`
+> (`scripts/capit24l_paper.py`) is built and tested but **NOT started** and **NOT** in
+> `scripts/capit_autostart.sh`. Start it only with the owner's OK: `paper/capit24l_binanceus/start.sh`.
+> Until it checks out, the two processes below keep running untouched.
+
 ## 1. What is running
 
 There is exactly **one active strategy, CAPIT-24 crash-buy**, plus a research shadow log.
@@ -110,10 +116,10 @@ fees, plus running totals) or a kill rule trips. If the runner is down, it resta
 
 ```bash
 env -i PATH=/usr/bin:/bin HOME=$HOME PYTHONPATH=$HOME/.local/lib/python3.13/site-packages \
-  /workspace/mayo-runtime/pyenv/bin/python -m pytest -q -p no:cacheprovider   # 616 passed (2026-11-16)
+  /workspace/mayo-runtime/pyenv/bin/python -m pytest -q -p no:cacheprovider   # 636 passed (2026-11-16)
 ```
 
 (The runtime venv has no pytest of its own, so the PYTHONPATH line borrows the user-site copy.)
 
 The suite is offline. `tests/test_safety_locks.py` fails loudly if the trading locks are relaxed;
-`tests/test_capit24.py` covers the CAPIT-24 rule and runner.
+`tests/test_capit24.py` covers the CAPIT-24 rule and runner; `tests/test_capit24l.py` covers CAPIT-24L (strict-below limit fills, 60-min expiry, 48 h exit, slots, $70 floor, K1/K2/K4).
