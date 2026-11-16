@@ -1,23 +1,54 @@
-# Dublin Trading OS
+# Dublin Trading OS (mayo-bot)
 
-A private, paper-first crypto trading system built around strict risk controls,
-transparent decisions, and testable strategies with a native Kraken Spot connector.
+A private, **paper-only** crypto trading system built around strict risk controls.
 
 > **Safety status: fully locked.** `PAPER_TRADING=true`, `DRY_RUN=true`,
-> `ALLOW_LIVE_TRADING=false`. The bot cannot place a real order.
+> `ALLOW_LIVE_TRADING=false`, futures/margin live flags off. The bot cannot place a real order.
 > See [SAFETY.md](SAFETY.md) before changing anything.
+
+## Current state (15 Nov 2026) — one strategy, paper only, not validated forward
+
+After two months of strategies that did not survive fees, the repo was reset to **one** strategy:
+
+- **CAPIT-24 crash-buy**, frozen: buy the next 1h open after a coin's 24h drop is ≥ 2.5× its
+  normal 24h move on ≥ 2× normal volume; sell 48 h later. Book: **VET, HBAR, ALGO, XLM**, max two
+  $50 slots on $100 of paper equity.
+- **Venue for the paper book: Binance.US** (public data; fees 0% maker / 0.02% taker, modeled as
+  10 bps round trip with slip). A **Kraken 80 bps** shadow book tracks the same trades so we see
+  what it would cost there.
+- **Evidence so far is a backtest only** (2022–2026, 78 trades, PF 2.82 at 10 bps / 2.32 at
+  80 bps; fails at Kraken taker 160 bps). There are **zero closed forward trades** yet. It is not
+  proven and it is not live.
+- **Kill rules:** after 30 closed trades with PF < 1.10 at the stated fee → kill; two consecutive
+  net-negative quarters while below cash → kill.
+- Live trading stays locked until the owner gives an explicit per-flag OK and adds his own keys.
+
+| Where | What |
+|---|---|
+| [paper/capit_binanceus/README.md](paper/capit_binanceus/README.md) | Frozen config, fee books, kill rules, how to run |
+| `src/dublin_bot/capit24.py`, `scripts/capit_paper.py` | The rule and the hourly paper runner |
+| [reports/low_price_coins_study_2026-11-15.md](reports/low_price_coins_study_2026-11-15.md) | Why these four coins, why not PUMP, why not "cheap" coins |
+| [reports/edge_search_2026-11-14.md](reports/edge_search_2026-11-14.md) | How CAPIT-24 was found (and its weaknesses) |
+| [reports/venue_fees_2026-11-15.md](reports/venue_fees_2026-11-15.md) | US exchange fees for $100 trades |
+| [archive/2026-11-pre-capit/README.md](archive/2026-11-pre-capit/README.md) | Everything retired on 15 Nov 2026, and why |
+| `shadow/capit24/` | Separate research shadow of CAPIT-24 on the old 12-coin set (signal log only) |
 
 ## Documentation
 
 | Document | Purpose |
 |---|---|
 | [SAFETY.md](SAFETY.md) | Safety model, residual risks, pre-live checklist |
-| [RUNBOOK.md](RUNBOOK.md) | Daily operation, incident response, state files |
-| [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner, current paper config |
-| [docs/MEANREV_SLEEVE.md](docs/MEANREV_SLEEVE.md) | 4h mean-reversion paper sleeve (limit entries) running beside regime_trend |
-| [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin, strategy research |
+| [RUNBOOK.md](RUNBOOK.md) | Daily operation, incident response, state files (parts describe the retired loop) |
+| [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner |
+| [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin |
 
-## Current scope
+## Legacy engine (dormant shared infrastructure)
+
+Everything below describes the gated Kraken engine (`engine.py`, CLI, dashboard). It is kept
+because its safety locks, exchange clients and tests are shared infrastructure. **No strategy
+runs on it now**; the old multi-sleeve paper loop was archived.
+
+### Engine scope
 
 - **Kraken Spot** native connector (Alpaca retained as fallback)
 - BTC/USD first, with a reusable multi-asset architecture
@@ -25,10 +56,6 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
 - Conservative risk defaults: `RISK_PER_TRADE=0.01` (alias `RISK_PCT`),
   `MAX_POSITION_FRACTION=0.25`, `MAX_LEVERAGE=1.0` (sizer cap, spot only),
   `MARGIN_EXPOSURE_FRACTION=0`
-- Paper loop runs two sleeves on one paper book: `regime_trend@1h` plus a 4h
-  mean-reversion sleeve with post-only limit entries on BTC/ETH/SOL
-  (see docs/MEANREV_SLEEVE.md). Shared max-positions and risk caps, and no
-  symbol collisions between sleeves
 - No leverage on the spot book, **no withdrawal access**. A paper perpetual
   short and a paper margin-cost model exist and default **off**; see
   [docs/PAPER_PRO.md](docs/PAPER_PRO.md). Live US access to Kraken margin and
