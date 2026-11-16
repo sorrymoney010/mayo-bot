@@ -737,7 +737,7 @@ def portfolio_snapshot(settings: Settings) -> dict[str, object]:
 
 def risk_state_snapshot(settings: Settings) -> dict[str, object]:
     with _state_lock:
-        if monotonic() - float(_state_cache["at"]) < 30:
+        if _state_cache["data"] and monotonic() - float(_state_cache["at"]) < 30:
             return dict(_state_cache["data"])
         try:
             # The trading engine persists daily risk state here. Reading the
