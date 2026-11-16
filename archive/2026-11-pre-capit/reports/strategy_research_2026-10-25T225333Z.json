@@ -1,0 +1,710 @@
+{
+  "results": [
+    {
+      "family": "regime",
+      "oos": {
+        "trades": 31,
+        "wins": 10,
+        "win_rate": 0.3226,
+        "avg_net_bps": 159.6847,
+        "avg_gross_bps": 259.7687,
+        "expectancy_usd": 2.7267,
+        "total_return_pct": 16.9055,
+        "max_dd_pct": 4.9396,
+        "profit_factor": 2.1802
+      },
+      "promotion": {
+        "trades": 31,
+        "passes": false,
+        "failed": [
+          "lower_bound_positive"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": true,
+            "value": 31,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": true,
+            "value": 159.7,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -11.0,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": true,
+            "value": 4.7,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": true,
+            "value": 82.5038,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=55,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=55,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=55,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 10,
+          "wins": 2,
+          "win_rate": 0.2,
+          "avg_net_bps": 50.9587,
+          "avg_gross_bps": 151.9729,
+          "expectancy_usd": 0.7694,
+          "total_return_pct": 1.5388,
+          "max_dd_pct": 3.4767,
+          "profit_factor": 1.3425
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 12,
+          "wins": 3,
+          "win_rate": 0.25,
+          "avg_net_bps": 92.284,
+          "avg_gross_bps": 191.1005,
+          "expectancy_usd": 1.4208,
+          "total_return_pct": 3.41,
+          "max_dd_pct": 3.3728,
+          "profit_factor": 1.581
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 9,
+          "wins": 5,
+          "win_rate": 0.5556,
+          "avg_net_bps": 370.359,
+          "avg_gross_bps": 471.0992,
+          "expectancy_usd": 6.2985,
+          "total_return_pct": 11.3372,
+          "max_dd_pct": 1.5387,
+          "profit_factor": 4.9131
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3762.6311821140903,
+        "mean_return_pct": 37.62631182114091,
+        "mean_max_dd_pct": 16.92470627977882
+      },
+      "timeframe_minutes": 60
+    },
+    {
+      "family": "meanrev",
+      "oos": {
+        "trades": 75,
+        "wins": 42,
+        "win_rate": 0.56,
+        "avg_net_bps": -40.5741,
+        "avg_gross_bps": 34.4567,
+        "expectancy_usd": -0.652,
+        "total_return_pct": -9.7799,
+        "max_dd_pct": 10.0766,
+        "profit_factor": 0.5342
+      },
+      "promotion": {
+        "trades": 75,
+        "passes": false,
+        "failed": [
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": true,
+            "value": 75,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": -40.6,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -68.2,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": -49.1,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": -50.7176,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=30.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=30.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=30.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=30.0,stop=0.03,tp=0.25)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 20,
+          "wins": 9,
+          "win_rate": 0.45,
+          "avg_net_bps": -46.238,
+          "avg_gross_bps": 28.75,
+          "expectancy_usd": -0.7639,
+          "total_return_pct": -3.0558,
+          "max_dd_pct": 3.0558,
+          "profit_factor": 0.3068
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 29,
+          "wins": 18,
+          "win_rate": 0.6207,
+          "avg_net_bps": -30.1164,
+          "avg_gross_bps": 44.9931,
+          "expectancy_usd": -0.5046,
+          "total_return_pct": -2.9268,
+          "max_dd_pct": 4.5268,
+          "profit_factor": 0.6298
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 26,
+          "wins": 15,
+          "win_rate": 0.5769,
+          "avg_net_bps": -47.8815,
+          "avg_gross_bps": 27.0942,
+          "expectancy_usd": -0.7943,
+          "total_return_pct": -4.1301,
+          "max_dd_pct": 5.4316,
+          "profit_factor": 0.553
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3762.6311821140903,
+        "mean_return_pct": 37.62631182114091,
+        "mean_max_dd_pct": 16.92470627977882
+      },
+      "timeframe_minutes": 60
+    },
+    {
+      "family": "trendhold",
+      "oos": {
+        "trades": 121,
+        "wins": 9,
+        "win_rate": 0.0744,
+        "avg_net_bps": -69.0709,
+        "avg_gross_bps": 30.7371,
+        "expectancy_usd": -0.1366,
+        "total_return_pct": -3.3058,
+        "max_dd_pct": 4.6619,
+        "profit_factor": 0.5596
+      },
+      "promotion": {
+        "trades": 121,
+        "passes": false,
+        "failed": [
+          "mean_positive",
+          "lower_bound_positive",
+          "ex_best_2_positive",
+          "beats_cash"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": true,
+            "value": 121,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": false,
+            "value": -69.1,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -120.1,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": -112.7,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": false,
+            "value": -16.7152,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 39,
+          "wins": 2,
+          "win_rate": 0.0513,
+          "avg_net_bps": -74.1214,
+          "avg_gross_bps": 25.6358,
+          "expectancy_usd": -0.1479,
+          "total_return_pct": -1.1538,
+          "max_dd_pct": 1.6181,
+          "profit_factor": 0.4806
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 47,
+          "wins": 3,
+          "win_rate": 0.0638,
+          "avg_net_bps": -88.5017,
+          "avg_gross_bps": 11.1109,
+          "expectancy_usd": -0.1763,
+          "total_return_pct": -1.6575,
+          "max_dd_pct": 2.2458,
+          "profit_factor": 0.4531
+        },
+        {
+          "bars": 3416,
+          "skipped": false,
+          "trades": 35,
+          "wins": 4,
+          "win_rate": 0.1143,
+          "avg_net_bps": -37.3503,
+          "avg_gross_bps": 62.7764,
+          "expectancy_usd": -0.0755,
+          "total_return_pct": -0.5284,
+          "max_dd_pct": 1.0007,
+          "profit_factor": 0.7692
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3762.6311821140903,
+        "mean_return_pct": 37.62631182114091,
+        "mean_max_dd_pct": 16.92470627977882
+      },
+      "timeframe_minutes": 60
+    },
+    {
+      "family": "regime",
+      "oos": {
+        "trades": 13,
+        "wins": 4,
+        "win_rate": 0.3077,
+        "avg_net_bps": 95.4129,
+        "avg_gross_bps": 194.4619,
+        "expectancy_usd": 1.7785,
+        "total_return_pct": 4.624,
+        "max_dd_pct": 6.6591,
+        "profit_factor": 1.479
+      },
+      "promotion": {
+        "trades": 13,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "lower_bound_positive",
+          "ex_best_2_positive"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 13,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": true,
+            "value": 95.4,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -211.0,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": false,
+            "value": -180.4,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": true,
+            "value": 24.7211,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=2.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.05,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+        "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=2.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.05,tp=0.25)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 3,
+          "wins": 2,
+          "win_rate": 0.6667,
+          "avg_net_bps": 790.794,
+          "avg_gross_bps": 888.7915,
+          "expectancy_usd": 13.1513,
+          "total_return_pct": 7.8908,
+          "max_dd_pct": 0.9188,
+          "profit_factor": 8.8865
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 3,
+          "wins": 1,
+          "win_rate": 0.3333,
+          "avg_net_bps": 58.5262,
+          "avg_gross_bps": 159.6165,
+          "expectancy_usd": 0.9157,
+          "total_return_pct": 0.5494,
+          "max_dd_pct": 1.7708,
+          "profit_factor": 1.3031
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 7,
+          "wins": 1,
+          "win_rate": 0.1429,
+          "avg_net_bps": -186.7989,
+          "avg_gross_bps": -88.1742,
+          "expectancy_usd": -2.5412,
+          "total_return_pct": -3.5577,
+          "max_dd_pct": 4.8606,
+          "profit_factor": 0.4307
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3012.786289222962,
+        "mean_return_pct": 30.127862892229615,
+        "mean_max_dd_pct": 14.924151840882795
+      },
+      "timeframe_minutes": 240
+    },
+    {
+      "family": "meanrev",
+      "oos": {
+        "trades": 20,
+        "wins": 14,
+        "win_rate": 0.7,
+        "avg_net_bps": 51.0948,
+        "avg_gross_bps": 126.8161,
+        "expectancy_usd": 0.8458,
+        "total_return_pct": 3.3834,
+        "max_dd_pct": 3.6792,
+        "profit_factor": 1.5768
+      },
+      "promotion": {
+        "trades": 20,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "lower_bound_positive"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 20,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": true,
+            "value": 51.1,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -28.6,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": true,
+            "value": 3.4,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": true,
+            "value": 17.0316,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+        "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 9,
+          "wins": 6,
+          "win_rate": 0.6667,
+          "avg_net_bps": 6.6,
+          "avg_gross_bps": 81.9861,
+          "expectancy_usd": 0.1023,
+          "total_return_pct": 0.1841,
+          "max_dd_pct": 1.4523,
+          "profit_factor": 1.0956
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 6,
+          "wins": 5,
+          "win_rate": 0.8333,
+          "avg_net_bps": 202.1841,
+          "avg_gross_bps": 279.0437,
+          "expectancy_usd": 3.4019,
+          "total_return_pct": 4.0823,
+          "max_dd_pct": 1.2418,
+          "profit_factor": 4.1667
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 5,
+          "wins": 3,
+          "win_rate": 0.6,
+          "avg_net_bps": -50.1219,
+          "avg_gross_bps": 24.8369,
+          "expectancy_usd": -0.854,
+          "total_return_pct": -0.854,
+          "max_dd_pct": 2.4681,
+          "profit_factor": 0.6596
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3012.786289222962,
+        "mean_return_pct": 30.127862892229615,
+        "mean_max_dd_pct": 14.924151840882795
+      },
+      "timeframe_minutes": 240
+    },
+    {
+      "family": "trendhold",
+      "oos": {
+        "trades": 21,
+        "wins": 6,
+        "win_rate": 0.2857,
+        "avg_net_bps": 260.7737,
+        "avg_gross_bps": 363.8966,
+        "expectancy_usd": 0.5235,
+        "total_return_pct": 2.1987,
+        "max_dd_pct": 0.6467,
+        "profit_factor": 2.6765
+      },
+      "promotion": {
+        "trades": 21,
+        "passes": false,
+        "failed": [
+          "min_trades",
+          "lower_bound_positive"
+        ],
+        "checks": {
+          "min_trades": {
+            "pass": false,
+            "value": 21,
+            "need": ">= 30"
+          },
+          "mean_positive": {
+            "pass": true,
+            "value": 260.8,
+            "need": "> 0 bps"
+          },
+          "lower_bound_positive": {
+            "pass": false,
+            "value": -15.2,
+            "need": "90% lower bound > 0 bps"
+          },
+          "ex_best_2_positive": {
+            "pass": true,
+            "value": 5.9,
+            "need": "mean without best 2 trades > 0 bps"
+          },
+          "beats_cash": {
+            "pass": true,
+            "value": 10.9525,
+            "need": "total realized P&L >= $0"
+          }
+        }
+      },
+      "passes": false,
+      "chosen": [
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+        "trendhold(d1=True,ema_fast=20,ema_slow=80)"
+      ],
+      "per_symbol": [
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 7,
+          "wins": 2,
+          "win_rate": 0.2857,
+          "avg_net_bps": 116.8724,
+          "avg_gross_bps": 218.5491,
+          "expectancy_usd": 0.232,
+          "total_return_pct": 0.3248,
+          "max_dd_pct": 0.2397,
+          "profit_factor": 1.6628
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 8,
+          "wins": 2,
+          "win_rate": 0.25,
+          "avg_net_bps": 236.8105,
+          "avg_gross_bps": 339.6926,
+          "expectancy_usd": 0.472,
+          "total_return_pct": 0.7552,
+          "max_dd_pct": 0.3888,
+          "profit_factor": 2.8055
+        },
+        {
+          "bars": 853,
+          "skipped": false,
+          "trades": 6,
+          "wins": 2,
+          "win_rate": 0.3333,
+          "avg_net_bps": 460.6093,
+          "avg_gross_bps": 565.7406,
+          "expectancy_usd": 0.9203,
+          "total_return_pct": 1.1043,
+          "max_dd_pct": 0.2993,
+          "profit_factor": 3.7935
+        }
+      ],
+      "buy_and_hold": {
+        "mean_net_bps": 3012.786289222962,
+        "mean_return_pct": 30.127862892229615,
+        "mean_max_dd_pct": 14.924151840882795
+      },
+      "timeframe_minutes": 240
+    }
+  ],
+  "winners": [],
+  "refused_families": [
+    "breakout",
+    "momentum"
+  ],
+  "min_tf_minutes": 60,
+  "generated_at": "2026-10-25",
+  "history": "ticks",
+  "sample": "Tick-built bars from the data dir (read-only; no bars1m cache written).",
+  "costs": {
+    "fee_bps": 40.0,
+    "slip_bps": 10.0,
+    "maker_bps": 25.0
+  },
+  "library": {
+    "regime": [
+      "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+      "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=55,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+      "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=2.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.05,tp=0.25)"
+    ],
+    "meanrev": [
+      "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+      "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=30.0,stop=0.03,tp=0.25)"
+    ],
+    "trendhold": [
+      "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+      "trendhold(d1=True,ema_fast=20,ema_slow=80)"
+    ]
+  },
+  "registered": [],
+  "orderflow": {
+    "report": "reports/orderflow_overlays_2026-10-25T233748Z.md",
+    "configs_tried": 35,
+    "shadow_candidates": [],
+    "stages": {}
+  }
+}

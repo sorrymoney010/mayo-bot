@@ -30,7 +30,7 @@ WHEELS="$MAYO_RUNTIME/wheelhouse"
 VLOG=${MAYO_VENV_LOG:-$REPO/logs/box_venv_rebuild.log}
 VENV_IMPORT_CHECK='import numpy, pandas, pydantic, pydantic_settings, requests, websockets
 import dublin_bot.config, dublin_bot.engine, dublin_bot.instance, dublin_bot.loop_telemetry
-import dublin_bot.exit_watcher, dublin_bot.meanrev_sleeve, dublin_bot.trendhold_sleeve
+import dublin_bot.exit_watcher, dublin_bot.promotion
 import dublin_bot.pipeline.collector, dublin_bot.pipeline.kraken_rest, dublin_bot.pipeline.tickstore
 import dublin_bot.watchdog, dublin_bot.scorecard'
 

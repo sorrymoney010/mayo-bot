@@ -11,6 +11,13 @@
 # * logs/BOX_STOP present -> do not (re)start the paper loop.
 # * optional failover gate (box_heartbeat.sh gate; inert unless heartbeat is configured)
 set -u
+# RETIRED 2026-11-15: the old multi-sleeve paper loop was archived to
+# archive/2026-11-pre-capit/scripts/. The active paper runner is scripts/capit_paper.py
+# (see paper/capit_binanceus/README.md). Refuse quietly instead of restart-looping.
+if [[ ! -f /workspace/mayo-bot/scripts/paper_trader_loop.py ]]; then
+  echo "$(date '+%F %T %Z') run_paper_supervised: old paper loop retired (archived); not starting" >&2
+  exit 0
+fi
 source /workspace/mayo-bot/deploy/box/box_env.sh
 cd "$REPO" || exit 1
 mkdir -p logs

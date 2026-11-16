@@ -1,0 +1,5244 @@
+{
+ "generated_at": "2026-11-01T23:22:10Z",
+ "costs": {
+  "fee_bps": 40.0,
+  "slippage_bps": 10.0,
+  "maker_bps": 25.0
+ },
+ "stress_costs": {
+  "fee_bps": 80.0,
+  "slippage_bps": 10.0,
+  "maker_bps": 25.0
+ },
+ "data": {
+  "BTC/USD": {
+   "span": [
+    "2026-06-04 21:00",
+    "2026-10-25 05:00"
+   ],
+   "days": 142.3
+  },
+  "ETH/USD": {
+   "span": [
+    "2026-06-04 21:00",
+    "2026-10-25 05:00"
+   ],
+   "days": 142.3
+  },
+  "SOL/USD": {
+   "span": [
+    "2026-06-04 21:00",
+    "2026-10-25 05:00"
+   ],
+   "days": 142.3
+  }
+ },
+ "configs_tried": 35,
+ "sleeves": {
+  "regime@60m": {
+   "tf": 60,
+   "spec": "regime(adx_enter=25.0,adx_exit=20.0,atr_mult=3.0,d1=True,lookback=20,min_atr_rank=0.0,stop=0.03,tp=0.25)",
+   "oos_days": {
+    "BTC/USD": 106.8,
+    "ETH/USD": 106.8,
+    "SOL/USD": 106.8
+   },
+   "baseline_check": {
+    "BTC/USD": {
+     "backtest_core_oos_n": 11,
+     "backtest_core_oos_mean": 45.8
+    },
+    "ETH/USD": {
+     "backtest_core_oos_n": 13,
+     "backtest_core_oos_mean": 69.4
+    },
+    "SOL/USD": {
+     "backtest_core_oos_n": 9,
+     "backtest_core_oos_mean": 370.4
+    }
+   },
+   "buy_and_hold": {
+    "mean_return_pct": 28.66,
+    "mean_max_dd_pct": 15.25,
+    "per_coin_return_pct": [
+     25.12,
+     32.14,
+     28.72
+    ]
+   },
+   "variants": {
+    "baseline": {
+     "n": 33,
+     "mean": 143.6,
+     "median": -140.7,
+     "win": 0.303,
+     "ex_best2": -2.4,
+     "lb90": -18.1,
+     "oos_return_pct": 16.07,
+     "max_dd_pct": 5.59,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 69.4,
+       "median": -140.7,
+       "win": 0.231,
+       "ex_best2": -169.4,
+       "lb90": -204.4
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 370.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -24.6
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 14,
+       "mean": 371.4,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": 32.2,
+       "lb90": 6.5
+      },
+      "3": {
+       "n": 13,
+       "mean": 36.6,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -60.6,
+       "lb90": -90.9
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 143.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -18.1,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -2.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 78.9827,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 65.8,
+     "exit_reasons": {
+      "chandelier": 25,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     }
+    },
+    "of_no_dist": {
+     "n": 32,
+     "mean": 152.5,
+     "median": -141.5,
+     "win": 0.312,
+     "ex_best2": 2.2,
+     "lb90": -14.0,
+     "oos_return_pct": 16.62,
+     "max_dd_pct": 5.59,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 12,
+       "mean": 86.9,
+       "median": -141.3,
+       "win": 0.25,
+       "ex_best2": -172.2,
+       "lb90": -211.2
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 370.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -24.6
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 13,
+       "mean": 410.8,
+       "median": -137.9,
+       "win": 0.308,
+       "ex_best2": 48.0,
+       "lb90": 19.2
+      },
+      "3": {
+       "n": 13,
+       "mean": 36.6,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -60.6,
+       "lb90": -90.9
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 32,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 32,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 152.5,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -14.0,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 2.2,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 81.3284,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 74.7,
+     "exit_reasons": {
+      "chandelier": 24,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_no_bear_abs": {
+     "n": 33,
+     "mean": 143.6,
+     "median": -140.7,
+     "win": 0.303,
+     "ex_best2": -2.4,
+     "lb90": -18.1,
+     "oos_return_pct": 16.07,
+     "max_dd_pct": 5.59,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 69.4,
+       "median": -140.7,
+       "win": 0.231,
+       "ex_best2": -169.4,
+       "lb90": -204.4
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 370.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -24.6
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 14,
+       "mean": 371.4,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": 32.2,
+       "lb90": 6.5
+      },
+      "3": {
+       "n": 13,
+       "mean": 36.6,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -60.6,
+       "lb90": -90.9
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 143.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -18.1,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -2.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 78.9827,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 65.8,
+     "exit_reasons": {
+      "chandelier": 25,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_abs_pref": {
+     "n": 0,
+     "mean": null,
+     "median": null,
+     "win": null,
+     "ex_best2": null,
+     "lb90": null,
+     "oos_return_pct": 0.0,
+     "max_dd_pct": 0.0,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 0,
+       "mean": null,
+       "median": null,
+       "win": null,
+       "ex_best2": null,
+       "lb90": null
+      },
+      "ETH/USD": {
+       "n": 0,
+       "mean": null,
+       "median": null,
+       "win": null,
+       "ex_best2": null,
+       "lb90": null
+      },
+      "SOL/USD": {
+       "n": 0,
+       "mean": null,
+       "median": null,
+       "win": null,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "by_fold": {},
+     "bar": {
+      "trades": 0,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "mean_positive",
+       "lower_bound_positive",
+       "ex_best_2_positive",
+       "beats_cash"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 0,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": false,
+        "value": null,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": null,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": null,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": false,
+        "value": 0,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": null,
+     "exit_reasons": {},
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_not_extended": {
+     "n": 30,
+     "mean": 52.8,
+     "median": -139.3,
+     "win": 0.333,
+     "ex_best2": -32.2,
+     "lb90": -49.0,
+     "oos_return_pct": 5.11,
+     "max_dd_pct": 3.56,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 10,
+       "mean": 52.3,
+       "median": -146.2,
+       "win": 0.2,
+       "ex_best2": -194.8,
+       "lb90": -215.8
+      },
+      "ETH/USD": {
+       "n": 11,
+       "mean": -39.7,
+       "median": -134.4,
+       "win": 0.273,
+       "ex_best2": -118.9,
+       "lb90": -119.5
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 166.2,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -19.7
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 13,
+       "mean": 125.3,
+       "median": -137.9,
+       "win": 0.308,
+       "ex_best2": -59.6,
+       "lb90": -83.0
+      },
+      "3": {
+       "n": 11,
+       "mean": 81.0,
+       "median": 45.4,
+       "win": 0.545,
+       "ex_best2": -27.9,
+       "lb90": -61.4
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 30,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 30,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 52.8,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -49.0,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -32.2,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 26.3767,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -27.4,
+     "exit_reasons": {
+      "chandelier": 26,
+      "regime_chop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_all": {
+     "n": 37,
+     "mean": 55.7,
+     "median": -140.7,
+     "win": 0.351,
+     "ex_best2": -34.7,
+     "lb90": -48.2,
+     "oos_return_pct": 6.62,
+     "max_dd_pct": 8.15,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 66.2,
+       "median": -134.4,
+       "win": 0.385,
+       "ex_best2": -96.2,
+       "lb90": -120.0
+      },
+      "SOL/USD": {
+       "n": 13,
+       "mean": 53.7,
+       "median": -173.0,
+       "win": 0.462,
+       "ex_best2": -71.0,
+       "lb90": -105.0
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -73.3,
+       "median": -73.3,
+       "win": 0.5,
+       "ex_best2": null,
+       "lb90": -643.5
+      },
+      "2": {
+       "n": 18,
+       "mean": 131.9,
+       "median": -139.3,
+       "win": 0.333,
+       "ex_best2": -56.4,
+       "lb90": -64.4
+      },
+      "3": {
+       "n": 13,
+       "mean": 37.9,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -60.6,
+       "lb90": -90.8
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 37,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 37,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 55.7,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -48.2,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -34.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 34.3676,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -24.4,
+     "exit_reasons": {
+      "chandelier": 24,
+      "regime_chop": 4,
+      "flow_buy_climax": 6,
+      "stop": 3
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_half": {
+     "n": 33,
+     "mean": 99.9,
+     "median": -140.7,
+     "win": 0.333,
+     "ex_best2": -12.9,
+     "lb90": -31.3,
+     "oos_return_pct": 10.96,
+     "max_dd_pct": 5.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 41.9,
+       "median": -140.7,
+       "win": 0.308,
+       "ex_best2": -163.3,
+       "lb90": -189.5
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 249.9,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 18.3,
+       "lb90": -6.4
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -106.4,
+       "median": -106.4,
+       "win": 0.5,
+       "ex_best2": null,
+       "lb90": -578.7
+      },
+      "2": {
+       "n": 14,
+       "mean": 263.2,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": -1.2,
+       "lb90": -26.5
+      },
+      "3": {
+       "n": 13,
+       "mean": 37.3,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -60.6,
+       "lb90": -90.9
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 99.9,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -31.3,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -12.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 54.9652,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 21.0,
+     "exit_reasons": {
+      "chandelier": 25,
+      "regime_chop": 4,
+      "flow_buy_climax_half": 5,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_all": {
+     "n": 44,
+     "mean": 9.9,
+     "median": -85.8,
+     "win": 0.432,
+     "ex_best2": -16.1,
+     "lb90": -41.8,
+     "oos_return_pct": 1.29,
+     "max_dd_pct": 5.49,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 14,
+       "mean": -18.2,
+       "median": -136.7,
+       "win": 0.357,
+       "ex_best2": -86.8,
+       "lb90": -103.3
+      },
+      "ETH/USD": {
+       "n": 15,
+       "mean": -24.4,
+       "median": -96.1,
+       "win": 0.333,
+       "ex_best2": -98.1,
+       "lb90": -110.8
+      },
+      "SOL/USD": {
+       "n": 15,
+       "mean": 70.3,
+       "median": 114.2,
+       "win": 0.6,
+       "ex_best2": 11.5,
+       "lb90": -35.8
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 22,
+       "mean": 74.3,
+       "median": 91.4,
+       "win": 0.545,
+       "ex_best2": 28.6,
+       "lb90": -3.4
+      },
+      "3": {
+       "n": 16,
+       "mean": -16.3,
+       "median": -68.9,
+       "win": 0.438,
+       "ex_best2": -79.4,
+       "lb90": -106.4
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 44,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 44,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 9.9,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -41.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -16.1,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 7.2499,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -69.9,
+     "exit_reasons": {
+      "chandelier": 24,
+      "flow_euphoria": 14,
+      "regime_chop": 4,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_half": {
+     "n": 33,
+     "mean": 51.6,
+     "median": -140.7,
+     "win": 0.303,
+     "ex_best2": -38.4,
+     "lb90": -55.1,
+     "oos_return_pct": 5.43,
+     "max_dd_pct": 5.81,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": -13.0,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -178.0
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": -4.3,
+       "median": -140.7,
+       "win": 0.231,
+       "ex_best2": -169.4,
+       "lb90": -188.9
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 211.2,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 9.7,
+       "lb90": -33.9
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 14,
+       "mean": 183.0,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": -27.7,
+       "lb90": -51.7
+      },
+      "3": {
+       "n": 13,
+       "mean": 6.0,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -67.0,
+       "lb90": -100.1
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 51.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -55.1,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -38.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 28.372,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -27.0,
+     "exit_reasons": {
+      "chandelier": 25,
+      "flow_euphoria_half": 6,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_shakeout_hold": {
+     "n": 33,
+     "mean": 145.4,
+     "median": -140.7,
+     "win": 0.303,
+     "ex_best2": -0.4,
+     "lb90": -16.0,
+     "oos_return_pct": 16.31,
+     "max_dd_pct": 5.4,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 74.0,
+       "median": -140.7,
+       "win": 0.231,
+       "ex_best2": -163.9,
+       "lb90": -198.8
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 370.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -24.6
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 14,
+       "mean": 371.3,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": 32.1,
+       "lb90": 6.4
+      },
+      "3": {
+       "n": 13,
+       "mean": 41.4,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -54.9,
+       "lb90": -84.1
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 145.4,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -16.0,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -0.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 79.9902,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 67.6,
+     "exit_reasons": {
+      "chandelier": 26,
+      "regime_chop": 4,
+      "tp": 2,
+      "soft_stop": 1
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_closestop_ctrl": {
+     "n": 33,
+     "mean": 144.7,
+     "median": -140.7,
+     "win": 0.303,
+     "ex_best2": -1.2,
+     "lb90": -16.8,
+     "oos_return_pct": 16.22,
+     "max_dd_pct": 5.47,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 45.8,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -175.3,
+       "lb90": -194.3
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": 72.2,
+       "median": -140.7,
+       "win": 0.231,
+       "ex_best2": -166.0,
+       "lb90": -200.8
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 370.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 22.4,
+       "lb90": -24.6
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -139.4,
+       "median": -139.4,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -514.0
+      },
+      "2": {
+       "n": 14,
+       "mean": 371.3,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": 32.1,
+       "lb90": 6.4
+      },
+      "3": {
+       "n": 13,
+       "mean": 39.6,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -57.0,
+       "lb90": -86.4
+      },
+      "4": {
+       "n": 4,
+       "mean": -164.5,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -189.9
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 144.7,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -16.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -1.2,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 79.603,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 66.9,
+     "exit_reasons": {
+      "chandelier": 26,
+      "regime_chop": 4,
+      "tp": 2,
+      "soft_stop": 1
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "ptp_2atr": {
+     "n": 33,
+     "mean": 37.4,
+     "median": -82.0,
+     "win": 0.303,
+     "ex_best2": -38.4,
+     "lb90": -51.6,
+     "oos_return_pct": 3.92,
+     "max_dd_pct": 5.71,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": -22.7,
+       "median": -82.0,
+       "win": 0.182,
+       "ex_best2": -143.1,
+       "lb90": -154.4
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": -19.9,
+       "median": -86.5,
+       "win": 0.231,
+       "ex_best2": -151.7,
+       "lb90": -171.8
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 193.6,
+       "median": 97.3,
+       "win": 0.556,
+       "ex_best2": 13.5,
+       "lb90": -15.4
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -66.1,
+       "median": -66.1,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -237.8
+      },
+      "2": {
+       "n": 14,
+       "mean": 145.2,
+       "median": -90.3,
+       "win": 0.286,
+       "ex_best2": -32.6,
+       "lb90": -50.9
+      },
+      "3": {
+       "n": 13,
+       "mean": -10.9,
+       "median": -4.9,
+       "win": 0.462,
+       "ex_best2": -73.7,
+       "lb90": -101.5
+      },
+      "4": {
+       "n": 4,
+       "mean": -131.3,
+       "median": -127.5,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -186.8
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 37.4,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -51.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -38.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 20.5746,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -28.9,
+     "exit_reasons": {
+      "chandelier": 25,
+      "ptp": 20,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "ptp_4atr": {
+     "n": 33,
+     "mean": 39.7,
+     "median": -140.7,
+     "win": 0.333,
+     "ex_best2": -38.9,
+     "lb90": -55.6,
+     "oos_return_pct": 4.14,
+     "max_dd_pct": 5.56,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": -35.4,
+       "median": -145.1,
+       "win": 0.182,
+       "ex_best2": -166.8,
+       "lb90": -173.7
+      },
+      "ETH/USD": {
+       "n": 13,
+       "mean": -10.0,
+       "median": -140.7,
+       "win": 0.308,
+       "ex_best2": -149.5,
+       "lb90": -168.6
+      },
+      "SOL/USD": {
+       "n": 9,
+       "mean": 203.4,
+       "median": 87.4,
+       "win": 0.556,
+       "ex_best2": 6.9,
+       "lb90": -30.3
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -119.3,
+       "median": -119.3,
+       "win": 0.5,
+       "ex_best2": null,
+       "lb90": -553.4
+      },
+      "2": {
+       "n": 14,
+       "mean": 148.5,
+       "median": -139.3,
+       "win": 0.286,
+       "ex_best2": -36.5,
+       "lb90": -58.0
+      },
+      "3": {
+       "n": 13,
+       "mean": 4.0,
+       "median": -62.4,
+       "win": 0.462,
+       "ex_best2": -72.0,
+       "lb90": -100.1
+      },
+      "4": {
+       "n": 4,
+       "mean": -145.3,
+       "median": -159.0,
+       "win": 0.0,
+       "ex_best2": -188.7,
+       "lb90": -196.6
+      }
+     },
+     "bar": {
+      "trades": 33,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 33,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 39.7,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -55.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -38.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 21.8398,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -31.4,
+     "exit_reasons": {
+      "chandelier": 25,
+      "ptp": 12,
+      "regime_chop": 4,
+      "tp": 2,
+      "stop": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    }
+   },
+   "walk_forward_selection": {
+    "chosen": [
+     "baseline",
+     "baseline",
+     "of_no_dist",
+     "of_not_extended"
+    ],
+    "n": 33,
+    "mean": 143.6,
+    "median": -140.7,
+    "win": 0.303,
+    "ex_best2": -2.4,
+    "lb90": -18.1
+   }
+  },
+  "meanrev_mk@240m": {
+   "tf": 240,
+   "spec": "meanrev(d1=True,entry=limit,limit_offset=0.001,rsi_exit=55.0,rsi_os=38.0,stop=0.03,tp=0.25)",
+   "oos_days": {
+    "BTC/USD": 85.7,
+    "ETH/USD": 85.7,
+    "SOL/USD": 85.7
+   },
+   "baseline_check": {
+    "BTC/USD": {
+     "backtest_core_oos_n": 9,
+     "backtest_core_oos_mean": 6.6
+    },
+    "ETH/USD": {
+     "backtest_core_oos_n": 6,
+     "backtest_core_oos_mean": 202.2
+    },
+    "SOL/USD": {
+     "backtest_core_oos_n": 5,
+     "backtest_core_oos_mean": -50.1
+    }
+   },
+   "buy_and_hold": {
+    "mean_return_pct": 28.8,
+    "mean_max_dd_pct": 14.92,
+    "per_coin_return_pct": [
+     25.13,
+     23.69,
+     37.59
+    ]
+   },
+   "variants": {
+    "baseline": {
+     "n": 20,
+     "mean": 51.1,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 3.4,
+     "lb90": -28.6,
+     "oos_return_pct": 3.38,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 202.2,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": 7.0
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -50.1,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -263.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 51.1,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -28.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 3.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 17.0316,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 10.7,
+     "exit_reasons": {
+      "reverted": 16,
+      "stop": 4
+     }
+    },
+    "of_no_dist": {
+     "n": 20,
+     "mean": 18.9,
+     "median": 64.2,
+     "win": 0.65,
+     "ex_best2": -25.2,
+     "lb90": -60.8,
+     "oos_return_pct": 1.19,
+     "max_dd_pct": 6.06,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 15.1,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -34.4,
+       "lb90": -69.8
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 80.3,
+       "median": 197.7,
+       "win": 0.667,
+       "ex_best2": -87.4,
+       "lb90": -140.2
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -47.7,
+       "median": 16.7,
+       "win": 0.6,
+       "ex_best2": -242.8,
+       "lb90": -261.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 118.2,
+       "median": 121.0,
+       "win": 0.75,
+       "ex_best2": -28.4,
+       "lb90": -52.2
+      },
+      "2": {
+       "n": 5,
+       "mean": 135.7,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": 1.8,
+       "lb90": -7.2
+      },
+      "3": {
+       "n": 3,
+       "mean": 225.3,
+       "median": 232.6,
+       "win": 1.0,
+       "ex_best2": 161.8,
+       "lb90": 160.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -181.0,
+       "median": -372.5,
+       "win": 0.375,
+       "ex_best2": -304.1,
+       "lb90": -315.3
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 18.9,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -60.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -25.2,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 6.3164,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -21.3,
+     "exit_reasons": {
+      "reverted": 15,
+      "stop": 5
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_no_bear_abs": {
+     "n": 20,
+     "mean": 51.1,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 3.4,
+     "lb90": -28.6,
+     "oos_return_pct": 3.38,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 202.2,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": 7.0
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -50.1,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -263.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 51.1,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -28.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 3.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 17.0316,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 10.7,
+     "exit_reasons": {
+      "reverted": 16,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_abs_pref": {
+     "n": 12,
+     "mean": -10.8,
+     "median": 105.5,
+     "win": 0.583,
+     "ex_best2": -91.6,
+     "lb90": -130.6,
+     "oos_return_pct": -0.49,
+     "max_dd_pct": 4.88,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 5,
+       "mean": -10.1,
+       "median": 92.4,
+       "win": 0.6,
+       "ex_best2": -141.5,
+       "lb90": -177.2
+      },
+      "ETH/USD": {
+       "n": 5,
+       "mean": 2.5,
+       "median": 118.7,
+       "win": 0.6,
+       "ex_best2": -208.8,
+       "lb90": -255.2
+      },
+      "SOL/USD": {
+       "n": 2,
+       "mean": -45.5,
+       "median": -45.5,
+       "win": 0.5,
+       "ex_best2": null,
+       "lb90": -1012.7
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 2,
+       "mean": -5.6,
+       "median": -5.6,
+       "win": 0.5,
+       "ex_best2": null,
+       "lb90": -416.2
+      },
+      "2": {
+       "n": 1,
+       "mean": 505.5,
+       "median": 505.5,
+       "win": 1.0,
+       "ex_best2": null,
+       "lb90": null
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 6,
+       "mean": -186.0,
+       "median": -372.5,
+       "win": 0.333,
+       "ex_best2": -372.5,
+       "lb90": -360.1
+      }
+     },
+     "bar": {
+      "trades": 12,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "mean_positive",
+       "lower_bound_positive",
+       "ex_best_2_positive",
+       "beats_cash"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 12,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": false,
+        "value": -10.8,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -130.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -91.6,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": false,
+        "value": -2.1553,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -50.9,
+     "exit_reasons": {
+      "reverted": 8,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_not_extended": {
+     "n": 20,
+     "mean": 51.1,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 3.4,
+     "lb90": -28.6,
+     "oos_return_pct": 3.38,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 202.2,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": 7.0
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -50.1,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -263.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 51.1,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -28.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 3.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 17.0316,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 10.7,
+     "exit_reasons": {
+      "reverted": 16,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_all": {
+     "n": 21,
+     "mean": 57.5,
+     "median": 89.7,
+     "win": 0.762,
+     "ex_best2": 19.7,
+     "lb90": -16.3,
+     "oos_return_pct": 4.03,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 10,
+       "mean": 28.7,
+       "median": 78.5,
+       "win": 0.8,
+       "ex_best2": -10.9,
+       "lb90": -44.8
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 180.7,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": -2.1
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -32.8,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -262.4
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 176.0,
+       "median": 89.7,
+       "win": 1.0,
+       "ex_best2": 47.8,
+       "lb90": 53.8
+      },
+      "3": {
+       "n": 4,
+       "mean": 126.3,
+       "median": 105.5,
+       "win": 1.0,
+       "ex_best2": 85.0,
+       "lb90": 75.2
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 21,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 21,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 57.5,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -16.3,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 19.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 20.1243,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 17.1,
+     "exit_reasons": {
+      "reverted": 13,
+      "flow_buy_climax": 4,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_half": {
+     "n": 20,
+     "mean": 53.8,
+     "median": 85.9,
+     "win": 0.75,
+     "ex_best2": 9.9,
+     "lb90": -24.5,
+     "oos_return_pct": 3.57,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 14.9,
+       "median": 49.0,
+       "win": 0.778,
+       "ex_best2": -34.2,
+       "lb90": -66.8
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 191.5,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": 3.0
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -41.5,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -261.4
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 158.7,
+       "median": 49.0,
+       "win": 1.0,
+       "ex_best2": 22.8,
+       "lb90": 25.1
+      },
+      "3": {
+       "n": 3,
+       "mean": 153.4,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 62.3
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 53.8,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -24.5,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 9.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 17.931,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 13.4,
+     "exit_reasons": {
+      "reverted": 16,
+      "flow_buy_climax_half": 4,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_all": {
+     "n": 20,
+     "mean": 64.2,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 17.9,
+     "lb90": -19.6,
+     "oos_return_pct": 4.28,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 205.8,
+       "median": 263.7,
+       "win": 0.833,
+       "ex_best2": 68.4,
+       "lb90": 9.2
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -2.3,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -258.1
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 115.6,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -63.8
+      },
+      "2": {
+       "n": 5,
+       "mean": 189.2,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": 7.0
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 64.2,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -19.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 17.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 21.3839,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 23.7,
+     "exit_reasons": {
+      "reverted": 14,
+      "stop": 4,
+      "flow_euphoria": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_half": {
+     "n": 20,
+     "mean": 57.6,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 10.6,
+     "lb90": -23.8,
+     "oos_return_pct": 3.83,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 204.0,
+       "median": 258.2,
+       "win": 0.833,
+       "ex_best2": 65.7,
+       "lb90": 8.1
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -26.2,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -258.9
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 112.9,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -62.8
+      },
+      "2": {
+       "n": 5,
+       "mean": 165.3,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": 0.1
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 57.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -23.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 10.6,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 19.2077,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 17.2,
+     "exit_reasons": {
+      "reverted": 16,
+      "stop": 4,
+      "flow_euphoria_half": 2
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_shakeout_hold": {
+     "n": 19,
+     "mean": 12.4,
+     "median": 79.4,
+     "win": 0.684,
+     "ex_best2": -37.5,
+     "lb90": -77.2,
+     "oos_return_pct": 0.7,
+     "max_dd_pct": 5.94,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 4.9,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -47.5,
+       "lb90": -80.1
+      },
+      "ETH/USD": {
+       "n": 5,
+       "mean": 150.3,
+       "median": 138.6,
+       "win": 0.8,
+       "ex_best2": -40.3,
+       "lb90": -80.5
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -112.0,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -349.9,
+       "lb90": -389.8
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 7,
+       "mean": -200.7,
+       "median": -378.2,
+       "win": 0.429,
+       "ex_best2": -356.2,
+       "lb90": -384.3
+      }
+     },
+     "bar": {
+      "trades": 19,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 19,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 12.4,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -77.2,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -37.5,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 3.9217,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -27.8,
+     "exit_reasons": {
+      "reverted": 15,
+      "soft_stop": 3,
+      "hard_stop": 1
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_closestop_ctrl": {
+     "n": 19,
+     "mean": 24.6,
+     "median": 79.4,
+     "win": 0.684,
+     "ex_best2": -23.8,
+     "lb90": -56.9,
+     "oos_return_pct": 1.5,
+     "max_dd_pct": 5.2,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 4.9,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -47.5,
+       "lb90": -80.1
+      },
+      "ETH/USD": {
+       "n": 5,
+       "mean": 150.3,
+       "median": 138.6,
+       "win": 0.8,
+       "ex_best2": -40.3,
+       "lb90": -80.5
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -65.6,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -272.6,
+       "lb90": -293.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 7,
+       "mean": -167.6,
+       "median": -378.2,
+       "win": 0.429,
+       "ex_best2": -309.8,
+       "lb90": -326.4
+      }
+     },
+     "bar": {
+      "trades": 19,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 19,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 24.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -56.9,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -23.8,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 7.7864,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -15.7,
+     "exit_reasons": {
+      "reverted": 15,
+      "soft_stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "ptp_2atr": {
+     "n": 20,
+     "mean": 59.0,
+     "median": 85.9,
+     "win": 0.75,
+     "ex_best2": 25.0,
+     "lb90": -8.8,
+     "oos_return_pct": 3.95,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 12.6,
+       "median": 49.0,
+       "win": 0.778,
+       "ex_best2": -31.1,
+       "lb90": -67.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 150.1,
+       "median": 211.9,
+       "win": 0.833,
+       "ex_best2": 42.5,
+       "lb90": -17.1
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": 33.2,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -135.0,
+       "lb90": -154.3
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 89.7,
+       "median": 109.3,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -56.2
+      },
+      "2": {
+       "n": 5,
+       "mean": 145.3,
+       "median": 49.0,
+       "win": 1.0,
+       "ex_best2": 30.2,
+       "lb90": 33.0
+      },
+      "3": {
+       "n": 3,
+       "mean": 174.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 44.4
+      },
+      "4": {
+       "n": 8,
+       "mean": -53.5,
+       "median": 2.4,
+       "win": 0.5,
+       "ex_best2": -160.5,
+       "lb90": -197.1
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 59.0,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -8.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 25.0,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 19.6665,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 28.9,
+     "exit_reasons": {
+      "reverted": 16,
+      "ptp": 10,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": true,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": true,
+      "folds_better": 3,
+      "failed": []
+     },
+     "shadow_candidate": false
+    },
+    "ptp_4atr": {
+     "n": 20,
+     "mean": 51.1,
+     "median": 85.9,
+     "win": 0.7,
+     "ex_best2": 3.4,
+     "lb90": -28.6,
+     "oos_return_pct": 3.38,
+     "max_dd_pct": 3.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 9,
+       "mean": 6.6,
+       "median": 49.0,
+       "win": 0.667,
+       "ex_best2": -44.9,
+       "lb90": -76.0
+      },
+      "ETH/USD": {
+       "n": 6,
+       "mean": 202.2,
+       "median": 252.7,
+       "win": 0.833,
+       "ex_best2": 62.9,
+       "lb90": 7.0
+      },
+      "SOL/USD": {
+       "n": 5,
+       "mean": -50.1,
+       "median": 4.7,
+       "win": 0.6,
+       "ex_best2": -246.8,
+       "lb90": -263.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 4,
+       "mean": 110.1,
+       "median": 109.0,
+       "win": 0.75,
+       "ex_best2": -32.5,
+       "lb90": -61.9
+      },
+      "2": {
+       "n": 5,
+       "mean": 141.4,
+       "median": 49.0,
+       "win": 0.8,
+       "ex_best2": -2.2,
+       "lb90": -13.8
+      },
+      "3": {
+       "n": 3,
+       "mean": 164.2,
+       "median": 118.7,
+       "win": 1.0,
+       "ex_best2": 92.4,
+       "lb90": 53.0
+      },
+      "4": {
+       "n": 8,
+       "mean": -77.3,
+       "median": -165.3,
+       "win": 0.5,
+       "ex_best2": -211.0,
+       "lb90": -245.0
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 51.1,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -28.6,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 3.4,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 17.0316,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 10.7,
+     "exit_reasons": {
+      "reverted": 16,
+      "stop": 4
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    }
+   },
+   "walk_forward_selection": {
+    "chosen": [
+     "baseline",
+     "of_no_dist",
+     "x_euphoria_all",
+     "of_no_dist"
+    ],
+    "n": 20,
+    "mean": 8.2,
+    "median": 64.2,
+    "win": 0.65,
+    "ex_best2": -37.1,
+    "lb90": -69.9
+   }
+  },
+  "trendhold@240m": {
+   "tf": 240,
+   "spec": "trendhold(d1=True,ema_fast=20,ema_slow=100)",
+   "oos_days": {
+    "BTC/USD": 85.7,
+    "ETH/USD": 85.7,
+    "SOL/USD": 85.7
+   },
+   "baseline_check": {
+    "BTC/USD": {
+     "backtest_core_oos_n": 7,
+     "backtest_core_oos_mean": 112.7
+    },
+    "ETH/USD": {
+     "backtest_core_oos_n": 7,
+     "backtest_core_oos_mean": 281.1
+    },
+    "SOL/USD": {
+     "backtest_core_oos_n": 6,
+     "backtest_core_oos_mean": 460.6
+    }
+   },
+   "buy_and_hold": {
+    "mean_return_pct": 28.8,
+    "mean_max_dd_pct": 14.92,
+    "per_coin_return_pct": [
+     25.13,
+     23.69,
+     37.59
+    ]
+   },
+   "variants": {
+    "baseline": {
+     "n": 20,
+     "mean": 276.0,
+     "median": -188.2,
+     "win": 0.3,
+     "ex_best2": 8.7,
+     "lb90": -13.9,
+     "oos_return_pct": 2.22,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 112.7,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -312.1
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 281.1,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -277.5
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 460.6,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -289.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 506.9,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": 23.5,
+       "lb90": -4.9
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 123.7,
+       "median": -2.6,
+       "win": 0.5,
+       "ex_best2": -145.0,
+       "lb90": -169.5
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 276.0,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -13.9,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 8.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 11.0401,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 194.1,
+     "exit_reasons": {
+      "below_ema": 20
+     }
+    },
+    "of_no_dist": {
+     "n": 20,
+     "mean": 267.5,
+     "median": -203.5,
+     "win": 0.3,
+     "ex_best2": -0.7,
+     "lb90": -23.8,
+     "oos_return_pct": 2.15,
+     "max_dd_pct": 0.68,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 104.9,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -261.0,
+       "lb90": -322.7
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 270.7,
+       "median": -181.0,
+       "win": 0.286,
+       "ex_best2": -209.3,
+       "lb90": -291.0
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 453.6,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -255.8,
+       "lb90": -299.3
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 500.3,
+       "median": -195.4,
+       "win": 0.273,
+       "ex_best2": 15.4,
+       "lb90": -13.3
+      },
+      "2": {
+       "n": 2,
+       "mean": -234.6,
+       "median": -234.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -469.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 114.6,
+       "median": -2.6,
+       "win": 0.5,
+       "ex_best2": -158.6,
+       "lb90": -184.8
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 267.5,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -23.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -0.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 10.7012,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 185.7,
+     "exit_reasons": {
+      "below_ema": 20
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_no_bear_abs": {
+     "n": 20,
+     "mean": 278.0,
+     "median": -192.5,
+     "win": 0.3,
+     "ex_best2": 10.9,
+     "lb90": -11.5,
+     "oos_return_pct": 2.23,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 118.4,
+       "median": -204.1,
+       "win": 0.286,
+       "ex_best2": -242.1,
+       "lb90": -304.1
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 281.1,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -277.5
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 460.6,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -289.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 506.1,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": 22.5,
+       "lb90": -5.9
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 123.7,
+       "median": -2.6,
+       "win": 0.5,
+       "ex_best2": -145.0,
+       "lb90": -169.5
+      },
+      "4": {
+       "n": 1,
+       "mean": -321.8,
+       "median": -321.8,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 278.0,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -11.5,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 10.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 11.1202,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 196.1,
+     "exit_reasons": {
+      "below_ema": 20
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": true,
+       "return_above_baseline": true,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_abs_pref": {
+     "n": 12,
+     "mean": -160.9,
+     "median": -238.1,
+     "win": 0.083,
+     "ex_best2": -245.9,
+     "lb90": -259.5,
+     "oos_return_pct": -0.77,
+     "max_dd_pct": 0.77,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 4,
+       "mean": -211.7,
+       "median": -202.1,
+       "win": 0.0,
+       "ex_best2": -279.2,
+       "lb90": -279.0
+      },
+      "ETH/USD": {
+       "n": 4,
+       "mean": -199.6,
+       "median": -219.8,
+       "win": 0.0,
+       "ex_best2": -288.8,
+       "lb90": -291.9
+      },
+      "SOL/USD": {
+       "n": 4,
+       "mean": -71.3,
+       "median": -249.7,
+       "win": 0.25,
+       "ex_best2": -321.1,
+       "lb90": -432.3
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 3,
+       "mean": -222.3,
+       "median": -227.3,
+       "win": 0.0,
+       "ex_best2": -274.5,
+       "lb90": -281.9
+      },
+      "2": {
+       "n": 5,
+       "mean": -29.6,
+       "median": -155.2,
+       "win": 0.2,
+       "ex_best2": -225.4,
+       "lb90": -272.0
+      },
+      "3": {
+       "n": 3,
+       "mean": -248.6,
+       "median": -303.1,
+       "win": 0.0,
+       "ex_best2": -309.4,
+       "lb90": -357.1
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.1,
+       "median": -370.1,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 12,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "mean_positive",
+       "lower_bound_positive",
+       "ex_best_2_positive",
+       "beats_cash"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 12,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": false,
+        "value": -160.9,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -259.5,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -245.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": false,
+        "value": -3.8612,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -239.3,
+     "exit_reasons": {
+      "below_ema": 12
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": false
+      },
+      "passes": false,
+      "folds_better": 2,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive",
+       "positive_on_2_of_3_coins"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "of_not_extended": {
+     "n": 20,
+     "mean": 276.0,
+     "median": -188.2,
+     "win": 0.3,
+     "ex_best2": 8.7,
+     "lb90": -13.9,
+     "oos_return_pct": 2.22,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 112.7,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -312.1
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 281.1,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -277.5
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 460.6,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -289.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 506.9,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": 23.5,
+       "lb90": -4.9
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 123.7,
+       "median": -2.6,
+       "win": 0.5,
+       "ex_best2": -145.0,
+       "lb90": -169.5
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 276.0,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -13.9,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 8.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 11.0401,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 194.1,
+     "exit_reasons": {
+      "below_ema": 20
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_all": {
+     "n": 37,
+     "mean": 101.5,
+     "median": -155.2,
+     "win": 0.459,
+     "ex_best2": -9.7,
+     "lb90": -41.4,
+     "oos_return_pct": 1.5,
+     "max_dd_pct": 1.11,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 11,
+       "mean": 62.2,
+       "median": -195.4,
+       "win": 0.364,
+       "ex_best2": -216.9,
+       "lb90": -272.9
+      },
+      "ETH/USD": {
+       "n": 14,
+       "mean": 107.8,
+       "median": -24.5,
+       "win": 0.5,
+       "ex_best2": -62.1,
+       "lb90": -94.7
+      },
+      "SOL/USD": {
+       "n": 12,
+       "mean": 130.2,
+       "median": -72.0,
+       "win": 0.5,
+       "ex_best2": -87.1,
+       "lb90": -142.3
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 15,
+       "mean": 372.1,
+       "median": -106.7,
+       "win": 0.467,
+       "ex_best2": 114.3,
+       "lb90": 72.7
+      },
+      "2": {
+       "n": 8,
+       "mean": -249.3,
+       "median": -213.6,
+       "win": 0.375,
+       "ex_best2": -398.8,
+       "lb90": -461.2
+      },
+      "3": {
+       "n": 12,
+       "mean": 81.2,
+       "median": 164.5,
+       "win": 0.583,
+       "ex_best2": -31.0,
+       "lb90": -73.6
+      },
+      "4": {
+       "n": 2,
+       "mean": -402.2,
+       "median": -402.2,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -495.9
+      }
+     },
+     "bar": {
+      "trades": 37,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 37,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 101.5,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -41.4,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -9.7,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 7.5131,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 21.0,
+     "exit_reasons": {
+      "below_ema": 20,
+      "flow_buy_climax": 17
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_climax_half": {
+     "n": 20,
+     "mean": 191.7,
+     "median": -188.2,
+     "win": 0.3,
+     "ex_best2": -22.6,
+     "lb90": -42.7,
+     "oos_return_pct": 1.54,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 155.4,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -325.2
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 228.0,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -247.0
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 191.8,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -240.5
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 368.9,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": -20.2,
+       "lb90": -43.0
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 95.6,
+       "median": 8.0,
+       "win": 0.5,
+       "ex_best2": -139.7,
+       "lb90": -157.3
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 191.7,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -42.7,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -22.6,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 7.6684,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 110.5,
+     "exit_reasons": {
+      "below_ema": 20,
+      "flow_buy_climax_half": 6
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_all": {
+     "n": 39,
+     "mean": 42.6,
+     "median": 64.4,
+     "win": 0.513,
+     "ex_best2": -5.9,
+     "lb90": -43.2,
+     "oos_return_pct": 0.66,
+     "max_dd_pct": 1.22,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 13,
+       "mean": -10.2,
+       "median": -155.2,
+       "win": 0.462,
+       "ex_best2": -106.3,
+       "lb90": -151.0
+      },
+      "ETH/USD": {
+       "n": 11,
+       "mean": 54.3,
+       "median": -106.7,
+       "win": 0.364,
+       "ex_best2": -142.6,
+       "lb90": -148.3
+      },
+      "SOL/USD": {
+       "n": 15,
+       "mean": 79.7,
+       "median": 198.6,
+       "win": 0.667,
+       "ex_best2": 11.7,
+       "lb90": -60.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 20,
+       "mean": 158.2,
+       "median": 148.2,
+       "win": 0.6,
+       "ex_best2": 71.3,
+       "lb90": 44.7
+      },
+      "2": {
+       "n": 8,
+       "mean": -208.3,
+       "median": -213.6,
+       "win": 0.375,
+       "ex_best2": -402.5,
+       "lb90": -444.1
+      },
+      "3": {
+       "n": 10,
+       "mean": 53.5,
+       "median": 52.1,
+       "win": 0.5,
+       "ex_best2": -69.4,
+       "lb90": -102.1
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 39,
+      "passes": false,
+      "failed": [
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": true,
+        "value": 39,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 42.6,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -43.2,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -5.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 3.3216,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": -37.4,
+     "exit_reasons": {
+      "below_ema": 20,
+      "flow_euphoria": 19
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": false,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds",
+       "stress_mean_positive"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_euphoria_half": {
+     "n": 20,
+     "mean": 146.5,
+     "median": -173.0,
+     "win": 0.3,
+     "ex_best2": -21.9,
+     "lb90": -45.8,
+     "oos_return_pct": 1.17,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 41.1,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -257.8
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 145.7,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -234.2
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 270.4,
+       "median": -117.5,
+       "win": 0.333,
+       "ex_best2": -193.1,
+       "lb90": -201.1
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 259.6,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": -52.0,
+       "lb90": -72.9
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 145.3,
+       "median": 165.5,
+       "win": 0.5,
+       "ex_best2": -60.9,
+       "lb90": -100.6
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 146.5,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -45.8,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -21.9,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 5.8594,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 65.6,
+     "exit_reasons": {
+      "below_ema": 20,
+      "flow_euphoria_half": 7
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "x_shakeout_hold": {
+     "n": 20,
+     "mean": 267.1,
+     "median": -188.2,
+     "win": 0.3,
+     "ex_best2": 6.5,
+     "lb90": -17.9,
+     "oos_return_pct": 2.14,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 107.0,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -317.4
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 261.4,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -269.5
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 460.6,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -289.2
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 494.3,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": 23.5,
+       "lb90": -8.2
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 117.1,
+       "median": -22.4,
+       "win": 0.5,
+       "ex_best2": -154.9,
+       "lb90": -175.5
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 267.1,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -17.9,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": true,
+        "value": 6.5,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 10.6852,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 185.3,
+     "exit_reasons": {
+      "below_ema": 20
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "ptp_2atr": {
+     "n": 20,
+     "mean": 106.9,
+     "median": -131.0,
+     "win": 0.35,
+     "ex_best2": -34.8,
+     "lb90": -55.0,
+     "oos_return_pct": 0.85,
+     "max_dd_pct": 0.52,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": -17.4,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -267.0
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 110.8,
+       "median": -106.7,
+       "win": 0.286,
+       "ex_best2": -168.5,
+       "lb90": -195.7
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 247.5,
+       "median": -18.2,
+       "win": 0.5,
+       "ex_best2": -143.4,
+       "lb90": -157.7
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 218.4,
+       "median": -106.7,
+       "win": 0.273,
+       "ex_best2": -40.2,
+       "lb90": -58.0
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 88.9,
+       "median": 98.3,
+       "win": 0.667,
+       "ex_best2": -94.5,
+       "lb90": -122.0
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 106.9,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -55.0,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -34.8,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 4.2768,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 35.5,
+     "exit_reasons": {
+      "below_ema": 20,
+      "ptp": 9
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 0,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    },
+    "ptp_4atr": {
+     "n": 20,
+     "mean": 113.3,
+     "median": -188.2,
+     "win": 0.3,
+     "ex_best2": -36.5,
+     "lb90": -63.5,
+     "oos_return_pct": 0.9,
+     "max_dd_pct": 0.65,
+     "by_coin": {
+      "BTC/USD": {
+       "n": 7,
+       "mean": 8.8,
+       "median": -195.4,
+       "win": 0.286,
+       "ex_best2": -250.1,
+       "lb90": -258.2
+      },
+      "ETH/USD": {
+       "n": 7,
+       "mean": 123.7,
+       "median": -165.0,
+       "win": 0.286,
+       "ex_best2": -194.7,
+       "lb90": -206.7
+      },
+      "SOL/USD": {
+       "n": 6,
+       "mean": 223.0,
+       "median": -222.0,
+       "win": 0.333,
+       "ex_best2": -245.3,
+       "lb90": -238.1
+      }
+     },
+     "by_fold": {
+      "1": {
+       "n": 11,
+       "mean": 209.4,
+       "median": -181.0,
+       "win": 0.273,
+       "ex_best2": -68.7,
+       "lb90": -87.6
+      },
+      "2": {
+       "n": 2,
+       "mean": -213.6,
+       "median": -213.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": -386.4
+      },
+      "3": {
+       "n": 6,
+       "mean": 126.6,
+       "median": 48.6,
+       "win": 0.5,
+       "ex_best2": -119.4,
+       "lb90": -146.2
+      },
+      "4": {
+       "n": 1,
+       "mean": -370.6,
+       "median": -370.6,
+       "win": 0.0,
+       "ex_best2": null,
+       "lb90": null
+      }
+     },
+     "bar": {
+      "trades": 20,
+      "passes": false,
+      "failed": [
+       "min_trades",
+       "lower_bound_positive",
+       "ex_best_2_positive"
+      ],
+      "checks": {
+       "min_trades": {
+        "pass": false,
+        "value": 20,
+        "need": ">= 30"
+       },
+       "mean_positive": {
+        "pass": true,
+        "value": 113.3,
+        "need": "> 0 bps"
+       },
+       "lower_bound_positive": {
+        "pass": false,
+        "value": -63.5,
+        "need": "90% lower bound > 0 bps"
+       },
+       "ex_best_2_positive": {
+        "pass": false,
+        "value": -36.5,
+        "need": "mean without best 2 trades > 0 bps"
+       },
+       "beats_cash": {
+        "pass": true,
+        "value": 4.5311,
+        "need": "total realized P&L >= $0"
+       }
+      }
+     },
+     "stress_mean": 38.9,
+     "exit_reasons": {
+      "below_ema": 20,
+      "ptp": 6
+     },
+     "improvement": {
+      "checks": {
+       "mean_above_baseline": false,
+       "return_above_baseline": false,
+       "beats_baseline_in_3_of_4_folds": false,
+       "stress_mean_positive": true,
+       "positive_on_2_of_3_coins": true
+      },
+      "passes": false,
+      "folds_better": 1,
+      "failed": [
+       "mean_above_baseline",
+       "return_above_baseline",
+       "beats_baseline_in_3_of_4_folds"
+      ]
+     },
+     "shadow_candidate": false
+    }
+   },
+   "walk_forward_selection": {
+    "chosen": [
+     "baseline",
+     "baseline",
+     "of_abs_pref",
+     "x_euphoria_half"
+    ],
+    "n": 17,
+    "mean": 237.2,
+    "median": -195.4,
+    "win": 0.176,
+    "ex_best2": -88.8,
+    "lb90": -103.0
+   }
+  }
+ },
+ "event_study": {
+  "ic": {
+   "imb_60|4h": {
+    "first_half": {
+     "BTC/USD": -0.024,
+     "ETH/USD": -0.024,
+     "SOL/USD": -0.027
+    },
+    "second_half": {
+     "BTC/USD": 0.021,
+     "ETH/USD": -0.015,
+     "SOL/USD": -0.035
+    }
+   },
+   "imb_60|24h": {
+    "first_half": {
+     "BTC/USD": 0.003,
+     "ETH/USD": -0.011,
+     "SOL/USD": -0.007
+    },
+    "second_half": {
+     "BTC/USD": 0.014,
+     "ETH/USD": -0.021,
+     "SOL/USD": -0.013
+    }
+   },
+   "net_z_60|4h": {
+    "first_half": {
+     "BTC/USD": -0.042,
+     "ETH/USD": -0.035,
+     "SOL/USD": -0.026
+    },
+    "second_half": {
+     "BTC/USD": 0.028,
+     "ETH/USD": -0.012,
+     "SOL/USD": -0.028
+    }
+   },
+   "net_z_60|24h": {
+    "first_half": {
+     "BTC/USD": 0.013,
+     "ETH/USD": -0.027,
+     "SOL/USD": -0.004
+    },
+    "second_half": {
+     "BTC/USD": 0.014,
+     "ETH/USD": -0.01,
+     "SOL/USD": -0.013
+    }
+   },
+   "lnet_z_60|4h": {
+    "first_half": {
+     "BTC/USD": -0.026,
+     "ETH/USD": -0.024,
+     "SOL/USD": -0.038
+    },
+    "second_half": {
+     "BTC/USD": 0.021,
+     "ETH/USD": -0.015,
+     "SOL/USD": -0.033
+    }
+   },
+   "lnet_z_60|24h": {
+    "first_half": {
+     "BTC/USD": 0.031,
+     "ETH/USD": -0.041,
+     "SOL/USD": 0.005
+    },
+    "second_half": {
+     "BTC/USD": 0.027,
+     "ETH/USD": -0.039,
+     "SOL/USD": -0.004
+    }
+   },
+   "imb_240|4h": {
+    "first_half": {
+     "BTC/USD": -0.014,
+     "ETH/USD": 0.007,
+     "SOL/USD": 0.005
+    },
+    "second_half": {
+     "BTC/USD": 0.06,
+     "ETH/USD": -0.021,
+     "SOL/USD": -0.085
+    }
+   },
+   "imb_240|24h": {
+    "first_half": {
+     "BTC/USD": -0.008,
+     "ETH/USD": 0.013,
+     "SOL/USD": -0.021
+    },
+    "second_half": {
+     "BTC/USD": 0.028,
+     "ETH/USD": 0.002,
+     "SOL/USD": -0.016
+    }
+   },
+   "net_z_240|4h": {
+    "first_half": {
+     "BTC/USD": -0.031,
+     "ETH/USD": -0.023,
+     "SOL/USD": -0.0
+    },
+    "second_half": {
+     "BTC/USD": 0.049,
+     "ETH/USD": -0.038,
+     "SOL/USD": -0.081
+    }
+   },
+   "net_z_240|24h": {
+    "first_half": {
+     "BTC/USD": 0.001,
+     "ETH/USD": -0.003,
+     "SOL/USD": -0.013
+    },
+    "second_half": {
+     "BTC/USD": 0.022,
+     "ETH/USD": 0.008,
+     "SOL/USD": -0.019
+    }
+   },
+   "lnet_z_240|4h": {
+    "first_half": {
+     "BTC/USD": -0.023,
+     "ETH/USD": -0.059,
+     "SOL/USD": -0.011
+    },
+    "second_half": {
+     "BTC/USD": 0.058,
+     "ETH/USD": -0.059,
+     "SOL/USD": -0.086
+    }
+   },
+   "lnet_z_240|24h": {
+    "first_half": {
+     "BTC/USD": 0.033,
+     "ETH/USD": -0.055,
+     "SOL/USD": 0.006
+    },
+    "second_half": {
+     "BTC/USD": 0.024,
+     "ETH/USD": -0.042,
+     "SOL/USD": -0.023
+    }
+   },
+   "vwap_dev_z|4h": {
+    "first_half": {
+     "BTC/USD": -0.077,
+     "ETH/USD": -0.095,
+     "SOL/USD": -0.045
+    },
+    "second_half": {
+     "BTC/USD": 0.038,
+     "ETH/USD": -0.013,
+     "SOL/USD": 0.029
+    }
+   },
+   "vwap_dev_z|24h": {
+    "first_half": {
+     "BTC/USD": 0.029,
+     "ETH/USD": 0.039,
+     "SOL/USD": 0.09
+    },
+    "second_half": {
+     "BTC/USD": -0.076,
+     "ETH/USD": -0.088,
+     "SOL/USD": -0.042
+    }
+   },
+   "ret_z_240|4h": {
+    "first_half": {
+     "BTC/USD": -0.075,
+     "ETH/USD": -0.116,
+     "SOL/USD": -0.104
+    },
+    "second_half": {
+     "BTC/USD": -0.019,
+     "ETH/USD": -0.017,
+     "SOL/USD": -0.004
+    }
+   },
+   "ret_z_240|24h": {
+    "first_half": {
+     "BTC/USD": -0.023,
+     "ETH/USD": -0.034,
+     "SOL/USD": 0.009
+    },
+    "second_half": {
+     "BTC/USD": -0.006,
+     "ETH/USD": -0.016,
+     "SOL/USD": 0.04
+    }
+   }
+  },
+  "events": {
+   "BTC/USD": {
+    "unconditional": {
+     "n": 13568,
+     "fwd4h": 2.8,
+     "fwd24h": 18.3
+    },
+    "buy_climax": {
+     "n": 27,
+     "fwd4h": -13.4,
+     "fwd24h": -57.3
+    },
+    "sell_climax": {
+     "n": 41,
+     "fwd4h": 30.9,
+     "fwd24h": 27.3
+    },
+    "euphoria": {
+     "n": 40,
+     "fwd4h": 42.4,
+     "fwd24h": 265.3
+    },
+    "dip_absorbed": {
+     "n": 505,
+     "fwd4h": 7.1,
+     "fwd24h": 4.3
+    }
+   },
+   "ETH/USD": {
+    "unconditional": {
+     "n": 13568,
+     "fwd4h": 3.4,
+     "fwd24h": 24.1
+    },
+    "buy_climax": {
+     "n": 24,
+     "fwd4h": -7.3,
+     "fwd24h": 31.3
+    },
+    "sell_climax": {
+     "n": 35,
+     "fwd4h": 12.3,
+     "fwd24h": 35.6
+    },
+    "euphoria": {
+     "n": 72,
+     "fwd4h": 94.4,
+     "fwd24h": 244.3
+    },
+    "dip_absorbed": {
+     "n": 631,
+     "fwd4h": 10.8,
+     "fwd24h": 19.8
+    }
+   },
+   "SOL/USD": {
+    "unconditional": {
+     "n": 13568,
+     "fwd4h": 4.7,
+     "fwd24h": 30.3
+    },
+    "buy_climax": {
+     "n": 18,
+     "fwd4h": -2.7,
+     "fwd24h": 136.5
+    },
+    "sell_climax": {
+     "n": 28,
+     "fwd4h": 39.8,
+     "fwd24h": 18.6
+    },
+    "euphoria": {
+     "n": 77,
+     "fwd4h": 27.0,
+     "fwd24h": 132.0
+    },
+    "dip_absorbed": {
+     "n": 569,
+     "fwd4h": 14.7,
+     "fwd24h": 24.0
+    }
+   }
+  }
+ },
+ "shadow_candidates": []
+}

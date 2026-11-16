@@ -434,10 +434,8 @@ def test_gateway_pipeline_enabled_serves_pipeline_frame(settings_factory, fake_s
 def test_flow_filters_default_off_and_live_config_unchanged(settings):
     assert settings.regime_flow_filter == "" and settings.meanrev_flow_filter == ""
     assert settings.pipeline_symbols == ["BTC/USD", "ETH/USD", "SOL/USD"]
-    from dublin_bot.strategies.meanrev4h_strategy import MeanReversion4hStrategy
     from dublin_bot.strategies.regime_strategy import RegimeTrendStrategy
     assert RegimeTrendStrategy(settings).params()["flt"] == ""
-    assert MeanReversion4hStrategy(settings).params()["flt"] == ""
 
 
 def test_flow_filter_masks_and_fail_closed():
