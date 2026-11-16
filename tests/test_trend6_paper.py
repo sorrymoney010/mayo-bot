@@ -109,8 +109,9 @@ def test_idempotent_and_catch_up(tmp_path):
     r, clock = runner(tmp_path, data, data["BTC"].index[260] + pd.Timedelta("1h"))
     r.run_cycle()
     s1 = (tmp_path / "state.json").read_text()
-    r.run_cycle()
+    st_again = r.run_cycle()
     assert (tmp_path / "state.json").read_text() == s1  # same day: nothing new
+    assert st_again["kill_inputs"]["closed_trades"] >= 0 and "equity_30d_ago" in st_again["kill_inputs"]
     clock["now"] = data["BTC"].index[300] + pd.Timedelta("1h")  # 40 days later in one go
     st = r.run_cycle()
     assert len(st["new_decisions_this_cycle"]) == 40

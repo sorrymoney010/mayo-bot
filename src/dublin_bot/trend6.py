@@ -486,7 +486,11 @@ class Trend6Paper:
                 "exposure_primary": round(exp, 4), "cash_pct_primary": round(1 - exp, 4),
                 "bench_5050_hold": round(bench, 4) if bench is not None else None,
                 "last_price": last_px, "books": books, "killed": state["killed"],
-                "kill_inputs": state.get("kill_inputs"),
+                "kill_inputs": {**kill_check(len(prim["closed"]), eq, max(prim["peak"], eq), prim["max_dd"],
+                                             bench, equity_at_or_before(state.get("equity_hist", []),
+                                                                        now - pd.Timedelta(days=KILL_LOOKBACK_DAYS))
+                                             )["inputs"], "basis": "mark (display; kills are judged at daily opens)"},
+                "kill_inputs_last_decision": state.get("kill_inputs"),
                 "kill_rules": {"K-DD": f"max drawdown > {KILL_DD:.0%} (any time)",
                                "K-REL": (f">= {KILL_MIN_TRADES} closed round trips AND return < 50/50 buy-and-hold "
                                          f"AND > {KILL_REL_DD:.0%} below peak AND equity < {KILL_LOOKBACK_DAYS} days ago"),
