@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from dublin_bot.capit24 import CapitPaper  # noqa: E402
+from dublin_bot.wallclock import sleep_until  # noqa: E402
 
 DEFAULT_OUT = ROOT / "paper" / "capit_binanceus"
 
@@ -69,7 +70,8 @@ def main() -> int:
             log("cycle error:\n" + traceback.format_exc())
         now = time.time()
         nxt = (int(now // 3600) + 1) * 3600 + 90       # ~90 s after the next 1h bar closes
-        time.sleep(max(30.0, nxt - now))
+        # Slice the wait so a box sleep/hibernate cannot stall the next cycle.
+        sleep_until(nxt)
 
 
 if __name__ == "__main__":
