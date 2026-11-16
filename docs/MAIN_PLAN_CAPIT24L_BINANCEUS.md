@@ -1,5 +1,8 @@
 # MAIN PLAN: CAPIT-24L on Binance.US (VET, HBAR, ALGO, XLM)
 
+> **Umbrella plan: [MAIN_PLAN.md](MAIN_PLAN.md)** (venue rule: Binance.US only, Kraken = vault; TREND-6;
+> live gates; 2026-11-16 snapshot). This file keeps the frozen CAPIT-24L rules.
+
 **Approved by the owner 2026-11-16 (voice call). PAPER ONLY. Live is locked.**
 `PAPER_TRADING=true`, `DRY_RUN=true`, `ALLOW_LIVE_TRADING=false`, futures/margin live flags off.
 Nothing in this plan changes a flag, holds a key, reads `.env`, or calls an order endpoint.

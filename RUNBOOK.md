@@ -5,7 +5,10 @@
 reads `.env`. Changing any flag needs the owner's explicit OK **per flag**, plus his own keys.
 Read [SAFETY.md](SAFETY.md) first.
 
-> **MAIN PLAN (approved 2026-11-16): [docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md](docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md)**
+> **MAIN PLAN (2026-11-16): [docs/MAIN_PLAN.md](docs/MAIN_PLAN.md)**: Binance.US is the only strategy/paper venue,
+> Kraken is the vault (reference fee columns only), no Coinbase/Kraken execution. TREND-6 paper runner
+> `paper/trend6_binanceus/` (`scripts/trend6_paper.py`) is **running** and in `scripts/capit_autostart.sh`.
+> CAPIT-24L rules: [docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md](docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md)
 > CAPIT-24L on Binance.US (VET, HBAR, ALGO, XLM; limit entry). Its runner `paper/capit24l_binanceus/`
 > (`scripts/capit24l_paper.py`) is built and tested but **NOT started** and **NOT** in
 > `scripts/capit_autostart.sh`. Start it only with the owner's OK: `paper/capit24l_binanceus/start.sh`.
@@ -18,6 +21,7 @@ There is exactly **one active strategy, CAPIT-24 crash-buy**, plus a research sh
 | Process | Location | What it does |
 |---|---|---|
 | **Paper runner** | `paper/capit_binanceus/` (`scripts/capit_paper.py --loop`, rule in `src/dublin_bot/capit24.py`) | Hourly. **VET, HBAR, ALGO, XLM**: buy at the next 1h open when the 24h z-score is ≤ −2.5 with 24h volume ≥ 2× normal, then sell 48 h later. At most two $50 slots on $100 of paper equity. Public Binance.US data. Primary fee book is **Binance.US at 10 bps** round trip (0.02% taker + 3 bps slip per side). A **Kraken 80 bps** maker shadow book tracks the same fills. Details: [paper/capit_binanceus/README.md](paper/capit_binanceus/README.md) |
+| **TREND-6 paper** | `paper/trend6_binanceus/` (`scripts/trend6_paper.py --loop`, rule in `src/dublin_bot/trend6.py`) | Hourly cycle; decides once per day after the 00:00 UTC close and fills at the next Binance.US daily open. **BTC, ETH**: weight = 50% × (signals on / 6) per coin from close > SMA50/100/200 and 7/14/28-day return > 0. $100 paper. Primary book Binance.US 8 bps RT, conservative 10 bps, Kraken 80/160 reference only. Kills: DD > 45% or PF < 1.10 after 30 round trips. Details: [paper/trend6_binanceus/README.md](paper/trend6_binanceus/README.md) |
 | **Shadow loop** | `shadow/capit24/` (`loop.sh` → `research/edge2/capit_shadow.py` every 15 min) | Signal log only, no book of record. Runs CAPIT-24 on the old 12-coin set in three variants: `base`, `r2` (BTC regime filter) and `oiflush` (OI-flush confirmation). Details: [shadow/capit24/README.md](shadow/capit24/README.md) |
 
 Both run under `env -i` (clean environment, no secrets), place **no orders**, and were approved by
@@ -116,10 +120,10 @@ fees, plus running totals) or a kill rule trips. If the runner is down, it resta
 
 ```bash
 env -i PATH=/usr/bin:/bin HOME=$HOME PYTHONPATH=$HOME/.local/lib/python3.13/site-packages \
-  /workspace/mayo-runtime/pyenv/bin/python -m pytest -q -p no:cacheprovider   # 636 passed (2026-11-16)
+  /workspace/mayo-runtime/pyenv/bin/python -m pytest -q -p no:cacheprovider   # 653 passed (2026-11-16)
 ```
 
 (The runtime venv has no pytest of its own, so the PYTHONPATH line borrows the user-site copy.)
 
 The suite is offline. `tests/test_safety_locks.py` fails loudly if the trading locks are relaxed;
-`tests/test_capit24.py` covers the CAPIT-24 rule and runner; `tests/test_capit24l.py` covers CAPIT-24L (strict-below limit fills, 60-min expiry, 48 h exit, slots, $70 floor, K1/K2/K4).
+`tests/test_capit24.py` covers the CAPIT-24 rule and runner; `tests/test_capit24l.py` covers CAPIT-24L (strict-below limit fills, 60-min expiry, 48 h exit, slots, $70 floor, K1/K2/K4); `tests/test_trend6_paper.py` covers TREND-6 (signals, sizing, next-open fills, no look-ahead, band/min notional, fee books, kills, Binance global warm-up, idempotency, no order code).

@@ -1,0 +1,9 @@
+# runtime output of the paper runner stays on disk, never in git
+*.jsonl
+*.json
+*.log
+*.pid
+*.lock
+*.tmp
+NO_AUTOSTART
+start.lock

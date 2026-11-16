@@ -6,7 +6,14 @@ A private, **paper-only** crypto trading system built around strict risk control
 > `ALLOW_LIVE_TRADING=false`, futures/margin live flags off. The bot cannot place a real order.
 > See [SAFETY.md](SAFETY.md) before changing anything.
 
-## MAIN PLAN (approved 16 Nov 2026): CAPIT-24L on Binance.US — paper only, runner built, not started
+## MAIN PLAN (16 Nov 2026): Binance.US only, paper only — read [docs/MAIN_PLAN.md](docs/MAIN_PLAN.md)
+
+Venue rule: **all strategy trading and paper running on Binance.US**; Kraken is the vault (holding,
+deliberate selling) and appears only as reference fee columns; no Coinbase/Kraken execution.
+Running: CAPIT-24 paper (`paper/capit_binanceus/`) and **TREND-6 paper** (`paper/trend6_binanceus/`,
+BTC+ETH daily trend, $100, started 2026-11-16 in 100% cash). CAPIT-24L is built, not started.
+
+### CAPIT-24L on Binance.US — paper only, runner built, not started
 
 **Read [docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md](docs/MAIN_PLAN_CAPIT24L_BINANCEUS.md) first.** Same
 crash-buy signal on **VET, HBAR, ALGO, XLM**, but entry is a post-only **limit buy 0.5% under the
