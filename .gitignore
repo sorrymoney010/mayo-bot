@@ -42,3 +42,9 @@ data/*.log
 data/ticks/
 data/quotes/
 data/bars1m/
+
+# Research outputs are runtime-generated; do not re-commit old strategy evidence.
+/data/*.json
+/data/*.txt
+/reports/
+/backtest_sweep.json

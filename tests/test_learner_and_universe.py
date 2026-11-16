@@ -26,13 +26,13 @@ def _fake_bars(rsi=70.0, price=1.0):
 # ── learner ────────────────────────────────────────────────
 def test_learner_biases_toward_positive_expectancy(tmp_path):
     la = LearningAgent(tmp_path / "learner.json", min_trades=2, enabled=True)
-    # PUMP wins consistently -> should be favored (>1.0)
+    # ETH wins consistently -> should be favored (>1.0)
     for _ in range(4):
-        la.record_trade("PUMP/USD", 0.5, "sideways")
+        la.record_trade("ETH/USD", 0.5, "sideways")
     # SCAM bleeds -> should be avoided (<1.0)
     for _ in range(4):
         la.record_trade("SCAM/USD", -0.5, "sideways")
-    assert la.bias("PUMP/USD") > 1.0
+    assert la.bias("ETH/USD") > 1.0
     assert la.bias("SCAM/USD") < 1.0
 
 
@@ -46,10 +46,10 @@ def test_learner_persists_and_reloads(tmp_path):
     p = tmp_path / "learner.json"
     la = LearningAgent(p, min_trades=2, enabled=True)
     for _ in range(3):
-        la.record_trade("PUMP/USD", 0.4, "sideways")
+        la.record_trade("ETH/USD", 0.4, "sideways")
     la2 = LearningAgent(p, min_trades=2, enabled=True)
-    assert la2.coins["PUMP/USD"].trades == 3
-    assert la2.bias("PUMP/USD") > 1.0
+    assert la2.coins["ETH/USD"].trades == 3
+    assert la2.bias("ETH/USD") > 1.0
 
 
 # ── autonomous selection (no manual pinning) ───────────────
@@ -73,7 +73,7 @@ def make_engine(universe="all_usd", symbols=None):
     pairs = []
     from decimal import Decimal
     from dublin_bot.kraken_gateway import SymbolMeta
-    for sym in (symbols or ["XRP/USD", "PUMP/USD", "ADA/USD"]):
+    for sym in (symbols or ["XRP/USD", "ETH/USD", "ADA/USD"]):
         pairs.append(SymbolMeta(key=sym.replace("/", ""), altname=sym, wsname=sym,
                                 base=sym.split("/")[0], quote="USD", lot_decimals=8,
                                 pair_decimals=5, order_min=Decimal("0"), cost_min=Decimal("0"), status="online"))
@@ -82,12 +82,12 @@ def make_engine(universe="all_usd", symbols=None):
     eng = TradingEngine(s, gateway=gw)
 
     # The selector ranks coins by the strategy's live signal. We stub the
-    # strategy so PUMP reports a real MR BUY (score 60) and other coins WAIT
+    # strategy so ETH reports a real MR BUY (score 60) and other coins WAIT
     # (score 10). This isolates the *selection* behaviour (auto-pick best setup)
     # from indicator math, which is covered by the strategy's own tests.
     def fake_evaluate(bars, in_position=False):
         sym = eng.settings.symbol
-        if sym == "PUMP/USD" and not in_position:
+        if sym == "ETH/USD" and not in_position:
             return Signal(Action.BUY, 60, "oversold reversion", 1.0, 1.0, 0.8)
         return Signal(Action.WAIT, 10, "no setup", 1.0, 1.0)
     eng.strategy.evaluate = fake_evaluate
@@ -97,9 +97,9 @@ def make_engine(universe="all_usd", symbols=None):
 def test_autonomous_selection_picks_mr_setup_without_manual_pin():
     eng = make_engine()
     eng.run_cycle()
-    # The engine should have autonomously switched to PUMP/USD (the only coin
+    # The engine should have autonomously switched to ETH/USD (the only coin
     # with a live mean-reversion setup) — no coin section / pin involved.
-    assert eng.settings.symbol == "PUMP/USD", f"expected PUMP/USD, got {eng.settings.symbol}"
+    assert eng.settings.symbol == "ETH/USD", f"expected ETH/USD, got {eng.settings.symbol}"
 
 
 def test_autonomous_selection_stays_when_holding():
@@ -125,14 +125,14 @@ def test_rotation_exits_weak_coin_for_stronger_setup():
     stronger momentum setup, the engine rotates: this cycle flags the exit and
     points at the stronger coin (the next cycle enters it)."""
     eng = make_engine()
-    # Holding XRP/USD (bot-owned). PUMP/USD shows a strong setup; XRP does not.
+    # Holding XRP/USD (bot-owned). ETH/USD shows a strong setup; XRP does not.
     eng.settings.symbol = "XRP/USD"
     eng._bot_qty["XRP/USD"] = 1.0
     eng.gateway.has_position.return_value = True
 
     def fake_evaluate(bars, in_position=False):
         sym = eng.settings.symbol
-        if sym == "PUMP/USD" and not in_position:
+        if sym == "ETH/USD" and not in_position:
             return Signal(Action.BUY, 90, "momentum confirmed", 1.0, 1.0)
         if sym == "XRP/USD" and in_position:
             return Signal(Action.WAIT, 30, "holding", 1.0, 1.0)
@@ -142,7 +142,7 @@ def test_rotation_exits_weak_coin_for_stronger_setup():
     before = eng.settings.symbol
     eng.run_cycle()
     # Rotation detected: symbol repointed to the stronger coin for next cycle.
-    assert eng.settings.symbol == "PUMP/USD", f"expected PUMP/USD, got {eng.settings.symbol}"
+    assert eng.settings.symbol == "ETH/USD", f"expected ETH/USD, got {eng.settings.symbol}"
     assert before == "XRP/USD"  # didn't churn the hold symbol mid-cycle incorrectly
 
 

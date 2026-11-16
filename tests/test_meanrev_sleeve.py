@@ -32,7 +32,8 @@ def _settings(**kw) -> Settings:
         paper_taker_fee_bps=40.0, paper_maker_fee_bps=25.0, paper_slippage_bps=10.0,
         cooldown_minutes=0, max_orders_per_day=0, learner_priors_path="no-priors.json",
         universe_allowlist=["BTC/USD", "ETH/USD", "SOL/USD"], max_concurrent_positions=3,
-        min_dollar_volume=0.0, meanrev_daily_filter=False,  # D1 covered in test_d1_trendhold.py
+        min_dollar_volume=0.0, meanrev_sleeve_enabled=True,
+        meanrev_daily_filter=False,  # D1 covered in test_d1_trendhold.py
     )
     base.update(kw)
     return Settings(**base)
@@ -118,7 +119,7 @@ def test_conservative_defaults_ported_from_dublin_and_locks_unchanged():
     assert s.max_position_fraction == 0.25
     assert s.paper_trading is True and s.dry_run is True and s.allow_live_trading is False
     assert s.safety_locked is True
-    assert s.meanrev_sleeve_enabled is True
+    assert s.meanrev_sleeve_enabled is False  # only active in explicit research tests
     assert s.meanrev_symbols == ["BTC/USD", "ETH/USD", "SOL/USD"]
     assert (s.meanrev_timeframe_minutes, s.meanrev_rsi_entry, s.meanrev_rsi_exit) == (240, 38.0, 55.0)
     assert (s.meanrev_stop_pct, s.meanrev_take_profit_pct, s.meanrev_limit_offset_pct) == (0.03, 0.25, 0.001)
@@ -260,11 +261,11 @@ def test_stop_exit_books_loss_to_learner_under_sleeve_key(dip_world):
     assert ex["reason"] == "stop" and ex["realized"] < 0
     assert _state()["positions"] == {}
     assert "BTC/USD" not in json.loads(Path("logs/paper_bot_positions.json").read_text())
-    la = LearningAgent("logs/learner.json", strategy_key="meanrev_mk@240m")
+    la = LearningAgent(_settings().learner_path, strategy_key="meanrev_mk@240m")
     hist = la.coins["BTC/USD"].history
     assert hist[-1]["strategy"] == "meanrev_mk@240m" and hist[-1]["net_bps"] < 0
     # The regime sleeve's learner does not see this trade in its expectancy.
-    assert LearningAgent("logs/learner.json", strategy_key="regime@60m")._live("BTC/USD")[1] == 0
+    assert LearningAgent(_settings().learner_path, strategy_key="regime@60m")._live("BTC/USD")[1] == 0
     assert SleeveRegistry().owner_of("BTC/USD") == PRIMARY  # released
 
 

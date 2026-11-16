@@ -503,16 +503,11 @@ def test_bot_exposure_fails_closed_when_a_lot_cannot_be_valued():
     assert engine._bot_open_exposure_usd() == float("inf")
 
 
-def test_universe_allowlist_defaults_to_positive_expectancy_coins():
-    """Audit #8: the live MR edge is coin-specific, so the default universe
-    must be restricted to coins with positive backtested expectancy — not the
-    entire Kraken market (which bleeds on XRP/SOL)."""
+def test_universe_allowlist_defaults_to_regular_spot_research():
+    """V1 has only BTC/ETH/SOL; old symbol research is not an active allowlist."""
     s = Settings(_env_file=None)
-    assert s.universe_allowlist == ["PUMP/USD", "BTC/USD"]
-    # The engine applies the allowlist on top of all_usd discovery.
-    candidates = ["PUMP/USD", "BTC/USD", "XRP/USD", "SOL/USD"]
-    if s.universe_allowlist:
-        allowed = {x.upper() for x in s.universe_allowlist}
-        candidates = [c for c in candidates if c.upper() in allowed]
-    assert "XRP/USD" not in candidates
-    assert "SOL/USD" not in candidates
+    assert s.universe_allowlist == ["BTC/USD", "ETH/USD", "SOL/USD"]
+    candidates = ["PUMP/USD", "BTC/USD", "XRP/USD", "ETH/USD", "SOL/USD"]
+    allowed = {x.upper() for x in s.universe_allowlist}
+    candidates = [c for c in candidates if c.upper() in allowed]
+    assert candidates == ["BTC/USD", "ETH/USD", "SOL/USD"]

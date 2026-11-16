@@ -50,7 +50,7 @@ _NEGATIONS = {"not", "no", "never", "isn't", "isnt", "dont", "don't", "won't",
 _COIN_ALIASES = {
     "XRP": {"xrp", "ripple"}, "BTC": {"btc", "bitcoin", "xbt"},
     "TRX": {"trx", "tron"}, "DOGE": {"doge", "dogecoin"},
-    "PUMP": {"pump", "pump.fun", "pumpfun"}, "KAITO": {"kaito"},
+    "KAITO": {"kaito"},
     "UNI": {"uni", "uniswap"}, "JTO": {"jto", "jito"}, "HYPE": {"hype", "hyperliquid"},
     "SOL": {"sol", "solana"}, "ADA": {"ada", "cardano"},
 }

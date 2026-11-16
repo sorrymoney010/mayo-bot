@@ -91,9 +91,9 @@ def test_btc_is_primary_symbol_and_full_basket_enabled():
     assert s.symbol == "BTC/USD"
     # Canonical basket is the allowlist surface (fallback_symbols was dead config).
     assert "BTC/USD" in s.coin_basket
-    assert "UNI/USD" in s.coin_basket
-    assert "XRP/USD" in s.coin_basket
-    assert "PUMP/USD" in s.coin_basket
+    assert "ETH/USD" in s.coin_basket
+    assert "SOL/USD" in s.coin_basket
+    assert "PUMP/USD" not in s.coin_basket
     assert "TRX/USD" not in s.coin_basket
     assert "DOGE/USD" not in s.coin_basket
     assert "KAITO/USD" not in s.coin_basket
@@ -139,7 +139,7 @@ def test_all_basket_symbols_resolve_against_loaded_metadata():
         "XRPZUSD": _meta_xrp(),
     }
     for display in ["BTC/USD", "KAITO/USD", "XRP/USD",
-                    "PUMP/USD", "DOGE/USD", "TRX/USD", "HYPE/USD"]:
+                    "ADA/USD", "DOGE/USD", "TRX/USD", "HYPE/USD"]:
         s = make_settings(symbol=display)
         gw = _gateway_with_meta(s, meta)
         # Unconfigured symbols have no metadata here; only the three with

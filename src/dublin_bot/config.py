@@ -9,10 +9,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # when the operator pins another coin. Order is stable; ``allowed_symbols``
 # dedupes but preserves this canonical ordering.
 DEFAULT_COIN_BASKET: tuple[str, ...] = (
-    "BTC/USD",       # master coin
-    "UNI/USD",       # Uniswap
-    "XRP/USD",
-    "PUMP/USD",
+    "BTC/USD",
+    "ETH/USD",
+    "SOL/USD",
 )
 
 
@@ -71,7 +70,7 @@ class Settings(BaseSettings):
     symbol: str = "BTC/USD"
     # Rapid mode: 15-minute bars, 15-minute monitor cadence, and a 15-minute
     # cooldown between entries. Strategy RSI/momentum gates are NOT loosened.
-    timeframe_minutes: int = Field(default=15, ge=1)
+    timeframe_minutes: int = Field(default=60, ge=1)
     lookback_bars: int = Field(default=500, ge=220)
     # Day-trade mode: tighten to 5-minute bars and a 60-second monitor cadence
     # so the engine reacts intraday instead of every 15 minutes. Strategy gates
@@ -97,15 +96,11 @@ class Settings(BaseSettings):
     #   The bot autonomously ranks the full market by strategy setup + learned
     #   expectancy and trades whatever coin the market is offering. This is the
     #   "full API access" mode — no manual coin section.
-    universe_mode: str = Field(default="all_usd")
-    # Hard safety allowlist applied ON TOP of the universe. Coins here are the
-    # only ones the bot may ever touch. Default = the set with POSITIVE
-    # backtested expectancy for the live mean-reversion strategy (audit #8:
-    # the edge is coin-specific — XRP/SOL bleed, PUMP/BTC are positive). The
-    # bot still ranks autonomously within this set; it just cannot leak on
-    # negative-expectancy coins. Override via UNIVERSE_ALLOWLIST in .env.
+    universe_mode: str = Field(default="basket")
+    # V1 strategy universe. Fixed to liquid BTC/ETH/SOL spot research pairs.
+    # No meme-coin or broad-market automatic discovery in this profile.
     universe_allowlist: list[str] = Field(
-        default_factory=lambda: ["PUMP/USD", "BTC/USD"]
+        default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"]
     )
     # Max coins scored per cycle (each costs one get_bars call). The bot scans
     # the vetted basket first; if you raise this it will also probe the broader
@@ -121,13 +116,13 @@ class Settings(BaseSettings):
     # Minimum trades before a coin's learned expectancy is trusted enough to
     # bias selection (avoids over-fitting to a single lucky/unlucky fill).
     learner_min_trades: int = Field(default=3, ge=1)
-    learner_path: Path = Path("logs/learner.json")
+    learner_path: Path = Path("logs/regime_trend_v1_learner.json")
     # Adaptive gate (learner.gate): per-symbol / per-regime rolling expectancy
     # (net bps after fees) blended with walk-forward OOS priors. A symbol or
     # regime with negative live expectancy over >= learner_min_sample closed
     # trades is benched for learner_bench_hours, then gets one probation trade
     # at reduced size. Weak/negative-but-unproven names trade at reduced size.
-    learner_priors_path: Path = Path("data/walkforward_results.json")
+    learner_priors_path: Path = Path("data/regime_trend_v1_priors.json")
     # No bench before 30 closed trades per strategy+coin (audit policy). Values
     # below the floor (e.g. an old LEARNER_MIN_SAMPLE=8 in an env file) are raised.
     learner_min_sample: int = Field(default=30, ge=2)
@@ -157,7 +152,7 @@ class Settings(BaseSettings):
     # RSI>=55 or close>=EMA50, 3% stop, 25% TP). See docs/MEANREV_SLEEVE.md.
     # The sleeve never submits exchange orders; it is disabled whenever any
     # safety lock is off (paper_trading/dry_run/allow_live_trading).
-    meanrev_sleeve_enabled: bool = Field(default=True)
+    meanrev_sleeve_enabled: bool = Field(default=False)
     meanrev_symbols: list[str] = Field(
         default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"]
     )
@@ -188,7 +183,7 @@ class Settings(BaseSettings):
     # stop. Fixed 25% of the paper book per coin; one position per coin across
     # ALL sleeves (SleeveRegistry); total exposure capped by
     # max_exposure_fraction (0.75 in run_paper_mac.sh). Paper only.
-    trendhold_sleeve_enabled: bool = Field(default=True)
+    trendhold_sleeve_enabled: bool = Field(default=False)
     trendhold_timeframe_minutes: int = Field(default=240, ge=60)
     trendhold_symbols: list[str] = Field(default_factory=lambda: ["BTC/USD", "ETH/USD", "SOL/USD"])
     trendhold_position_fraction: float = Field(default=0.25, gt=0, le=0.34)
@@ -259,14 +254,14 @@ class Settings(BaseSettings):
     # When the bot holds a position on one coin but a DIFFERENT allowed coin
     # shows a clearly stronger momentum setup, it rotates: sells the weaker
     # bot-owned lot and enters the stronger. This is what lets the bot "trade
-    # all things" (e.g. rotate PUMP -> BTC) instead of sitting in one coin
+    # all things" (e.g. rotate ETH -> BTC) instead of sitting in one coin
     # forever. The exit always sells only the bot's own accumulated lot, and
     # the new entry still runs through every risk gate. Turn off to keep the
     # bot pinned to whichever coin it is currently holding.
     rotate_positions: bool = Field(default=True)
     rotate_min_score_gap: float = Field(default=15.0, ge=0.0)
     dca_enabled: bool = Field(default=False)
-    dca_symbol: str = Field(default="PUMP/USD")
+    dca_symbol: str = Field(default="BTC/USD")
     dca_interval_minutes: int = Field(default=240, ge=30)
     dca_fixed_usd: float = Field(default=12.0, gt=0)
     dca_max_buys_per_day: int = Field(default=4, ge=0)
@@ -490,6 +485,17 @@ def paper_live_choice_ok(settings: "Settings") -> tuple[bool, str]:
     """Is this configuration an allowed paper/live choice? (never raises)"""
     if getattr(settings, "allow_retired_strategies", False):
         return True, "retired strategies allowed (backtest/research override)"
+    approved = {"BTC/USD", "ETH/USD", "SOL/USD"}
+    if getattr(settings, "universe_mode", "basket") != "basket":
+        return False, "regime V1 requires basket universe; broad-market scanning disabled"
+    for attr in ("coin_basket", "universe_allowlist"):
+        symbols = {str(s).upper() for s in getattr(settings, attr, [])}
+        if not symbols or not symbols <= approved:
+            return False, f"{attr} contains symbols outside BTC/ETH/SOL regime V1"
+    if str(getattr(settings, "symbol", "BTC/USD")).upper() not in approved:
+        return False, "selected symbol outside BTC/ETH/SOL regime V1"
+    if getattr(settings, "day_trade_mode", False):
+        return False, "day_trade_mode changes 1h strategy cadence and is retired for V1"
     name = str(getattr(settings, "strategy", "") or "").lower()
     if name not in PAPER_LIVE_STRATEGIES:
         return False, (f"strategy '{name}' is retired from paper/live "
