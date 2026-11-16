@@ -3,7 +3,7 @@ from dublin_bot import dashboard as d
 class Gateway:
     def _private(self, name, params=None):
         if name == 'Balance':
-            return {'XXBT': '0.00023', 'ZUSD': '3.5', 'PUMP': '0'}
+            return {'XXBT': '0.00023', 'ZUSD': '3.5', 'ETH': '0'}
         if name == 'TradeBalance':
             raise RuntimeError('permission denied')
         raise AssertionError(name)
@@ -43,9 +43,9 @@ def test_ohlc_normalized_for_local_chart():
     class Public:
         def _public(self, endpoint, params):
             assert endpoint == 'OHLC'
-            assert params == {'pair': 'PUMPUSD', 'interval': 15}
+            assert params == {'pair': 'ETHUSD', 'interval': 15}
             return {'PUMPUSD': [[100, '1', '3', '.5', '2', '1.5', '10', 2]], 'last': 100}
-    data = d.load_chart('PUMP/USD', 15, Public())
+    data = d.load_chart('ETH/USD', 15, Public())
     assert data['candles'][0] == {'time': 100, 'open': 1., 'high': 3., 'low': .5, 'close': 2., 'volume': 10.}
 
 
@@ -61,7 +61,7 @@ def test_readonly_http_surface_and_local_assets():
         html = urllib.request.urlopen(base+'/gunbot').read().decode()
         assert '/static/lightweight-charts.js' in html
         assert 'id="chart"' in html
-        assert 'BTC/USD' in html and 'PUMP/USD' in html and 'XRP/USD' in html
+        assert 'BTC/USD' in html and 'PUMP/USD' in html and 'SOL/USD' in html
         js = urllib.request.urlopen(base+'/static/dashboard.js').read().decode()
         assert 'AbortController' in js
         assert 'addCandlestickSeries' in js and 'addHistogramSeries' in js

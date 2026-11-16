@@ -314,7 +314,7 @@ def execution_data(settings: Settings, limit: int = 100) -> dict[str, object]:
 # Full tradeable basket (BTC/SOL/XRP explicitly enabled alongside the
 # small-cap rotation of ADA/DOGE/TRX/HYPE). ETH is kept for market context
 # but is not part of the trading basket.
-WATCHLIST_DEFAULT = "BTC/USD,ETH/USD,SOL/USD,XRP/USD,ADA/USD,DOGE/USD,TRX/USD,HYPE/USD"
+WATCHLIST_DEFAULT = "BTC/USD,ETH/USD,SOL/USD"
 KRAKEN_ALTNAMES = {
     "BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD",
     "XRP/USD": "XRPUSD", "DOGE/USD": "DOGEUSD", "ADA/USD": "ADAUSD",
@@ -1417,7 +1417,7 @@ nav button.on{color:var(--cyan)}
       <div class="label">Self-Learning Agent — what the bot has learned</div>
       <div class="row"><span class="rl">Active coin</span><span class="rv" id="lrActive">—</span></div>
       <div class="row"><span class="rl">Market regime</span><span class="rv" id="learnerRegime">—</span></div>
-      <div class="sub muted">The bot scans the full Kraken USD market each cycle and biases toward coins with proven positive expectancy. Best-known coins by $/trade:</div>
+      <div class="sub muted">The active research universe is limited to BTC, ETH, and SOL regular spot markets. Best-known coins by $/trade:</div>
       <div id="learnerBody" class="basket"></div>
     </div>
     <div class="card m12">
@@ -2014,7 +2014,7 @@ def serve_dashboard(settings: Settings, run: bool = True) -> int:
 
 _DASH_BASE = _Path(__file__).resolve().parents[2]
 _DASH_STATIC = _Path(__file__).resolve().parent / "static"
-_DASH_PAIRS = {"BTC/USD": "XBTUSD", "PUMP/USD": "PUMPUSD", "XRP/USD": "XRPUSD"}
+_DASH_PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
 _DASH_CACHE = {}
 _DASH_LOCKS = {}
 _DASH_GUARD = threading.Lock()
@@ -2127,7 +2127,8 @@ def load_live_portfolio(gateway=None):
 
 def _dash_symbol(raw):
     return {"XXBTZUSD": "BTC/USD", "XBTUSD": "BTC/USD", "XBT/USD": "BTC/USD",
-            "BTCUSD": "BTC/USD", "PUMPUSD": "PUMP/USD", "XXRPZUSD": "XRP/USD",
+            "BTCUSD": "BTC/USD", "ETHUSD": "ETH/USD", "SOLUSD": "SOL/USD",
+            "XXRPZUSD": "XRP/USD",
             "XRPUSD": "XRP/USD"}.get(raw, raw)
 
 
