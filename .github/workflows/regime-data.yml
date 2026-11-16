@@ -1,5 +1,9 @@
 name: Regular-spot regime data snapshot
 on:
+  push:
+    branches: [chore/lock-regime-trend-20261116]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '17 2 * * *'
