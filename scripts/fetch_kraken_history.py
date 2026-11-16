@@ -33,7 +33,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 API = "https://api.kraken.com/0/public/"
-PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD", "PUMP/USD": "PUMPUSD"}
+PAIRS = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}
 COLS = ["time", "open", "high", "low", "close", "volume"]
 
 
@@ -196,7 +196,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("mode", choices=["ohlc", "trades"])
     ap.add_argument("--symbols", nargs="*", default=list(PAIRS))
-    ap.add_argument("--tfs", nargs="*", type=int, default=[15, 60, 240])
+    ap.add_argument("--tfs", nargs="*", type=int, default=[60, 240, 1440])
     ap.add_argument("--days", type=int, default=60)
     ap.add_argument("--pause", type=float, default=1.0)
     a = ap.parse_args()
