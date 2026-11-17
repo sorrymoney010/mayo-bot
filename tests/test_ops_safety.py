@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parents[1]
 def test_paper_defaults():
     s = Settings(_env_file=None)
     assert s.strategy == "regime_trend"
-    assert (s.paper_taker_fee_bps, s.paper_maker_fee_bps, s.paper_slippage_bps) == (40.0, 25.0, 10.0)
+    assert (s.paper_taker_fee_bps, s.paper_maker_fee_bps, s.paper_slippage_bps) == (80.0, 40.0, 10.0)
     assert s.paper_use_ledger_equity is True and s.paper_block_private_api is True
     assert s.safety_locked  # locks unchanged: paper + dry-run + no live by default
 
@@ -113,7 +113,7 @@ def test_mac_wrapper_keeps_locks_and_sets_owner():
     sh = (REPO / "scripts" / "run_paper_mac.sh").read_text()
     for line in ("export PAPER_TRADING=true", "export DRY_RUN=true", "export ALLOW_LIVE_TRADING=false",
                  "export MAYO_LEDGER_OWNER=1", "export PAPER_USE_LEDGER_EQUITY=true",
-                 "export PAPER_TAKER_FEE_BPS=40", "export PAPER_MAKER_FEE_BPS=25",
+                 "export PAPER_TAKER_FEE_BPS=80", "export PAPER_MAKER_FEE_BPS=40",
                  "export PAPER_SLIPPAGE_BPS=10"):
         assert line in sh
     assert "source .env" not in sh and ". .env" not in sh

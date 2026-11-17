@@ -141,7 +141,7 @@ def resample(m1: pd.DataFrame, tf_minutes: int, runs: list[tuple[float, float]],
     if not len(buckets):
         return _empty_bars()
     src = m1 if m1 is not None and len(m1) else _empty_bars()
-    sec = (src.index.asi8 // 10**9).astype(np.int64)
+    sec = (src.index.as_unit("ns").asi8 // 10**9).astype(np.int64)
     key = (sec // tfs) * tfs
     keep = np.isin(key, buckets)
     s = src[keep].copy()
@@ -260,7 +260,7 @@ class BarBuilder:
                              exchange_holes=self.store.verified_holes(symbol))
         bars = resample(m1, tf_minutes, runs, now=end_ts)
         if len(bars):
-            sec = bars.index.asi8 // 10**9
+            sec = bars.index.as_unit("ns").asi8 // 10**9
             bars = bars[(sec >= start_ts - 1e-9) & (sec + tf_minutes * 60 <= end_ts + 1e-9)]
         return bars
 

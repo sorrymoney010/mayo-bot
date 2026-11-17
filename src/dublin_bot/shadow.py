@@ -121,7 +121,7 @@ def score_one(bars: pd.DataFrame | None, spec: Spec, t0: int, tf: int, costs: Co
     d = bars.copy()
     if "time" not in d:
         d = d.reset_index(names="ts")
-        d["time"] = (pd.to_datetime(d["ts"], utc=True).astype("int64") // 10**9).astype(int)
+        d["time"] = (pd.to_datetime(d["ts"], utc=True).dt.as_unit("ns").astype("int64") // 10**9).astype(int)
     d = d.sort_values("time").reset_index(drop=True)
     hits = d.index[d["time"].astype(int) == int(t0)]
     if not len(hits):

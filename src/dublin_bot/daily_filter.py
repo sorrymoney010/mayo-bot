@@ -77,7 +77,7 @@ def bar_open_times(d: pd.DataFrame) -> np.ndarray | None:
         return pd.to_numeric(d["time"], errors="coerce").to_numpy(float)
     if isinstance(d.index, pd.DatetimeIndex):
         idx = d.index if d.index.tz is not None else d.index.tz_localize("UTC")
-        return (idx.asi8 // 10**9).astype(float)
+        return (idx.as_unit("ns").asi8 // 10**9).astype(float)
     return None
 
 

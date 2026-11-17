@@ -49,8 +49,8 @@ from dublin_bot.pipeline.history import load_pipeline_bars  # noqa: E402
 from study_orderflow import fold_edges, fold_of, stats  # noqa: E402
 
 OOS_START = int(datetime(2026, 8, 3, tzinfo=timezone.utc).timestamp())
-BASE = Costs(fee_bps=40.0, slippage_bps=5.0, maker_bps=25.0)
-STRESS = Costs(fee_bps=80.0, slippage_bps=10.0, maker_bps=25.0)
+BASE = Costs(fee_bps=80.0, slippage_bps=5.0, maker_bps=40.0)
+STRESS = Costs(fee_bps=120.0, slippage_bps=10.0, maker_bps=60.0)
 SLEEVES = {"regime@60m": (60, "regime"), "meanrev_mk@240m": (240, "meanrev_mk")}
 
 

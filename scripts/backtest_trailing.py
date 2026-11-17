@@ -56,7 +56,7 @@ def _pool(frames, spec, costs):
 
 def main() -> int:
     data = ROOT / "data"
-    costs = Costs(fee_bps=40.0, slippage_bps=10.0, maker_bps=25.0)
+    costs = Costs(fee_bps=80.0, slippage_bps=10.0, maker_bps=40.0)
     day = time.strftime("%Y-%m-%d")
     report = {"generated_at": day, "rule": "improves() in dublin_bot.research",
               "costs": {"taker_bps": 40, "maker_bps": 25, "slip_bps": 10},

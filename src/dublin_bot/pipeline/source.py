@@ -137,7 +137,7 @@ class PipelineBarSource:
 def _contiguous_tail(bars: pd.DataFrame, tfs: int) -> pd.DataFrame:
     if not len(bars):
         return bars
-    sec = bars.index.asi8 // 10**9
+    sec = bars.index.as_unit("ns").asi8 // 10**9
     breaks = np.nonzero(np.diff(sec) != tfs)[0]
     return bars.iloc[breaks[-1] + 1:] if len(breaks) else bars
 

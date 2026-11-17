@@ -25,8 +25,8 @@ export STRATEGY_EQUITY_USD=500
 export PAPER_USE_LEDGER_EQUITY=true
 export RISK_PER_TRADE=0.01
 # Paper fill model = Kraken tier-1 (taker 0.40%/side, maker 0.25%/side) + 10bps slippage.
-export PAPER_TAKER_FEE_BPS=40
-export PAPER_MAKER_FEE_BPS=25
+export PAPER_TAKER_FEE_BPS=80
+export PAPER_MAKER_FEE_BPS=40
 export PAPER_SLIPPAGE_BPS=10
 # Adaptive learner gate (bench negative-expectancy symbol/regime after 8 closed trades).
 export LEARNER_GATE_ENABLED=true

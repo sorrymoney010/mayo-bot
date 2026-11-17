@@ -71,14 +71,14 @@ class Settings(BaseSettings):
     symbol: str = "BTC/USD"
     # Rapid mode: 15-minute bars, 15-minute monitor cadence, and a 15-minute
     # cooldown between entries. Strategy RSI/momentum gates are NOT loosened.
-    timeframe_minutes: int = Field(default=15, ge=1)
+    timeframe_minutes: int = Field(default=60, ge=1)
     lookback_bars: int = Field(default=500, ge=220)
     # Day-trade mode: tighten to 5-minute bars and a 60-second monitor cadence
     # so the engine reacts intraday instead of every 15 minutes. Strategy gates
     # are NOT loosened — only the data resolution and polling speed change.
     # Applied at startup by TradingEngine._apply_performance_profile().
     day_trade_mode: bool = False
-    strategy_equity_usd: float = Field(default=100.0, ge=25.0)
+    strategy_equity_usd: float = Field(default=25.0, ge=25.0)
     # Auto-scale risk per trade based on session win/loss streak. The base risk
     # (risk_per_trade) is multiplied by this factor, which the engine moves
     # between min_risk_scale and max_risk_scale as the bot wins/loses — so a
@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     #   The bot autonomously ranks the full market by strategy setup + learned
     #   expectancy and trades whatever coin the market is offering. This is the
     #   "full API access" mode — no manual coin section.
-    universe_mode: str = Field(default="all_usd")
+    universe_mode: str = Field(default="basket")
     # Hard safety allowlist applied ON TOP of the universe. Coins here are the
     # only ones the bot may ever touch. Default = the set with POSITIVE
     # backtested expectancy for the live mean-reversion strategy (audit #8:
@@ -302,7 +302,7 @@ class Settings(BaseSettings):
     max_drawdown_fraction: float = Field(default=0.10, gt=0, le=0.20)
     # Daily order cap. Set to 0 for unlimited orders per day (cooldown still
     # applies between entries). Bounded at 10 when a cap is used.
-    max_orders_per_day: int = Field(default=0, ge=0, le=10)
+    max_orders_per_day: int = Field(default=3, ge=0, le=10)
     cooldown_minutes: int = Field(default=10, ge=0)
     monitor_interval_seconds: int = Field(default=900, ge=60, le=86400)
     candle_close_delay_seconds: int = Field(default=2, ge=1, le=30)
@@ -343,13 +343,13 @@ class Settings(BaseSettings):
     min_order_notional_usd: float = Field(default=1.0, ge=1.0)
     # ── Fill-model cost assumptions (backtest + paper) ──────
     # These MUST mirror the real exchange fee schedule or every backtest is
-    # fiction. Kraken Pro tier-1 (< $10k 30d volume): 40 bps taker / 25 bps
-    # maker, plus 10 bps assumed slippage on taker fills. Same values as
-    # run_paper_mac.sh, the walk-forward and the studies.
+    # fiction. Kraken Pro Tier 1 (new fee tiers effective 2026-07-09):
+    # 80 bps taker / 40 bps maker, plus 10 bps assumed slippage on taker fills.
+    # Same values as run_paper_mac.sh, the walk-forward and the studies.
     # Override via env (PAPER_TAKER_FEE_BPS etc.); `TradeVolume` is the
     # authoritative source.
-    paper_taker_fee_bps: float = Field(default=40.0, ge=0.0)
-    paper_maker_fee_bps: float = Field(default=25.0, ge=0.0)
+    paper_taker_fee_bps: float = Field(default=80.0, ge=0.0)
+    paper_maker_fee_bps: float = Field(default=40.0, ge=0.0)
     paper_slippage_bps: float = Field(default=10.0, ge=0.0)
     paper_min_spread_bps: float = Field(default=5.0, ge=0.0)
     # ── Advanced order execution (Kraken full API) ──────────
