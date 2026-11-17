@@ -16,10 +16,11 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
 | [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner, current paper config |
 | [docs/MEANREV_SLEEVE.md](docs/MEANREV_SLEEVE.md) | 4h mean-reversion paper sleeve (limit entries) running beside regime_trend |
 | [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin, strategy research |
+| [docs/BINANCE_US.md](docs/BINANCE_US.md) | Running on Binance.US (`BROKER=binance`): symbol mapping, brackets, limits |
 
 ## Current scope
 
-- **Kraken Spot** native connector (Alpaca retained as fallback)
+- **Kraken Spot** native connector, and a **Binance.US Spot** connector (`BROKER=binance`)
 - BTC/USD first, with a reusable multi-asset architecture
 - $25 strategy budget by default; dollar-notional sizing
 - Conservative risk defaults: `RISK_PER_TRADE=0.01` (alias `RISK_PCT`),

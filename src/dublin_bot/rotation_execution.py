@@ -149,6 +149,15 @@ class RotationExecutor:
     explicit historical migration is required. Ambiguous writes never resend.
     """
     def __init__(self, gateway, settings, path=None, risk_manager=None):
+        if (getattr(gateway, "name", None) == "binance"
+                or str(getattr(settings, "broker", "kraken")).lower() == "binance"):
+            # This executor's crash recovery is built on Kraken-specific
+            # semantics (userref ranges, QueryTrades, BalanceEx holds). Fail
+            # closed rather than improvise them on another venue.
+            from .errors import SafetyLockError
+            raise SafetyLockError(
+                "Live rotation executor is Kraken-only; on Binance use the main engine "
+                "(scripts/paper_trader_loop.py) for live trading")
         self.gateway = gateway
         self.settings = settings
         self.path = Path(path or Path(settings.session_state_path).with_name("rotation_live_state.json"))

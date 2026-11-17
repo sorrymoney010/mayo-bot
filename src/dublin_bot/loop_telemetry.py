@@ -5,7 +5,7 @@
 * shadow outcome scoring (every 15 min)    -> logs/shadow_signals.jsonl (outcome rows)
 * marked-to-market paper equity (5 min)    -> logs/equity.jsonl
 
-Public market data only (Kraken public REST); never touches private endpoints,
+Public market data only (active venue public REST); never touches private endpoints,
 never places or blocks an order. Every method swallows its own errors.
 """
 from __future__ import annotations
@@ -24,20 +24,10 @@ _BASE = {"BTC/USD": "XBT", "ETH/USD": "ETH", "SOL/USD": "SOL"}
 
 
 def public_prices(symbols: list[str]) -> dict[str, float]:
-    from .pipeline.kraken_rest import KrakenPublic
+    """Last prices from the active venue (Kraken or Binance.US public REST)."""
+    from .venue import public_prices as _venue_prices
 
-    if not symbols:
-        return {}
-    pairs = ",".join(_BASE.get(s, s.split("/")[0]) + "USD" for s in symbols)
-    res = KrakenPublic(min_interval=0.0, timeout=10.0).get("Ticker", {"pair": pairs}, retries=2)
-    out: dict[str, float] = {}
-    for sym in symbols:
-        base = _BASE.get(sym, sym.split("/")[0])
-        for k, v in res.items():
-            if base in k and k.endswith("USD"):
-                out[sym] = float(v["c"][0])
-                break
-    return out
+    return _venue_prices(symbols)
 
 
 class LoopTelemetry:

@@ -18,14 +18,15 @@ import pandas as pd
 
 from dublin_bot.config import Settings
 from dublin_bot.indicators import enrich
-from dublin_bot.kraken_gateway import KrakenGateway
+from dublin_bot.engine import build_gateway
+from dublin_bot.kraken_gateway import KrakenGateway  # noqa: F401  (type hints)
 from dublin_bot.risk import RiskManager, SessionState
 
 
 # ── real history (reuse backtest fetcher) ───────────────────────
 
 def fetch_history(gw: KrakenGateway, symbol: str, days: int, interval_min: int = 15) -> pd.DataFrame:
-    g = KrakenGateway(gw.settings)
+    g = build_gateway(gw.settings, allow_order_submission=False)  # BROKER-aware (public data only)
     g.settings.symbol = symbol
     meta = g.resolve_symbol()
     import time
@@ -197,7 +198,7 @@ class VariantResult:
 
 def replay(symbol: str, days: int, fee_rate: float, start_equity: float,
            strat_fn, settings: Settings, sentiment=None) -> VariantResult:
-    gw = KrakenGateway(settings)
+    gw = build_gateway(settings, allow_order_submission=False)
     bars = fetch_history(gw, symbol, days)
     if bars.empty:
         return VariantResult(strat_fn.__name__)

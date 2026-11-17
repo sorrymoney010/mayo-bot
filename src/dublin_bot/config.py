@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # ── Active broker ──────────────────────────────────────
-    broker: str = "kraken"  # kraken only (alpaca decommissioned)
+    broker: str = "kraken"  # kraken | binance (Binance.US by default)
 
     # ── Kraken Spot ─────────────────────────────────────────
     kraken_api_key: str = ""
@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     # ── Binance Spot ───────────────────────────────────────
     binance_api_key: str = ""
     binance_api_secret: str = ""
+    # "binance.us" (default, US-regulated venue), "binance.com", or a full URL.
+    binance_host: str = "binance.us"
+    # Quote currency our canonical "*/USD" symbols map to, in preference order.
+    # Binance.US lists real USD pairs (BTCUSD); a coin without one (e.g. PUMP)
+    # falls back to the next quote in the list (PUMPUSDT).
+    binance_usd_quotes: list[str] = Field(default_factory=lambda: ["USD", "USDT"])
+    binance_recv_window_ms: int = Field(default=5000, ge=1000, le=60000)
 
     # ── Coinbase Advanced Trade ────────────────────────────
     coinbase_api_key: str = ""
@@ -410,6 +417,22 @@ class Settings(BaseSettings):
     allow_margin_live_orders: bool = Field(default=False)
     journal_path: Path = Path("logs/decisions.jsonl")
 
+    @field_validator("broker", mode="before")
+    @classmethod
+    def _norm_broker(cls, v: object) -> str:
+        raw = str(v or "kraken").strip().lower()
+        # "binance.us", "binanceus", "binance-us" all mean the Binance gateway;
+        # the venue host itself is chosen by BINANCE_HOST (default binance.us).
+        if raw.replace(".", "").replace("-", "").replace("_", "") in ("binance", "binanceus"):
+            return "binance"
+        return raw
+
+    @field_validator("binance_usd_quotes", mode="after")
+    @classmethod
+    def _norm_quotes(cls, v: list[str]) -> list[str]:
+        out = [str(q).strip().upper() for q in v if str(q).strip()]
+        return out or ["USD", "USDT"]
+
     @field_validator("learner_min_sample", mode="after")
     @classmethod
     def _learner_floor(cls, v: int) -> int:
@@ -432,6 +455,9 @@ class Settings(BaseSettings):
 
     @property
     def has_credentials(self) -> bool:
+        """Credentials for the ACTIVE broker are configured."""
+        if str(self.broker).lower() == "binance":
+            return bool(self.binance_api_key and self.binance_api_secret)
         return bool(self.kraken_api_key and self.kraken_api_secret)
 
     @property

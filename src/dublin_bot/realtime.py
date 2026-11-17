@@ -154,3 +154,79 @@ class KrakenRealtimeFeed:
             snap.source = "ws"
         if self.on_tick is not None:
             self.on_tick(snap)
+
+
+class BinanceRealtimeFeed(KrakenRealtimeFeed):
+    """Live ticker feed from Binance (Binance.US by default) combined streams.
+
+    ``pairs`` maps our canonical symbol -> Binance pair, e.g.
+    ``{"BTC/USD": "BTCUSD"}``. Uses the ``<pair>@ticker`` stream (last/bid/ask,
+    ~1s cadence). Same read-only, best-effort contract as the Kraken feed.
+    """
+
+    WS_HOSTS = {
+        "https://api.binance.us": "wss://stream.binance.us:443",
+        "https://api.binance.com": "wss://stream.binance.com:443",
+    }
+
+    def __init__(self, pairs: dict[str, str], *, timeout: float = 10.0,
+                 rest_host: str = "https://api.binance.us") -> None:
+        super().__init__({s: p.upper() for s, p in pairs.items()}, timeout=timeout)
+        base = self.WS_HOSTS.get(rest_host.rstrip("/"), "wss://stream.binance.us:443")
+        streams = "/".join(f"{p.lower()}@ticker" for p in self.pairs.values())
+        self.WS_URL = f"{base}/stream?streams={streams}"
+
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True, name="binance-ws-feed")
+        self._thread.start()
+
+    def _loop_once(self) -> None:
+        import websockets  # lazy: optional dependency; only used here
+
+        async def _consume() -> None:
+            async with websockets.connect(
+                self.WS_URL, open_timeout=self._timeout, close_timeout=self._timeout
+            ) as ws:
+                self._connected = True
+                async for raw in ws:
+                    if self._stop.is_set():
+                        break
+                    self._ingest(raw if isinstance(raw, str) else raw.decode("utf-8", "replace"))
+
+        asyncio.run(_consume())
+
+    def _ingest(self, raw: str) -> None:
+        try:
+            msg = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            return
+        data = msg.get("data", msg) if isinstance(msg, dict) else None
+        if not isinstance(data, dict) or "s" not in data:
+            return
+        pair = str(data["s"]).upper()
+        canon = next((s for s, p in self.pairs.items() if p == pair), None)
+        if canon is None:
+            return
+
+        def _f(key: str) -> float:
+            try:
+                return float(data.get(key) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        last, bid, ask = _f("c"), _f("b"), _f("a")
+        with self._lock:
+            snap = self._snapshots[canon]
+            if last:
+                snap.last = last
+            if bid:
+                snap.bid = bid
+            if ask:
+                snap.ask = ask
+            snap.updated_at = time.time()
+            snap.source = "ws"
+        if self.on_tick is not None:
+            self.on_tick(snap)

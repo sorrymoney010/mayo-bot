@@ -48,6 +48,10 @@ def sleeve_active(settings: Settings) -> tuple[bool, str]:
         return False, "disabled (FUTURES_SLEEVE_ENABLED=false)"
     if not (settings.paper_trading and settings.dry_run and not settings.allow_live_trading):
         return False, "disabled: paper-only sleeve and a safety lock is off"
+    if str(getattr(settings, "broker", "kraken")).lower() == "binance":
+        # Kraken perpetual marks/funding cannot price a Binance.US book, and
+        # Binance.US offers no futures or margin to US residents.
+        return False, "disabled: futures sleeve models Kraken perps; Binance.US has no futures"
     tf = int(getattr(settings, "futures_timeframe_minutes", 240) or 240)
     if tf < 60:
         return False, f"disabled: futures_timeframe_minutes={tf} is below 1h (entries refused)"

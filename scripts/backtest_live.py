@@ -36,7 +36,7 @@ import pandas as pd
 from dublin_bot.config import Settings
 from dublin_bot.engine import build_gateway
 from dublin_bot.fills import FillModel
-from dublin_bot.kraken_gateway import KrakenGateway
+from dublin_bot.kraken_gateway import KrakenGateway  # noqa: F401  (type hints)
 from dublin_bot.models import Action, Signal
 from dublin_bot.risk import RiskManager, SessionState
 from dublin_bot.strategy import build_strategy
@@ -62,7 +62,7 @@ def fetch_history(gw: KrakenGateway, symbol: str, days: int,
     and report the ACTUAL span so a truncated window is never mistaken for the
     requested one.
     """
-    g = KrakenGateway(gw.settings)
+    g = build_gateway(gw.settings, allow_order_submission=False)  # BROKER-aware (public data only)
     g.settings.symbol = symbol
     meta = g.resolve_symbol()
     raw = g._public("OHLC", {"pair": meta.key, "interval": interval_min})

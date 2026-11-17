@@ -149,13 +149,11 @@ def score_one(bars: pd.DataFrame | None, spec: Spec, t0: int, tf: int, costs: Co
 
 
 def public_bars(symbol: str, tf_minutes: int, *, now: float | None = None) -> pd.DataFrame:
-    """Closed Kraken public OHLC bars (time = bar open, epoch s). No private API."""
-    from .daily_filter import _PAIR
-    from .pipeline.kraken_rest import KrakenPublic
+    """Closed public OHLC bars of the active venue (time = bar open, epoch s). No private API."""
+    from .venue import public_ohlc
 
     now = time.time() if now is None else float(now)
-    pair = _PAIR.get(symbol.upper(), symbol.replace("/", ""))
-    rows = KrakenPublic(min_interval=0.0, timeout=10.0).ohlc(pair, int(tf_minutes), retries=2)
+    rows = public_ohlc(symbol, int(tf_minutes), retries=2)
     df = pd.DataFrame([r[:7] for r in rows], columns=["time", "open", "high", "low", "close", "vwap", "volume"])
     df = df.drop(columns=["vwap"]).astype({"time": int, "open": float, "high": float, "low": float,
                                            "close": float, "volume": float})

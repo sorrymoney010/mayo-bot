@@ -545,9 +545,16 @@ class ExitWatcher:
 
 def _try_feed():
     try:
-        from .realtime import KrakenRealtimeFeed
-        pairs = {"BTC/USD": "XBT/USD", "ETH/USD": "ETH/USD", "SOL/USD": "SOL/USD"}
-        feed = KrakenRealtimeFeed(pairs)
+        from .venue import binance_public, is_binance
+        if is_binance():
+            from .realtime import BinanceRealtimeFeed
+            gw = binance_public()
+            pairs = {s: gw._pair_for(s) for s in ("BTC/USD", "ETH/USD", "SOL/USD")}
+            feed = BinanceRealtimeFeed(pairs, rest_host=gw.host)
+        else:
+            from .realtime import KrakenRealtimeFeed
+            pairs = {"BTC/USD": "XBT/USD", "ETH/USD": "ETH/USD", "SOL/USD": "SOL/USD"}
+            feed = KrakenRealtimeFeed(pairs)
         feed.start()
         return feed
     except Exception as exc:
@@ -588,7 +595,10 @@ def _collect_prices(settings, feed, now: float, *, symbols: tuple[str, ...] | No
 
 
 def _rest_last(symbol: str) -> float | None:
-    """Public spot ticker. None on any failure (watcher just waits)."""
+    """Public spot ticker of the active venue. None on any failure (watcher just waits)."""
+    from .venue import is_binance, public_last
+    if is_binance():
+        return public_last(symbol)
     pair = {"BTC/USD": "XBTUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}.get(symbol)
     if not pair:
         return None
@@ -659,6 +669,11 @@ def _fresh_ticks(data_dir, symbols, now: float) -> dict[str, tuple[float, float]
     not a second wall-clock read.
     """
     out: dict[str, tuple[float, float]] = {}
+    from .venue import is_binance
+    if is_binance():
+        # The tick collector records Kraken trades; exits on a Binance book
+        # must be priced from Binance (websocket / REST), never another venue.
+        return out
     day = datetime.fromtimestamp(now, tz=timezone.utc).strftime("%Y-%m-%d")
     root = Path(data_dir) / "ticks"
     key = {"BTC/USD": "BTCUSD", "ETH/USD": "ETHUSD", "SOL/USD": "SOLUSD"}

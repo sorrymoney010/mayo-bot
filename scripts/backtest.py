@@ -20,7 +20,7 @@ import pandas as pd
 
 from dublin_bot.config import Settings
 from dublin_bot.engine import build_gateway
-from dublin_bot.kraken_gateway import KrakenGateway
+from dublin_bot.kraken_gateway import KrakenGateway  # noqa: F401  (type hints)
 from dublin_bot.models import Action, Signal
 from dublin_bot.risk import RiskManager, SessionState
 from dublin_bot.strategy import build_strategy
@@ -31,7 +31,7 @@ from dublin_bot.strategy import build_strategy
 def fetch_history(gateway: KrakenGateway, symbol: str, days: int, interval_min: int = 15) -> pd.DataFrame:
     """Fetch `days` of completed OHLC candles for `symbol` (e.g. XRP/USD)."""
     # Map our symbol to Kraken pair key.
-    gw = KrakenGateway(gateway.settings)
+    gw = build_gateway(gateway.settings, allow_order_submission=False)  # BROKER-aware (public data only)
     gw.settings.symbol = symbol
     meta = gw.resolve_symbol()
     since = int(time.time()) - days * 86400

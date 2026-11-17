@@ -1,4 +1,4 @@
-"""Kraken OHLC fetch with local cache. Research-only. No orders."""
+"""Venue OHLC fetch (Kraken or Binance.US) with local cache. Research-only. No orders."""
 
 from __future__ import annotations
 
@@ -7,14 +7,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from dublin_bot.kraken_gateway import KrakenGateway
+from dublin_bot.kraken_gateway import KrakenGateway  # noqa: F401  (type of `gateway`)
 
 CACHE_DIR = Path("logs")
 
 
-def cache_path(symbol: str, interval_min: int) -> Path:
+def cache_path(symbol: str, interval_min: int, broker: str = "kraken") -> Path:
     safe = symbol.replace("/", "-").upper()
-    return CACHE_DIR / f"ohlc_{safe}_{interval_min}m.csv"
+    venue = "" if str(broker).lower() == "kraken" else f"_{str(broker).lower()}"
+    return CACHE_DIR / f"ohlc_{safe}_{interval_min}m{venue}.csv"
 
 
 def _parse_ohlc(raw: dict) -> pd.DataFrame:
@@ -39,7 +40,10 @@ def fetch_history_paged(
     interval_min: int = 60,
     sleep_s: float = 0.35,
 ) -> pd.DataFrame:
-    """Page Kraken public OHLC. One call is capped (~720 candles)."""
+    """Page public OHLC of the configured venue (Kraken ~720 candles/call; Binance 1000)."""
+    if str(getattr(gateway.settings, "broker", "kraken")).lower() == "binance":
+        from .venue import history
+        return history(symbol, days, interval_min)
     gw = KrakenGateway(gateway.settings)
     gw.settings.symbol = symbol
     meta = gw.resolve_symbol()
@@ -82,7 +86,7 @@ def load_or_fetch(
     cache: Path | None = None,
     refresh: bool = False,
 ) -> pd.DataFrame:
-    path = cache or cache_path(symbol, interval_min)
+    path = cache or cache_path(symbol, interval_min, getattr(gateway.settings, "broker", "kraken"))
     path.parent.mkdir(parents=True, exist_ok=True)
     cached = pd.DataFrame()
     if path.exists() and not refresh:

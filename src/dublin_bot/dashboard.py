@@ -159,6 +159,18 @@ def alerts_status() -> dict[str, object]:
 # Direct Kraken REST (read-only) for account + market features
 # ---------------------------------------------------------------------------
 
+def _venue_text(text: str, settings: Settings) -> str:
+    """Relabel user-facing 'Kraken' copy for the active venue (labels only)."""
+    if getattr(settings, "broker", "kraken") != "binance":
+        return text
+    host = str(getattr(settings, "binance_host", "binance.us") or "binance.us").lower()
+    venue = "Binance" if "binance.com" in host else "Binance.US"
+    return (text.replace("Kraken TradeBalance", f"{venue} account")
+                .replace("Kraken Balance", f"{venue} balance")
+                .replace("Kraken API", f"{venue} API")
+                .replace("Kraken", venue))
+
+
 def _kraken_credentials(settings: Settings) -> tuple[str, str] | None:
     """Find Kraken credentials without assuming the Settings attribute names."""
     key_names = ("kraken_api_key", "KRAKEN_API_KEY", "api_key")
@@ -336,6 +348,15 @@ def scanner_data(settings: Settings) -> dict[str, object]:
             return dict(_scanner_cache["data"])
 
         def _fetch(display: str) -> dict[str, object]:
+            if settings.broker == "binance":
+                from .venue import binance_public
+                t = binance_public().get_ticker_for(display)
+                return {
+                    "pair": display, "kraken_pair": t["pair"], "exchange_pair": t["pair"],
+                    "price": t["last"], "change_24h_pct": round(t["change_24h_pct"], 2),
+                    "high_24h": t["high_24h"], "low_24h": t["low_24h"],
+                    "volume_24h": round(t["volume_24h"], 2), "trades_24h": t["trades_24h"],
+                }
             altname = KRAKEN_ALTNAMES.get(display, display.replace("/", ""))
             result = _kraken_public("/0/public/Ticker", {"pair": altname})
             tick = next(iter(result.values()))
@@ -977,7 +998,7 @@ def system_health_data(settings: Settings) -> dict[str, object]:
 
         return {
             "broker": {
-                "name": "Kraken",
+                "name": "Binance.US" if settings.broker == "binance" else "Kraken",
                 "reachable": broker_health.get("reachable", False),
                 "latency_ms": broker_health.get("latency_ms"),
                 "error": broker_health.get("error"),
@@ -1881,7 +1902,7 @@ def make_handler(settings: Settings, monitor: PaperMonitor) -> type[BaseHTTPRequ
         def do_GET(self) -> None:
             path = self.path.split("?", 1)[0]
             if path == "/":
-                self.send_bytes(HTML.encode(), "text/html; charset=utf-8")
+                self.send_bytes(_venue_text(HTML, settings).encode(), "text/html; charset=utf-8")
                 return
             handler = GET_ROUTES.get(path)
             if handler is None:
@@ -2091,23 +2112,35 @@ def _dash_evidence(result, endpoint, data):
 
 
 def _dash_gateway():
-    from .kraken_gateway import KrakenGateway
     s = Settings(_env_file=str(_DASH_BASE / ".env"))
     s.http_timeout_seconds = 8
+    if s.broker == "binance":
+        from .binance_gateway import BinanceGateway
+        return BinanceGateway(s, allow_order_submission=False, max_retries=1)
+    from .kraken_gateway import KrakenGateway
     return KrakenGateway(s, allow_order_submission=False, max_retries=1)
+
+
+def _dash_venue(gateway) -> str:
+    return "Binance.US" if getattr(gateway, "name", "") == "binance" else "Kraken"
+
+
+def _dash_inner(gateway):
+    return getattr(gateway, "gateway", gateway)
 
 
 def load_live_portfolio(gateway=None):
     g = gateway or _dash_private_gateway()
     data = {"equity": None, "cash": None, "holdings": None,
             "total_pnl": None, "win_rate": None, "errors": {},
-            "scope": "Kraken account — not bot-owned inventory",
+            "scope": f"{_dash_venue(_dash_inner(g))} account — not bot-owned inventory",
             "last_updated": datetime.now(timezone.utc).isoformat()}
     try:
         balances = _dash_evidence(g._private("Balance"), "Balance", data)
         if not isinstance(balances, dict):
             raise ValueError("Malformed Balance response")
-        data["cash"] = _dash_number(balances.get("ZUSD", "0"))
+        cash_assets = ("ZUSD", "USD", "USDT", "USDC") if _dash_venue(_dash_inner(g)) != "Kraken" else ("ZUSD",)
+        data["cash"] = sum(_dash_number(balances.get(a, "0")) or 0.0 for a in cash_assets)
         aliases = {"XXBT": "BTC", "XBT": "BTC", "XXRP": "XRP", "ZUSD": "USD"}
         data["holdings"] = [
             {"asset": aliases.get(asset, asset), "exchange_asset": asset,
@@ -2126,6 +2159,10 @@ def load_live_portfolio(gateway=None):
 
 
 def _dash_symbol(raw):
+    raw = str(raw or "").split(":", 1)[0]
+    for quote in ("USDT", "USDC"):
+        if raw.endswith(quote) and len(raw) > len(quote) and "/" not in raw:
+            return f"{raw[:-len(quote)]}/USD"
     return {"XXBTZUSD": "BTC/USD", "XBTUSD": "BTC/USD", "XBT/USD": "BTC/USD",
             "BTCUSD": "BTC/USD", "PUMPUSD": "PUMP/USD", "XXRPZUSD": "XRP/USD",
             "XRPUSD": "XRP/USD"}.get(raw, raw)
@@ -2161,7 +2198,8 @@ def load_exchange_history(gateway=None, offset=0):
     g = gateway or _dash_private_gateway()
     data = {"fills": None, "orders": [], "fills_total": None,
             "fills_has_more": None, "closed_total": None, "closed_has_more": None,
-            "offset": offset, "errors": {}, "scope": "Kraken account history; bot attribution unverified",
+            "offset": offset, "errors": {},
+            "scope": f"{_dash_venue(_dash_inner(g))} account history; bot attribution unverified",
             "last_updated": datetime.now(timezone.utc).isoformat()}
     try:
         result = g._private("TradesHistory", {"type": "all", "trades": True, "ofs": offset})
@@ -2221,7 +2259,7 @@ def load_chart(symbol, interval=15, gateway=None):
                 "low": _dash_number(r[3]), "close": _dash_number(r[4]), "volume": _dash_number(r[6])}
                for r in rows]
     return {"symbol": symbol, "interval": interval, "candles": candles,
-            "source": "Kraken public OHLC; final candle is in progress",
+            "source": f"{_dash_venue(g)} public OHLC; final candle is in progress",
             "last_updated": datetime.now(timezone.utc).isoformat()}
 
 
@@ -2272,7 +2310,14 @@ class SimpleDashboardHandler(BaseHTTPRequestHandler):
         try:
             if path in assets:
                 name, content_type = assets[path]
-                return self._send((_DASH_STATIC / name).read_bytes(), content_type)
+                body = (_DASH_STATIC / name).read_bytes()
+                if name in ("dashboard.html", "dashboard.js"):
+                    try:
+                        venue_settings = Settings(_env_file=str(_DASH_BASE / ".env"))
+                        body = _venue_text(body.decode("utf-8"), venue_settings).encode("utf-8")
+                    except Exception:
+                        pass
+                return self._send(body, content_type)
             if path == "/gunbot/stats":
                 data = _dash_cached("account", 30, load_live_portfolio)
             elif path == "/gunbot/saved-fills":
