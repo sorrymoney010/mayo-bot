@@ -83,8 +83,8 @@ def fold_t(ts: float, edges: list[float]) -> int | None:
 
 
 def run(a) -> dict:
-    base = Costs(fee_bps=40.0, slippage_bps=5.0, maker_bps=25.0)
-    stress = Costs(fee_bps=80.0, slippage_bps=10.0, maker_bps=25.0)
+    base = Costs(fee_bps=80.0, slippage_bps=5.0, maker_bps=40.0)
+    stress = Costs(fee_bps=120.0, slippage_bps=10.0, maker_bps=60.0)
     grid = list(itertools.product(RSI_OS, RSI_EXIT))
     acc = {key(tf, o, e): {"tf": tf, "rsi_os": o, "rsi_exit": e, "trades": [], "stress": [],
                            "by_coin": {}, "by_fold": {k: [] for k in range(1, FOLDS + 1)}}

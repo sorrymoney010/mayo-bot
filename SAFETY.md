@@ -129,7 +129,7 @@ Honest accounting of what is **not** yet proven:
    gates (30+ trades, majority profitable folds, PF ≥ 1.10) have not been run
    against Kraken history. Strategy edge is unproven.
 5. **Fills are not modelled.** Market orders on a $25 budget will pay spread and
-   taker fees (~0.26%) that the backtest approximates but does not measure.
+   taker fees (Tier 1: 0.40% maker / 0.80% taker since 2026-07-09) that the backtest approximates but does not measure.
 6. **Single-process assumption.** The nonce generator and idempotency ledger are
    safe across restarts and threads but not across two concurrent bot processes
    sharing one API key.

@@ -31,7 +31,7 @@ def load_pipeline_bars(data_dir: Path | str, symbol: str, tf_minutes: int, *,
     info = {"symbol": sym, "tf": tf_minutes, "bars_total": int(len(bars))}
     if not len(bars):
         return pd.DataFrame(), info | {"bars": 0}
-    sec = bars.index.asi8 // 10**9
+    sec = bars.index.as_unit("ns").asi8 // 10**9
     breaks = np.nonzero(np.diff(sec) != tf_minutes * 60)[0]
     info["holes"] = int(len(breaks))
     if len(breaks):

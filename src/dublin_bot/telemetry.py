@@ -104,7 +104,7 @@ def excursion(bars: pd.DataFrame | None, entry_ts: float | None, entry_px: float
         if "time" in bars:
             opens = pd.to_numeric(bars["time"], errors="coerce").to_numpy(float)
         else:
-            opens = (bars.index.asi8 // 10**9).astype(float)
+            opens = (bars.index.as_unit("ns").asi8 // 10**9).astype(float)
         # bars that overlap the holding period (the entry bar included)
         tf = float(opens[-1] - opens[-2]) if len(opens) > 1 else 0.0
         m = opens + tf > float(entry_ts)

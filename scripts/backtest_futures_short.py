@@ -158,7 +158,7 @@ def main() -> int:
                 params = ShortSimParams(leverage=lev, warm=210)
                 trades = simulate_perp_short(df, params, funding_hourly=rates, bar_hours=hours)
                 all_oos.extend(_oos_split(trades, len(df)))
-                bh = buy_and_hold(df, Costs(fee_bps=40.0, slippage_bps=10.0, maker_bps=25.0))
+                bh = buy_and_hold(df, Costs(fee_bps=80.0, slippage_bps=10.0, maker_bps=40.0))
                 if bh:
                     holds.append(bh)
             m = short_metrics(all_oos, leverage=lev)

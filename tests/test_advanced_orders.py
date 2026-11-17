@@ -249,8 +249,8 @@ def test_fee_model_defaults_to_real_kraken_schedule():
 
     s = Settings(_env_file=None)
     fm = FillModel(s)
-    assert fm.taker_fee_bps == 40.0
-    assert fm.maker_fee_bps == 25.0
+    assert fm.taker_fee_bps == 80.0
+    assert fm.maker_fee_bps == 40.0
     assert fm.slippage_bps == 10.0 if hasattr(fm, "slippage_bps") else True
 
 
