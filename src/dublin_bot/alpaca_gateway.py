@@ -328,7 +328,7 @@ class AlpacaGateway:
             params["symbols"] = to_alpaca(symbol)
         return [self._norm_order(o) for o in self._trading("GET", "/v2/orders", params=params) or []]
 
-    def get_order(self, order_id: str) -> dict:
+    def get_order(self, order_id: str, *, symbol: str = "") -> dict:
         return self._norm_order(self._trading("GET", f"/v2/orders/{order_id}"))
 
     def get_order_by_client_id(self, client_order_id: str) -> dict | None:
@@ -407,7 +407,7 @@ class AlpacaGateway:
                            "client_order_id": client_order_id})
         return self._norm_order(o)
 
-    def cancel_order(self, order_id: str) -> bool:
+    def cancel_order(self, order_id: str, *, symbol: str = "") -> bool:
         self._require_orders()
         try:
             self._trading("DELETE", f"/v2/orders/{order_id}")

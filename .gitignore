@@ -42,3 +42,9 @@ data/*.log
 data/ticks/
 data/quotes/
 data/bars1m/
+
+# Sleeve runner state, journals and simulated accounts (per machine, may hold balances)
+data/alpaca_paper/
+data/binanceus_paper/
+data/binanceus_live/
+data/binanceus_backtest_results.json

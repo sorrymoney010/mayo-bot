@@ -1,4 +1,5 @@
-"""Alpaca paper runner: the three fee-surviving sleeves on Alpaca's paper account.
+"""Sleeve runner: the three fee-surviving sleeves on Alpaca paper, Binance.US
+paper (simulated fills on real prices) or Binance.US live.
 
 Sleeves (defaults = the walk-forward's default specs, which the folds chose
 almost every time; see data/walkforward_results.json):
@@ -15,6 +16,14 @@ Rules match ``backtest_core.simulate`` so paper results are comparable:
 * hard stop 3% under entry, take-profit 25% over entry (polled every cycle)
 * signal exits: regime → chandelier break or ADX chop; meanrev → reverted
 * long-only spot, one position per sleeve per symbol
+
+Venues with ``supports_resting_stop`` (Binance.US, its simulator) also get a
+STOP_LOSS_LIMIT resting on the exchange right after each entry fills, so the
+stop works even if this machine is off. The runner still polls: if price gaps
+through the stop-limit's limit, it cancels the stop and sells at market.
+
+Live mode (Binance.US) needs ``live=True`` AND every live lock open AND a
+gateway built with order permission; otherwise the constructor refuses.
 
 Every slot is (sleeve, symbol). Alpaca nets positions per symbol, so the runner
 keeps its own lots in a JSON state file and only ever sells its own quantity.
@@ -34,13 +43,15 @@ from typing import Any, Callable
 
 import numpy as np
 
-from .alpaca_gateway import OPEN_STATUSES, AlpacaGateway
+from .alpaca_gateway import OPEN_STATUSES, live_locks_open
 from .backtest_core import add_indicators, meanrev_signals, regime_signals
 
 DEFAULT_SYMBOLS = ("BTC/USD", "ETH/USD", "SOL/USD")
 WARM_BARS = 210          # same warm-up as the backtester (EMA200 needs it)
 FETCH_BARS = 400
 ENTRY_FRESH_SECONDS = 15 * 60
+STOP_LIMIT_GAP = 0.01    # stop-limit's limit sits 1% under the stop trigger
+_CODES = {"regime_1h": "r1", "regime_4h_mk": "r4", "meanrev_4h_mk": "m4"}
 
 
 @dataclass(frozen=True)
@@ -93,6 +104,8 @@ class Slot:
     exit_client_id: str = ""
     exit_reason: str = ""
     exit_attempts: int = 0
+    stop_order_id: str = ""
+    stop_attempts: int = 0
 
     @property
     def key(self) -> str:
@@ -117,6 +130,7 @@ class RunnerConfig:
     max_daily_loss_fraction: float = 0.03
     taker_bps: float = 25.0
     maker_bps: float = 15.0
+    max_trade_usd: float | None = None       # hard cap per trade (use for live)
 
 
 @dataclass
@@ -185,12 +199,18 @@ def evaluate(spec: SleeveSpec, raw) -> dict:
     return out
 
 
-class AlpacaPaperRunner:
-    def __init__(self, gateway: AlpacaGateway, config: RunnerConfig,
+class SleeveRunner:
+    def __init__(self, gateway: Any, config: RunnerConfig,
                  *, clock: Callable[[], datetime] | None = None,
-                 log: Callable[[str], None] | None = None) -> None:
+                 log: Callable[[str], None] | None = None, live: bool = False) -> None:
         if not gateway.paper:
-            raise RuntimeError("AlpacaPaperRunner only runs against the Alpaca PAPER endpoint")
+            if not live:
+                raise RuntimeError("this gateway trades real money; pass live=True to use it")
+            if not live_locks_open(gateway.settings) or not gateway.order_submission_enabled:
+                raise RuntimeError("live runner refused: live locks are not all open or the "
+                                   "gateway has no order permission")
+        self.live = not gateway.paper
+        self.resting_stop = bool(getattr(gateway, "supports_resting_stop", False))
         self.gw = gateway
         self.cfg = config
         self.clock = clock or (lambda: datetime.now(timezone.utc))
@@ -222,7 +242,13 @@ class AlpacaPaperRunner:
     def sizing_equity(self) -> float:
         return max(0.0, self.cfg.budget_usd + self.state.realized_pnl)
 
+    @property
+    def kill_file(self) -> Path:
+        return self.cfg.state_path.parent / "KILL"
+
     def entries_blocked(self) -> str:
+        if self.kill_file.exists():
+            return "kill switch (delete KILL file to resume)"
         if self.state.entries_today >= self.cfg.max_entries_per_day:
             return "daily entry cap"
         if self.state.pnl_today <= -self.cfg.max_daily_loss_fraction * self.cfg.budget_usd:
@@ -230,7 +256,9 @@ class AlpacaPaperRunner:
         return ""
 
     def _client_id(self, slot: Slot, tag: str, bar: float) -> str:
-        return f"dub-{slot.sleeve}-{slot.symbol.replace('/', '')}-{int(bar)}-{tag}"
+        # <= 36 chars, [A-Za-z0-9-] (Binance limit; Alpaca allows 128)
+        code = _CODES.get(slot.sleeve, slot.sleeve[:3])
+        return f"dub-{code}-{slot.symbol.replace('/', '')}-{int(bar)}-{tag}"
 
     # ── main cycle ─────────────────────────────────────────
     def cycle(self) -> None:
@@ -259,11 +287,18 @@ class AlpacaPaperRunner:
             self._check_entry(slot, spec, now)
         if slot.status == "exiting":
             self._check_exit(slot)
+        if slot.status == "open" and self.resting_stop:
+            self._check_stop(slot)
         if slot.status == "open":
             px = price(slot.symbol)
-            if px <= slot.stop_px:
+            if self.resting_stop and slot.stop_order_id:
+                # The exchange stop handles normal stops; step in only on a gap
+                # below its limit, where a stop-limit can't fill.
+                if px <= slot.stop_px * (1 - STOP_LIMIT_GAP):
+                    self._exit(slot, "stop_gap", now)
+            elif px <= slot.stop_px:
                 self._exit(slot, "stop", now)
-            elif px >= slot.tp_px:
+            if slot.status == "open" and px >= slot.tp_px:
                 self._exit(slot, "tp", now)
 
         key = (slot.symbol, spec.tf)
@@ -301,6 +336,8 @@ class AlpacaPaperRunner:
             return
         eq = self.sizing_equity()
         notional = min(eq * self.cfg.risk_per_trade / spec.stop, eq * self.slot_cap)
+        if self.cfg.max_trade_usd:
+            notional = min(notional, self.cfg.max_trade_usd)
         try:
             notional = min(notional, self.gw.cash() * 0.98)
         except Exception:
@@ -316,6 +353,10 @@ class AlpacaPaperRunner:
         if qty <= 0:
             self._event("entry_skipped", slot, reason="below minimum order size",
                         notional=round(notional, 2), min_qty=str(meta.min_order_size))
+            return
+        if hasattr(meta, "notional_ok") and not meta.notional_ok(qty, ref, market=limit is None):
+            self._event("entry_skipped", slot, reason="below exchange minimum notional",
+                        notional=round(notional, 2), min_notional=str(meta.min_notional))
             return
         cid = self._client_id(slot, "e", sig["bar"])
         o = self.gw.submit_order(symbol=slot.symbol, side="buy",
@@ -334,15 +375,15 @@ class AlpacaPaperRunner:
         self._check_entry(slot, spec, now)
 
     def _check_entry(self, slot: Slot, spec: SleeveSpec, now: float) -> None:
-        o = self.gw.get_order(slot.entry_order_id)
+        o = self.gw.get_order(slot.entry_order_id, symbol=slot.symbol)
         status, filled = o["status"], o["filled_qty"]
         if status == "filled":
             self._opened(slot, spec, filled, o["filled_avg_price"])
             return
         if status in OPEN_STATUSES:
             if slot.entry_expires and now >= slot.entry_expires:
-                self.gw.cancel_order(slot.entry_order_id)
-                o = self.gw.get_order(slot.entry_order_id)
+                self.gw.cancel_order(slot.entry_order_id, symbol=slot.symbol)
+                o = self.gw.get_order(slot.entry_order_id, symbol=slot.symbol)
                 if o["filled_qty"] > 0:
                     self._opened(slot, spec, o["filled_qty"], o["filled_avg_price"])
                 else:
@@ -357,23 +398,81 @@ class AlpacaPaperRunner:
             slot.reset()
 
     def _opened(self, slot: Slot, spec: SleeveSpec, qty: float, px: float) -> None:
+        # Both venues take the buy fee in coin, so the lot is what was RECEIVED.
+        # The runner never sells more than that, so coins you hold yourself on
+        # the same account are never touched.
+        fee = (self.cfg.maker_bps if slot.entry_maker else self.cfg.taker_bps) / 1e4
+        qty = float(qty) * (1 - fee)
         slot.status, slot.qty, slot.entry_px = "open", float(qty), float(px)
         slot.entry_time = _iso(self.clock().timestamp())
         slot.stop_px = slot.entry_px * (1 - spec.stop)
         slot.tp_px = slot.entry_px * (1 + spec.tp)
         self._event("entry_filled", slot, qty=qty, price=px, stop=round(slot.stop_px, 6),
                     tp=round(slot.tp_px, 6))
+        if self.resting_stop:
+            self._place_stop(slot)
+
+    # ── resting stop (exchange-side) ─────────────────────
+    def _place_stop(self, slot: Slot) -> None:
+        meta = self.gw.asset(slot.symbol)
+        qty = meta.floor_qty(min(slot.qty, self.gw.position_qty(slot.symbol)))
+        if qty <= 0:
+            self._event("stop_not_placed", slot, reason="no free balance")
+            return
+        cid = self._client_id(slot, f"s{slot.stop_attempts}", slot.signal_bar)
+        try:
+            o = self.gw.submit_order(symbol=slot.symbol, side="sell", order_type="stop_limit",
+                                     qty=qty, stop_price=slot.stop_px,
+                                     limit_price=slot.stop_px * (1 - STOP_LIMIT_GAP),
+                                     client_order_id=cid, time_in_force="gtc")
+        except Exception as exc:
+            # Fall back to polling the stop; never leave the error silent.
+            self._event("stop_not_placed", slot, error=f"{type(exc).__name__}: {exc}")
+            slot.stop_order_id = ""
+            return
+        slot.stop_order_id = str(o["order_id"])
+        self._event("stop_placed", slot, qty=str(qty), stop=round(slot.stop_px, 6),
+                    order_id=slot.stop_order_id)
+
+    def _check_stop(self, slot: Slot) -> None:
+        if not slot.stop_order_id:
+            slot.stop_attempts += 1
+            self._place_stop(slot)        # retry a stop that failed to rest
+            return
+        o = self.gw.get_order(slot.stop_order_id, symbol=slot.symbol)
+        if o["status"] == "filled":
+            self._closed(slot, o["filled_avg_price"], "stop")
+        elif o["status"] not in OPEN_STATUSES:
+            if o["filled_qty"] > 0:
+                self._closed(slot, o["filled_avg_price"], "stop_partial")
+            else:
+                self._event("stop_lost", slot, status=o["status"])
+                slot.stop_order_id = ""
+                slot.stop_attempts += 1
+                self._place_stop(slot)
+
+    def _release_stop(self, slot: Slot) -> bool:
+        """Cancel the resting stop before selling. True if the stop already filled."""
+        if not slot.stop_order_id:
+            return False
+        self.gw.cancel_order(slot.stop_order_id, symbol=slot.symbol)
+        o = self.gw.get_order(slot.stop_order_id, symbol=slot.symbol)
+        if o["status"] == "filled":
+            self._closed(slot, o["filled_avg_price"], "stop")
+            return True
+        slot.stop_order_id = ""
+        return False
 
     # ── exits ──────────────────────────────────────────────
     def _exit(self, slot: Slot, reason: str, now: float) -> None:
+        if self._release_stop(slot):
+            return
         meta = self.gw.asset(slot.symbol)
         held = self.gw.position_qty(slot.symbol)
-        others = sum(s.qty for s in self.state.slots.values()
-                     if s is not slot and s.symbol == slot.symbol and s.status in ("open", "exiting"))
-        # Fees are taken in coin, so this slot may own slightly less than it bought.
-        # The last open lot on a symbol sells whatever is left.
-        want = slot.qty if others > 0 else max(slot.qty, held)
-        qty = meta.floor_qty(min(want, held))
+        # Sell this lot only, never more (rounding down to the exchange step can
+        # leave a little dust, which is cheaper than touching your own coins).
+        floor = getattr(meta, "floor_market_qty", meta.floor_qty)
+        qty = floor(min(slot.qty, held))
         if qty <= 0:
             self._event("exit_no_position", slot, reason=reason, held=held)
             self._closed(slot, slot.entry_px, reason + "_missing")
@@ -389,7 +488,7 @@ class AlpacaPaperRunner:
         self._check_exit(slot)
 
     def _check_exit(self, slot: Slot) -> None:
-        o = self.gw.get_order(slot.exit_order_id)
+        o = self.gw.get_order(slot.exit_order_id, symbol=slot.symbol)
         if o["status"] == "filled":
             self._closed(slot, o["filled_avg_price"], slot.exit_reason)
         elif o["status"] not in OPEN_STATUSES:
@@ -415,6 +514,33 @@ class AlpacaPaperRunner:
         self._event("trade_closed", slot, reason=reason, net_bps=round(net * 1e4, 1),
                     pnl_usd=round(pnl, 4))
         slot.reset()
+
+    # ── emergency ─────────────────────────────────────────
+    def flatten(self, reason: str = "flatten") -> None:
+        """Cancel every runner order and market-sell every runner position."""
+        now = self.clock().timestamp()
+        for slot in self.state.slots.values():
+            try:
+                if slot.status == "entering":
+                    self.gw.cancel_order(slot.entry_order_id, symbol=slot.symbol)
+                    o = self.gw.get_order(slot.entry_order_id, symbol=slot.symbol)
+                    if o["filled_qty"] > 0:
+                        spec = SLEEVES[slot.sleeve]
+                        slot.status, slot.qty, slot.entry_px = "open", o["filled_qty"], o["filled_avg_price"]
+                        slot.stop_px = slot.entry_px * (1 - spec.stop)
+                        slot.tp_px = slot.entry_px * (1 + spec.tp)
+                    else:
+                        slot.reset()
+                if slot.status == "open":
+                    self._exit(slot, reason, now)
+                if slot.status == "exiting":
+                    self._check_exit(slot)
+            except Exception as exc:
+                self._event("flatten_error", slot, error=f"{type(exc).__name__}: {exc}")
+            self.state.save(self.cfg.state_path)
+
+
+AlpacaPaperRunner = SleeveRunner   # backwards-compatible name
 
 
 # ── reporting ─────────────────────────────────────────────
