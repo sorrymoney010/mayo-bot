@@ -342,11 +342,24 @@ class BinanceGateway:
             self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "error": str(exc)}, severity="error")
             raise
 
-    def add_order(self, params: dict) -> str:
-        """Raw advanced order (limit / bracket). Mirrors KrakenGateway.add_order."""
+    # Kraken AddOrder field names the engine's bracket path produces. Binance
+    # would reject them (or worse, accept a partial order with no stop), so the
+    # live path refuses them outright; Binance.US live trading goes through
+    # scripts/binanceus_runner.py instead.
+    _KRAKEN_KEYS = frozenset({"ordertype", "volume", "pair", "oflags", "close[ordertype]",
+                              "close[price]", "close[price2]", "price2", "userref", "leverage"})
+
+    def add_order(self, params: dict, *, signal_price: float | None = None) -> str:
+        """Raw Binance order. Kraken-shaped params are refused when live."""
         if not self.order_submission_enabled:
             self.audit.record(AuditEvent.ORDER_INTENT, {"broker": "binance", **params})
             return "binance-dry-" + str(params.get("type", "order"))
+        kraken = sorted(set(params) & self._KRAKEN_KEYS)
+        if kraken:
+            raise BrokerError(
+                f"refusing Kraken-format order params on Binance ({', '.join(kraken)}); "
+                "use scripts/binanceus_runner.py for Binance.US live trading"
+            )
         payload = {"symbol": self._to_binance(self.settings.symbol)}
         payload.update(params)
         try:

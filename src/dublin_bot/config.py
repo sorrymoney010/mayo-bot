@@ -45,6 +45,18 @@ class Settings(BaseSettings):
     binance_api_key: str = ""
     binance_api_secret: str = ""
 
+    # ── Binance.US sleeve runner (scripts/binanceus_runner.py) ──
+    # Paper = simulated fills on real Binance.US prices; live needs every lock.
+    binanceus_quote: str = "USD"
+    binanceus_budget_usd: float = Field(default=100.0, gt=0.0)
+    # Hard cap per live trade, whatever the sizing says.
+    binanceus_max_trade_usd: float = Field(default=25.0, gt=0.0)
+    # Binance.US spot since 2026-04-22: 0% maker / 0.02% taker (bps per side).
+    binanceus_taker_fee_bps: float = Field(default=2.0, ge=0.0)
+    binanceus_maker_fee_bps: float = Field(default=0.0, ge=0.0)
+    # Extra slippage assumed by the paper simulator on market fills.
+    binanceus_sim_slippage_bps: float = Field(default=5.0, ge=0.0)
+
     # ── Coinbase Advanced Trade ────────────────────────────
     coinbase_api_key: str = ""
     coinbase_api_secret: str = ""  # Coinbase uses a key *name* + PEM/passphrase
