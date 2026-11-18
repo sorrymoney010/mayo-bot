@@ -20,7 +20,21 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # ── Active broker ──────────────────────────────────────
-    broker: str = "kraken"  # kraken only (alpaca decommissioned)
+    broker: str = "kraken"  # kraken | binance | alpaca
+
+    # ── Alpaca Crypto (spot, long-only) ────────────────────
+    # Paper is the default and uses Alpaca's paper endpoint (simulated money).
+    # ALPACA_PAPER=false points at the live endpoint, which also needs every
+    # live lock (ALLOW_LIVE_TRADING, PAPER_TRADING=false, DRY_RUN=false).
+    alpaca_api_key: str = ""
+    alpaca_api_secret: str = ""
+    alpaca_paper: bool = True
+    # Cap on the equity the Alpaca paper runner sizes against, so a $100k
+    # paper account trades like the real account size.
+    alpaca_paper_budget_usd: float = Field(default=100.0, gt=0.0)
+    # Alpaca crypto Tier 1 fees (bps per side).
+    alpaca_taker_fee_bps: float = Field(default=25.0, ge=0.0)
+    alpaca_maker_fee_bps: float = Field(default=15.0, ge=0.0)
 
     # ── Kraken Spot ─────────────────────────────────────────
     kraken_api_key: str = ""
