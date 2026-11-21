@@ -80,7 +80,7 @@ def _norm_pair(value: str) -> str:
 def build_gateway(settings: Settings, **kwargs):
     """Factory: returns the configured broker gateway.
 
-    Supported: kraken (Spot), binance (Spot).  Each adapter is a drop-in
+    Supported: kraken (Spot), binance (Spot), tastytrade (crypto spot).  Each adapter is a drop-in
     implementation of the BrokerGateway protocol, so the engine, risk manager,
     dashboard and audit log stay broker-agnostic.
     """
@@ -90,9 +90,14 @@ def build_gateway(settings: Settings, **kwargs):
     if settings.broker == "binance":
         kwargs.setdefault("allow_order_submission", bool(settings.allow_live_trading and not settings.paper_trading and not settings.dry_run))
         return BinanceGateway(settings, **kwargs)
+    if settings.broker == "tastytrade":
+        from .tastytrade_gateway import TastytradeGateway
+
+        kwargs.setdefault("allow_order_submission", bool(settings.allow_live_trading and not settings.paper_trading and not settings.dry_run))
+        return TastytradeGateway(settings, **kwargs)
     raise ValueError(
         f"Unsupported broker: {settings.broker!r}. "
-        "Supported: 'kraken', 'binance'."
+        "Supported: 'kraken', 'binance', 'tastytrade'."
     )
 
 

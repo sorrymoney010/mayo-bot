@@ -24,9 +24,64 @@ def build_parser() -> argparse.ArgumentParser:
             "audit-verify", # verify the audit hash chain
             "safety-report",# full pre-live safety report
             "dashboard",
+            "tasty-health",    # tastytrade auth, accounts, locks, crypto status
+            "tasty-spreads",   # one put-credit-spread sleeve cycle (paper by default)
+            "tasty-book",      # open spreads + paper stats
+            "tasty-backtest",  # validate the spread rules on tastytrade's backtester
         ],
     )
+    parser.add_argument("--force-hours", action="store_true",
+                        help="tasty-spreads: run outside the 09:45-15:45 ET window")
+    parser.add_argument("--symbols", default="", help="tasty-backtest: comma list, default SPY")
+    parser.add_argument("--start", default="2018-01-01", help="tasty-backtest start date")
     return parser
+
+
+def tasty_health(settings: Settings, args=None) -> int:
+    from .tastytrade_gateway import TastytradeGateway
+
+    gw = TastytradeGateway(settings)
+    out: dict[str, object] = {"locks": gw.lock_report(),
+                              "credentials_present": gw.client.has_credentials,
+                              "crypto_api_enabled": settings.tastytrade_crypto_api_enabled,
+                              "options_sleeve_enabled": settings.options_sleeve_enabled}
+    if gw.client.has_credentials:
+        try:
+            out["accounts"] = gw.client.account_numbers()
+            out["spy_quote"] = {k: gw.client.market_data(equity=["SPY"]).get("SPY", {}).get(k)
+                                for k in ("bid", "ask", "mark")}
+        except Exception as exc:
+            out["error"] = str(exc)
+    print(json.dumps(out, indent=2, default=str))
+    return 0 if "error" not in out else 1
+
+
+def tasty_spreads(settings: Settings, args=None) -> int:
+    from .credit_spread import CreditSpreadSleeve
+
+    allow = bool(settings.allow_live_trading and not settings.paper_trading and not settings.dry_run)
+    sleeve = CreditSpreadSleeve(settings, allow_order_submission=allow)
+    res = sleeve.run_cycle(force_hours=bool(getattr(args, "force_hours", False)))
+    print(json.dumps(res, indent=2, default=str))
+    return 0
+
+
+def tasty_book(settings: Settings, args=None) -> int:
+    from .credit_spread import SpreadBook, describe_open
+
+    book = SpreadBook(settings.options_ledger_path)
+    print(json.dumps({"stats": book.stats(), "open": describe_open(book)}, indent=2, default=str))
+    return 0
+
+
+def tasty_backtest(settings: Settings, args=None) -> int:
+    from .tasty_backtest import format_report, run_validation
+
+    syms = [x.strip().upper() for x in (getattr(args, "symbols", "") or "").split(",") if x.strip()]
+    report = run_validation(settings, symbols=syms or None,
+                            start=getattr(args, "start", "2018-01-01"))
+    print(format_report(report))
+    return 0 if report["any_promotable"] else 5
 
 
 def doctor(settings: Settings) -> int:
@@ -115,6 +170,10 @@ def main() -> int:
     }
     if args.command in handlers:
         return handlers[args.command](settings)
+    tasty = {"tasty-health": tasty_health, "tasty-spreads": tasty_spreads,
+             "tasty-book": tasty_book, "tasty-backtest": tasty_backtest}
+    if args.command in tasty:
+        return tasty[args.command](settings, args)
 
     # One trading cycle writes the paper ledger: same guards as the loop.
     from pathlib import Path

@@ -39,6 +39,58 @@ class Settings(BaseSettings):
     bybit_api_key: str = ""
     bybit_api_secret: str = ""
 
+    # ── tastytrade (OAuth2 personal grant) ─────────────────
+    # Sandbox by default. Production must be chosen explicitly AND every
+    # existing lock must still be opened before a real order can form.
+    tastytrade_env: str = "sandbox"  # sandbox | production
+    tastytrade_refresh_token: str = ""
+    tastytrade_client_secret: str = ""
+    tastytrade_account_number: str = ""
+    # tastytrade disabled crypto order entry through the API in release
+    # 20260629 ("until further notice"). Keep False until their release notes
+    # say it is back; the crypto adapter refuses to submit while False.
+    tastytrade_crypto_api_enabled: bool = Field(default=False)
+    # Allow calls to the broker's /orders/dry-run preview endpoint. A dry-run
+    # never executes, but it does touch the account, so it is opt-in.
+    tastytrade_preview_orders: bool = Field(default=False)
+    # Venue lock for real option orders (see venue_locks.py pattern).
+    allow_options_live_orders: bool = Field(default=False)
+
+    # ── Options sleeve: defined-risk put credit spreads ────
+    options_sleeve_enabled: bool = Field(default=False)
+    options_underlyings: list[str] = Field(default_factory=lambda: ["SPY", "QQQ", "IWM"])
+    # Paper capital for the sleeve. Fee maths (docs/TASTYTRADE.md) means a
+    # 5-wide SPY spread is the smallest that keeps costs under 10% of credit,
+    # and at 5% risk per trade that needs roughly $8-10k.
+    options_equity_usd: float = Field(default=10000.0, ge=100.0)
+    options_min_iv_rank: float = Field(default=0.30, ge=0, le=1)
+    options_min_liquidity_rating: int = Field(default=3, ge=0, le=5)
+    options_dte_min: int = Field(default=30, ge=7)
+    options_dte_target: int = Field(default=45, ge=7)
+    options_dte_max: int = Field(default=60, ge=7)
+    options_short_delta: float = Field(default=0.20, gt=0.05, lt=0.5)
+    options_delta_tolerance: float = Field(default=0.08, gt=0, lt=0.25)
+    # Widest spread that fits the per-trade risk budget is used: wider spreads
+    # pay the same per-contract fees on a bigger credit, so fee drag falls.
+    options_width_candidates: list[float] = Field(default_factory=lambda: [10.0, 5.0, 2.0])
+    # ~20-delta 45-DTE index spreads typically collect 15-25% of width.
+    options_min_credit_ratio: float = Field(default=0.15, gt=0, lt=1)
+    options_max_leg_spread_pct: float = Field(default=0.15, gt=0, le=1)
+    options_take_profit_pct: float = Field(default=0.50, gt=0, lt=1)
+    options_stop_loss_multiple: float = Field(default=2.0, gt=0)
+    options_exit_dte: int = Field(default=21, ge=0)
+    options_risk_per_trade: float = Field(default=0.05, gt=0, le=0.10)
+    options_max_total_risk: float = Field(default=0.25, gt=0, le=0.50)
+    options_max_positions: int = Field(default=3, ge=1, le=10)
+    options_fee_open_per_contract: float = Field(default=1.00, ge=0)
+    options_clearing_fee_per_contract: float = Field(default=0.10, ge=0)
+    options_slippage_per_spread: float = Field(default=0.02, ge=0)
+    # Reject any spread whose round-trip fees + slippage exceed this share of
+    # the credit. Narrow spreads pay the same per-contract fees on a tiny
+    # credit, which silently destroys the edge.
+    options_max_cost_to_credit: float = Field(default=0.10, gt=0, le=1)
+    options_ledger_path: Path = Path("logs/paper_spreads.json")
+
     # ── Multi-account: run the same engine across several brokers ──
     # Each entry is a broker name; the matching *_api_key/_secret are read
     # from the environment. Empty => single-account (use `broker`).
@@ -428,6 +480,12 @@ class Settings(BaseSettings):
             raise ValueError("RSI_MIN must be below RSI_MAX")
         if self.adx_enter_above <= self.adx_exit_below:
             raise ValueError("ADX_ENTER_ABOVE must be greater than ADX_EXIT_BELOW")
+        if not (self.options_dte_min <= self.options_dte_target <= self.options_dte_max):
+            raise ValueError("OPTIONS_DTE_MIN <= OPTIONS_DTE_TARGET <= OPTIONS_DTE_MAX required")
+        if self.options_exit_dte >= self.options_dte_min:
+            raise ValueError("OPTIONS_EXIT_DTE must be below OPTIONS_DTE_MIN")
+        if self.options_risk_per_trade > self.options_max_total_risk:
+            raise ValueError("OPTIONS_RISK_PER_TRADE cannot exceed OPTIONS_MAX_TOTAL_RISK")
         return self
 
     @property
