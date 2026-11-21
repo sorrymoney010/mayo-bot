@@ -16,6 +16,7 @@ transparent decisions, and testable strategies with a native Kraken Spot connect
 | [docs/WALKFORWARD.md](docs/WALKFORWARD.md) | Fee-aware walk-forward backtest, adaptive learner, current paper config |
 | [docs/MEANREV_SLEEVE.md](docs/MEANREV_SLEEVE.md) | 4h mean-reversion paper sleeve (limit entries) running beside regime_trend |
 | [docs/PAPER_PRO.md](docs/PAPER_PRO.md) | Trailing take-profit, fast exits, paper futures/margin, strategy research |
+| [docs/TASTYTRADE.md](docs/TASTYTRADE.md) | tastytrade gateway, put credit spread sleeve, edge validation and fee findings |
 
 ## Current scope
 
@@ -82,6 +83,10 @@ dublin-bot recover        # resolve pending intents after a crash
 dublin-bot audit-verify   # verify the audit hash chain (exit 3 if broken)
 dublin-bot safety-report  # full pre-live review bundle
 dublin-bot dashboard      # http://127.0.0.1:8765
+dublin-bot tasty-health   # tastytrade auth, accounts, locks
+dublin-bot tasty-backtest # validate the credit spread rules on tastytrade data
+dublin-bot tasty-spreads  # one put credit spread sleeve cycle (paper)
+dublin-bot tasty-book     # open spreads + paper stats
 ```
 
 The dashboard binds only to localhost and refuses to start unless the safety
