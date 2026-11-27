@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # ── Binance Spot ───────────────────────────────────────
     binance_api_key: str = ""
     binance_api_secret: str = ""
+    binance_exchange_stop: bool = True  # place an exchange-side OCO stop/take-profit after each live entry
     binance_host: str = ""  # "binance.us" (default) | "binance.com" | full URL
 
     # ── Coinbase Advanced Trade ────────────────────────────

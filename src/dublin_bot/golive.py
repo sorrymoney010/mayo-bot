@@ -38,7 +38,11 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
         add("order style", FAIL if unsup else PASS,
             f"USE_BRACKET={settings.use_bracket}, ORDER_TYPE={settings.order_type} "
             + ("(Binance adapter has no bracket/limit support: set USE_BRACKET=false ORDER_TYPE=market)" if unsup
-               else "(market entries; stops are software-side, run under a supervisor)"))
+               else "(market entries)"))
+        add("exchange stop", PASS if settings.binance_exchange_stop else FAIL,
+            f"BINANCE_EXCHANGE_STOP={settings.binance_exchange_stop} "
+            f"(OCO stop {settings.stop_loss_pct:.1%} / take-profit {settings.take_profit_pct:.1%} placed after each entry; "
+            "if it cannot be placed the entry is sold straight back)")
     add("no leverage", PASS if settings.max_leverage <= 1.0 and settings.margin_exposure_fraction == 0 else FAIL,
         f"MAX_LEVERAGE={settings.max_leverage}, MARGIN_EXPOSURE_FRACTION={settings.margin_exposure_fraction}")
 

@@ -74,3 +74,9 @@ def test_bracket_or_limit_style_fails_for_binance(monkeypatch):
     monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
     assert by(preflight(S(use_bracket=True), FakeGw({"enableWithdrawals": False})))["order style"].status == FAIL
     assert by(preflight(S(order_type="limit"), FakeGw({"enableWithdrawals": False})))["order style"].status == FAIL
+
+
+def test_exchange_stop_disabled_fails(monkeypatch):
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    r = by(preflight(S(binance_exchange_stop=False), FakeGw({"enableWithdrawals": False})))
+    assert r["exchange stop"].status == FAIL

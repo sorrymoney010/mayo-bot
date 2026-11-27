@@ -75,6 +75,7 @@ class BinanceGateway:
         self._sleep_fn = sleep_fn or (lambda _s: None)
         self._ticker_cache: dict[str, dict] = {}
         self._step: dict[str, Decimal] = {}
+        self._tick: dict[str, Decimal] = {}
 
     # ── helpers ────────────────────────────────────────────
     def _public(self, path: str, params: dict | None = None) -> dict:
@@ -143,6 +144,7 @@ class BinanceGateway:
         step = Decimal(str(lot.get("stepSize", "1")))
         tick = Decimal(str(price_f.get("tickSize", "0.01")))
         self._step[pair] = step
+        self._tick[pair] = tick
         return SymbolMeta(
             key=pair,
             altname=pair,
@@ -350,10 +352,103 @@ class BinanceGateway:
         try:
             resp = self._signed("/api/v3/order", params, method="POST")
             self.audit.record(AuditEvent.ORDER_SUBMITTED, {"broker": "binance", "order_id": resp.get("orderId"), "side": "buy"})
-            return str(resp.get("orderId"))
         except BrokerError as exc:
             self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "error": str(exc)}, severity="error")
             raise
+        if getattr(self.settings, "binance_exchange_stop", True):
+            executed = Decimal(str(resp.get("executedQty", "0") or "0"))
+            quote = Decimal(str(resp.get("cummulativeQuoteQty", "0") or "0"))
+            if executed > 0 and quote > 0:
+                self._protect_or_flatten(pair, executed, quote / executed)
+        return str(resp.get("orderId"))
+
+    # ── exchange-resident protection (OCO: take-profit + stop-loss) ──────────
+    _OCO_PREFIX = "dublin-oco-"
+
+    def _filters(self, pair: str) -> tuple[Decimal, Decimal, Decimal]:
+        if pair not in self._step or pair not in self._tick:
+            self.resolve_symbol()
+        meta_min = Decimal("0")
+        try:
+            meta_min = self.resolve_symbol().order_min
+        except BrokerError:
+            pass
+        return self._step[pair], self._tick[pair], meta_min
+
+    @staticmethod
+    def _floor_to(value: Decimal, step: Decimal) -> Decimal:
+        return (value // step) * step
+
+    @staticmethod
+    def _fmt(value: Decimal, step: Decimal) -> str:
+        return format(value.quantize(Decimal(1).scaleb(-_decimals(step))), "f")
+
+    def _free(self, asset: str) -> Decimal:
+        acct = self._signed("/api/v3/account")
+        for b in acct.get("balances", []):
+            if b["asset"] == asset:
+                return Decimal(str(b["free"]))
+        return Decimal("0")
+
+    def _protect_or_flatten(self, pair: str, executed: Decimal, avg_price: Decimal) -> None:
+        """Place a take-profit/stop-loss OCO for the position just bought.
+
+        Invariant: after a live entry the bot either holds a position WITH a resting stop, or is
+        flat. If the stop cannot be placed the entry is sold straight back.
+        """
+        step, tick, min_qty = self._filters(pair)
+        base = self.resolve_symbol().base
+        qty = min(self._floor_to(executed, step), self._floor_to(self._free(base), step))
+        if qty <= 0 or qty < min_qty:
+            self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "stage": "protect",
+                              "error": f"filled quantity {qty} below minimum {min_qty}; nothing to protect"},
+                              severity="warning")
+            return
+        sl = Decimal(str(self.settings.stop_loss_pct))
+        tp = Decimal(str(self.settings.take_profit_pct))
+        stop = self._floor_to(avg_price * (1 - sl), tick)
+        stop_limit = self._floor_to(stop * Decimal("0.998"), tick)
+        take = self._floor_to(avg_price * (1 + tp), tick)
+        params = {
+            "symbol": pair, "side": "SELL", "quantity": self._fmt(qty, step),
+            "price": self._fmt(take, tick), "stopPrice": self._fmt(stop, tick),
+            "stopLimitPrice": self._fmt(stop_limit, tick), "stopLimitTimeInForce": "GTC",
+            "listClientOrderId": f"{self._OCO_PREFIX}{int(time.time())}",
+        }
+        try:
+            resp = self._signed("/api/v3/order/oco", params, method="POST")
+            self.audit.record(AuditEvent.ORDER_SUBMITTED, {
+                "broker": "binance", "side": "sell", "kind": "oco_protection",
+                "order_list_id": resp.get("orderListId") if isinstance(resp, dict) else None, **params})
+            return
+        except BrokerError as exc:
+            self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "stage": "protect",
+                              "error": str(exc)}, severity="error")
+            protect_err = exc
+        # Could not protect: flatten rather than hold an unprotected position.
+        try:
+            self._signed("/api/v3/order", {"symbol": pair, "side": "SELL", "type": "MARKET",
+                                           "quantity": self._fmt(qty, step)}, method="POST")
+        except BrokerError as exc2:
+            self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "stage": "flatten",
+                              "error": str(exc2)}, severity="critical")
+            raise BrokerError(
+                f"CRITICAL: position is UNPROTECTED and could not be flattened ({protect_err}; {exc2}). "
+                "Sell it manually on Binance.us now.") from exc2
+        raise BrokerError(f"protective stop could not be placed ({protect_err}); entry flattened")
+
+    def _cancel_protection(self, pair: str) -> int:
+        """Cancel our resting OCO lists for ``pair`` (lets the position be sold)."""
+        lists = self._signed("/api/v3/openOrderList")
+        n = 0
+        for lst in lists if isinstance(lists, list) else []:
+            if lst.get("symbol") == pair and str(lst.get("listClientOrderId", "")).startswith(self._OCO_PREFIX):
+                self._signed("/api/v3/orderList", {"symbol": pair, "orderListId": lst["orderListId"]},
+                             method="DELETE")
+                self.audit.record(AuditEvent.ORDER_CANCELLED, {"broker": "binance",
+                                  "order_list_id": lst["orderListId"]})
+                n += 1
+        return n
 
     def close_position(self, *, userref: int | None = None, quantity: float | None = None,
                        signal_price: float | None = None) -> str:
@@ -361,21 +456,14 @@ class BinanceGateway:
         if not self.order_submission_enabled:
             self.audit.record(AuditEvent.ORDER_INTENT, {"broker": "binance", "side": "sell", "userref": userref})
             return f"binance-dry-sell-{userref}"
-        params = {"symbol": pair, "side": "SELL", "type": "MARKET"}
-        if quantity is not None:
-            params["quantity"] = f"{quantity:.8f}"
-        else:
-            # Sell entire base balance.
-            bal = self._signed("/api/v3/account")
-            meta = self.resolve_symbol()
-            qty = 0.0
-            for b in bal.get("balances", []):
-                if b["asset"] == meta.base:
-                    qty = float(b["free"])
-            if qty <= 0:
-                return "binance-no-position"
-            params["quantity"] = f"{qty:.8f}"
-        params = {k: v for k, v in params.items() if v is not None}
+        step, _tick, min_qty = self._filters(pair)
+        base = self.resolve_symbol().base
+        self._cancel_protection(pair)          # frees the locked quantity; errors propagate (stay protected)
+        free = self._floor_to(self._free(base), step)
+        qty = free if quantity is None else min(self._floor_to(Decimal(str(quantity)), step), free)
+        if qty <= 0 or qty < min_qty:
+            return "binance-no-position"       # already closed (e.g. the stop/take-profit filled)
+        params = {"symbol": pair, "side": "SELL", "type": "MARKET", "quantity": self._fmt(qty, step)}
         try:
             resp = self._signed("/api/v3/order", params, method="POST")
             self.audit.record(AuditEvent.ORDER_SUBMITTED, {"broker": "binance", "order_id": resp.get("orderId"), "side": "sell"})
@@ -431,7 +519,7 @@ class BinanceGateway:
         client_id = f"dublin-{userref}"
         try:
             orders = self._signed("/api/v3/openOrders", {"symbol": pair})
-            cancelled = 0
+            cancelled = self._cancel_protection(pair)
             for o in orders:
                 if o.get("clientOrderId") == client_id:
                     self.cancel_order(str(o["orderId"]))
