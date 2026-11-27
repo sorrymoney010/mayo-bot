@@ -7,11 +7,17 @@ cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 [ -f .env.binance.example ] || { echo "Run from the mayo-bot repo on branch claude/amazing-franklin-2m57m8"; exit 1; }
 
-if [ -f .env ]; then
+SKIP_ENV=0
+if [ -f .env ] && grep -q '^BROKER=binance' .env && ! grep -q 'PASTE_' .env; then
+  read -r -p ".env already has Binance keys. Keep it and just run install + preflight? [Y/n] " A
+  case "${A:-Y}" in [Nn]*) ;; *) SKIP_ENV=1 ;; esac
+fi
+if [ "$SKIP_ENV" = 0 ] && [ -f .env ]; then
   cp .env ".env.backup.$(date +%Y%m%d%H%M%S)"
   echo "Existing .env backed up."
 fi
 
+if [ "$SKIP_ENV" = 0 ]; then
 read -r -s -p "Binance.us API key (hidden): " KEY; echo
 read -r -s -p "Binance.us API secret (hidden): " SECRET; echo
 [ -n "$KEY" ] && [ -n "$SECRET" ] || { echo "Key and secret are both required."; exit 1; }
@@ -31,11 +37,30 @@ PY
 chmod 600 .env
 unset KEY SECRET
 echo ".env written (locks ON: PAPER_TRADING=true DRY_RUN=true ALLOW_LIVE_TRADING=false)."
+fi
 
-[ -d .venv ] || python3 -m venv .venv
+# Need Python >= 3.11 (macOS system python3 is 3.9 and cannot install this project).
+PY=""
+for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3 /usr/local/bin/python3 python3; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
+    PY="$(command -v "$c")"; break
+  fi
+done
+if [ -z "$PY" ]; then
+  echo "No Python 3.11+ found. Install one, then re-run this script:  brew install python@3.12"
+  echo "(Your .env is already written; nothing else was changed.)"
+  exit 1
+fi
+echo "Using $PY ($("$PY" --version))"
+# Recreate the venv if it was built with an old Python.
+if [ -d .venv ] && ! .venv/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
+  rm -rf .venv
+fi
+[ -d .venv ] || "$PY" -m venv .venv
 # shellcheck disable=SC1091
 source .venv/bin/activate
-pip install -q -e . 
+python -m pip install -q --upgrade pip
+pip install -q -e .
 echo
 echo "=== golive-check (places no orders) ==="
 set +e
