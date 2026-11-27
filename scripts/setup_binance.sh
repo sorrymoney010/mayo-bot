@@ -12,6 +12,28 @@ if [ -f .env ] && grep -q '^BROKER=binance' .env && ! grep -q 'PASTE_' .env; the
   read -r -p ".env already has Binance keys. Keep it and just run install + preflight? [Y/n] " A
   case "${A:-Y}" in [Nn]*) ;; *) SKIP_ENV=1 ;; esac
 fi
+if [ "$SKIP_ENV" = 1 ]; then
+  cp .env ".env.backup.$(date +%Y%m%d%H%M%S)"
+  python3 - <<'PY'
+import re
+old = {}
+for line in open(".env"):
+    m = re.match(r"^([A-Z_]+)=(.*)$", line.strip())
+    if m:
+        old[m.group(1)] = m.group(2)
+keep = ("BINANCE_API_KEY", "BINANCE_API_SECRET", "BINANCE_QUOTE", "PAPER_TRADING", "DRY_RUN",
+        "ALLOW_LIVE_TRADING", "LIVE_RISK_ACKNOWLEDGEMENT")
+out = []
+for line in open(".env.binance.example"):
+    m = re.match(r"^([A-Z_]+)=(.*)$", line.rstrip("\n"))
+    if m and m.group(1) in keep and m.group(1) in old:
+        line = f"{m.group(1)}={old[m.group(1)]}\n"
+    out.append(line)
+open(".env", "w").writelines(out)
+PY
+  chmod 600 .env
+  echo ".env refreshed from the template (kept: keys, BINANCE_QUOTE, live flags)."
+fi
 if [ "$SKIP_ENV" = 0 ] && [ -f .env ]; then
   cp .env ".env.backup.$(date +%Y%m%d%H%M%S)"
   echo "Existing .env backed up."
