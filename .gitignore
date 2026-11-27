@@ -42,3 +42,10 @@ data/*.log
 data/ticks/
 data/quotes/
 data/bars1m/
+
+# env backups (contain secrets) and local log backups
+.env.*
+!.env.example
+!.env.test
+!.env.binance.example
+logs-*-backup*/
