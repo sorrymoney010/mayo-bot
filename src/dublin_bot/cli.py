@@ -23,6 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
             "recover",      # resolve pending order intents after a crash
             "audit-verify", # verify the audit hash chain
             "safety-report",# full pre-live safety report
+            "golive-check", # read-only Binance live preflight (places no orders)
             "dashboard",
         ],
     )
@@ -111,6 +112,7 @@ def main() -> int:
         "recover": recover,
         "audit-verify": audit_verify,
         "safety-report": safety_report,
+        "golive-check": lambda st: __import__("dublin_bot.golive", fromlist=["run"]).run(st),
         "dashboard": serve_dashboard,
     }
     if args.command in handlers:
