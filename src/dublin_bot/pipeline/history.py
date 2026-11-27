@@ -5,6 +5,7 @@ Used by ``scripts/backtest_walkforward.py --source pipeline`` and
 order-flow columns) the live strategies receive from ``pipeline.source``.
 """
 from __future__ import annotations
+from ..timeutil import epoch_seconds
 
 import time
 from pathlib import Path
@@ -31,7 +32,7 @@ def load_pipeline_bars(data_dir: Path | str, symbol: str, tf_minutes: int, *,
     info = {"symbol": sym, "tf": tf_minutes, "bars_total": int(len(bars))}
     if not len(bars):
         return pd.DataFrame(), info | {"bars": 0}
-    sec = bars.index.asi8 // 10**9
+    sec = epoch_seconds(bars.index)
     breaks = np.nonzero(np.diff(sec) != tf_minutes * 60)[0]
     info["holes"] = int(len(breaks))
     if len(breaks):

@@ -12,6 +12,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from dublin_bot.timeutil import epoch_seconds
 import pytest
 
 from dublin_bot.pipeline import SYMBOLS, canonical, fs_key
@@ -126,7 +128,7 @@ def test_resample_only_emits_fully_covered_closed_bars():
     runs = coverage_runs([summarize(ticks, "d")])
     # stream starts 30 s before T0 -> the 15m bar opening at T0 is covered.
     bars = resample(m1, 15, runs, now=T0 + 3600 + 600)
-    assert list(bars.index.asi8 // 10**9) == [T0, T0 + 900, T0 + 1800]  # last bar ends after the final trade
+    assert list(epoch_seconds(bars.index)) == [T0, T0 + 900, T0 + 1800]  # last bar ends after the final trade
     assert bars["trades"].tolist() == [60, 60, 60]
     assert bars.iloc[0].open == m1.loc[pd.Timestamp(T0, unit="s", tz="UTC")].open
     # "now" inside the second bar -> it is still forming -> not emitted
@@ -140,7 +142,7 @@ def test_bar_over_an_id_hole_is_dropped_and_runs_link_across_days():
     runs = coverage_runs([summarize(ticks, "d")])
     assert len(runs) == 2
     bars = resample(m1, 15, runs, now=T0 + 7200)
-    opens = list(bars.index.asi8 // 10**9)
+    opens = list(epoch_seconds(bars.index))
     assert T0 + 900 not in opens          # the hole is at minute 20 -> 15m bar #2 dropped
     assert T0 in opens
     # day summaries with consecutive ids form one run

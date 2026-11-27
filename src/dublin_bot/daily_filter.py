@@ -13,6 +13,7 @@ Values are cached per symbol and refreshed once the UTC day rolls over (or
 after ``ttl`` seconds), so the 5-minute loop does not re-download.
 """
 from __future__ import annotations
+from .timeutil import epoch_seconds
 
 import math
 import threading
@@ -77,7 +78,7 @@ def bar_open_times(d: pd.DataFrame) -> np.ndarray | None:
         return pd.to_numeric(d["time"], errors="coerce").to_numpy(float)
     if isinstance(d.index, pd.DatetimeIndex):
         idx = d.index if d.index.tz is not None else d.index.tz_localize("UTC")
-        return (idx.asi8 // 10**9).astype(float)
+        return epoch_seconds(idx).astype(float)
     return None
 
 

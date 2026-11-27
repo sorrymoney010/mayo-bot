@@ -18,6 +18,7 @@ trades) plus the microstructure columns (NaN on REST-only bars) and ``src``
 (``ticks`` | ``ohlc``). ``frame.attrs["pipeline"]`` describes what happened.
 """
 from __future__ import annotations
+from ..timeutil import epoch_seconds
 
 import threading
 import time
@@ -137,7 +138,7 @@ class PipelineBarSource:
 def _contiguous_tail(bars: pd.DataFrame, tfs: int) -> pd.DataFrame:
     if not len(bars):
         return bars
-    sec = bars.index.asi8 // 10**9
+    sec = epoch_seconds(bars.index)
     breaks = np.nonzero(np.diff(sec) != tfs)[0]
     return bars.iloc[breaks[-1] + 1:] if len(breaks) else bars
 

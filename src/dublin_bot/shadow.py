@@ -12,6 +12,7 @@ hypothetical trade has exited (or it is marked ``no_fill`` / ``not_reproduced``
 Paper telemetry only: this never places, sizes or blocks anything.
 """
 from __future__ import annotations
+from .timeutil import series_epoch_seconds
 
 import json
 import time
@@ -121,7 +122,7 @@ def score_one(bars: pd.DataFrame | None, spec: Spec, t0: int, tf: int, costs: Co
     d = bars.copy()
     if "time" not in d:
         d = d.reset_index(names="ts")
-        d["time"] = (pd.to_datetime(d["ts"], utc=True).astype("int64") // 10**9).astype(int)
+        d["time"] = series_epoch_seconds(d["ts"]).astype(int)
     d = d.sort_values("time").reset_index(drop=True)
     hits = d.index[d["time"].astype(int) == int(t0)]
     if not len(hits):
