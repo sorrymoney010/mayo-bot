@@ -14,7 +14,7 @@ def test_binance_template_is_the_researched_config_and_locked():
     assert s.meanrev_sleeve_enabled is False and s.trendhold_sleeve_enabled is False
     assert (s.stop_loss_pct, s.take_profit_pct) == (0.05, 0.25)                 # tested exits
     assert s.use_bracket is False and s.order_type == "market" and s.binance_exchange_stop is True
-    assert s.strategy_equity_usd == 25.0 and s.max_orders_per_day == 3 and s.max_leverage == 1.0
+    assert s.strategy_equity_usd == 20.0 and s.max_orders_per_day == 3 and s.max_leverage == 1.0
     assert paper_live_choice_ok(s)[0] is True
     # shipped locked: nothing can trade live until the operator flips all four flags
     assert s.safety_locked is True

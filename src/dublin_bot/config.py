@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     # are NOT loosened — only the data resolution and polling speed change.
     # Applied at startup by TradingEngine._apply_performance_profile().
     day_trade_mode: bool = False
-    strategy_equity_usd: float = Field(default=25.0, ge=25.0)
+    strategy_equity_usd: float = Field(default=25.0, ge=20.0)
     # Auto-scale risk per trade based on session win/loss streak. The base risk
     # (risk_per_trade) is multiplied by this factor, which the engine moves
     # between min_risk_scale and max_risk_scale as the bot wins/loses — so a

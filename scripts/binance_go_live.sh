@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Switch the Binance.us bot to LIVE ($25 first run). Run from the repo root:  bash scripts/binance_go_live.sh
+# Switch the Binance.us bot to LIVE (small first run). Run from the repo root:  bash scripts/binance_go_live.sh
 # Refuses unless the preflight has no FAIL, asks you to type a confirmation, then flips the four live
 # flags in .env and runs ONE cycle. Undo any time with: bash scripts/binance_stop_live.sh
 set -euo pipefail
@@ -28,8 +28,10 @@ print("  REAL MONEY will be used. Expect small, infrequent trades (~35/yr per th
 print("  edge is modest and unproven live. You can lose the $25.")
 PY
 echo
-read -r -p 'Type exactly  GO LIVE $25  to continue (anything else cancels): ' ANSWER
-[ "$ANSWER" = 'GO LIVE $25' ] || { echo "Cancelled. Nothing changed."; exit 0; }
+BUDGET="$(python -c 'from dublin_bot.config import Settings; print(f"{Settings().strategy_equity_usd:g}")')"
+PHRASE="GO LIVE \$$BUDGET"
+read -r -p "Type exactly  $PHRASE  to continue (anything else cancels): " ANSWER
+[ "$ANSWER" = "$PHRASE" ] || { echo "Cancelled. Nothing changed."; exit 0; }
 
 echo; echo "=== 3/4 enabling live flags ==="
 cp .env ".env.backup.$(date +%Y%m%d%H%M%S)"
