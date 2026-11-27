@@ -26,3 +26,12 @@ CSV: `timestamp,open,high,low,close,volume`, 1-minute bars (UTC if naive).
 
 Synthetic data (`--synthetic-days`) is a random walk: it has no edge by construction and
 exists only to test plumbing. No result here implies a profitable strategy.
+
+## Strategies (pluggable)
+- `orb` momentum breakout (above). `meanrev` fades |z|>=2.2 stretches from VWAP after a
+  reversal bar, target = VWAP, stop = 3x ATR (<=12 pts), skips trend days, max 2 trades/day.
+
+## Comparing
+    arc-bot --regimes --synthetic-days 250      # walk / revert / trend synthetic regimes
+    arc-bot --csv mes_1m.csv --strategy compare # in-sample vs OUT-OF-SAMPLE, both strategies
+Judge only the OUT-OF-SAMPLE block on real data.

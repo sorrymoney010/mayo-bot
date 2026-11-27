@@ -56,3 +56,19 @@ def test_backtest_runs_and_respects_limits():
 def test_monte_carlo_shape():
     out = monte_carlo_pass([150, -100, 200, -80, 120] * 6, n=300)
     assert 0 <= out["p_pass"] <= 1 and 0 <= out["p_blow"] <= 1
+
+
+def test_meanrev_runs_and_respects_limits():
+    from arc_bot.strategy import MRParams
+    res = run(synthetic(80, seed=5, mode="revert"), MES, MRParams())
+    assert all(t.qty <= 60 for t in res.trades)
+    assert all(d > -1500 for d in res.day_pnls)
+
+
+def test_regime_sensitivity_directionally_sane():
+    from arc_bot.strategy import MRParams, ORBParams
+    rev = synthetic(200, seed=11, mode="revert")
+    tre = synthetic(200, seed=11, mode="trend")
+    mr_rev = stats(run(rev, MES, MRParams()))["net"]
+    mr_tre = stats(run(tre, MES, MRParams()))["net"]
+    assert mr_rev > mr_tre   # fading works better when price actually reverts

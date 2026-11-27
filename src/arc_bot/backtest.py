@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from .rules import Instrument, PropGuard, PropRules
-from .strategy import ORBParams, vwap
+from .strategy import ORBParams
 
 
 @dataclass
@@ -34,9 +34,10 @@ def _hm(s: str) -> tuple[int, int]:
     return int(h), int(m)
 
 
-def run(bars: pd.DataFrame, inst: Instrument, p: ORBParams = ORBParams(),
+def run(bars: pd.DataFrame, inst: Instrument, p=ORBParams(),
         rules: PropRules = PropRules(), slippage_ticks: float = 1.0,
         stop_on_pass: bool = False) -> Result:
+    """Run any strategy object (ORBParams / MRParams) under PropGuard."""
     guard = PropGuard(rules)
     res = Result(guard=guard)
     slip = slippage_ticks * inst.tick
@@ -51,69 +52,56 @@ def run(bars: pd.DataFrame, inst: Instrument, p: ORBParams = ORBParams(),
         day = str(g.index[0].date())
         avg_rng = float(np.mean(daily_ranges[-10:])) if len(daily_ranges) >= 5 else None
         daily_ranges.append(float(g["high"].max() - g["low"].min()))
-        orb = g.iloc[: p.or_minutes]
-        rest = g.iloc[p.or_minutes:]
-        if len(orb) < p.or_minutes or avg_rng is None:
+        ctx = p.start_day(g, avg_rng)
+        if ctx is None:
             guard.end_day(); continue
-        hi, lo = float(orb["high"].max()), float(orb["low"].min())
-        rng = hi - lo
-        if not (p.min_range_frac <= rng / avg_rng <= p.max_range_frac):
-            guard.end_day(); continue
-        vw = vwap(g)
-        mid = (hi + lo) / 2
-        pos = None  # dict(side, entry, stop, target, qty, risk_pts)
+        rest = g.iloc[ctx["start"]:]
+        pos = None
         trades_today = 0
-        pending = 0  # side to enter at next bar open
-        for i, (ts, b) in enumerate(rest.iterrows()):
+        pending = 0
+        for ts, b in rest.iterrows():
             t = (ts.hour, ts.minute)
             if pending and pos is None:
                 side = pending; pending = 0
                 entry = b["open"] + side * slip
-                stop = mid if p.stop_mode == "mid" else (lo if side > 0 else hi)
+                stop, target = p.levels(side, entry, ctx)
                 risk_pts = abs(entry - stop)
                 budget = guard.max_risk_now(p.risk_per_trade)
-                if 0 < risk_pts <= p.max_stop_pts and budget > 0:
+                if 1e-6 < risk_pts <= p.max_stop_pts and budget > 0:
                     qty = int(budget // (risk_pts * inst.point_value))
                     if guard.contracts_ok(qty):
                         pos = dict(side=side, entry=entry, stop=stop, qty=qty, risk=risk_pts,
-                                   target=entry + side * p.target_r * risk_pts, be=False)
+                                   target=target, be=False)
                         trades_today += 1
             if pos:
-                s = pos["side"]
-                adverse = b["low"] if s > 0 else b["high"]
-                fav = b["high"] if s > 0 else b["low"]
-                open_pnl = (adverse - pos["entry"]) * s * pos["qty"] * inst.point_value
-                guard.mark_equity(open_pnl)
+                s_ = pos["side"]
+                adverse = b["low"] if s_ > 0 else b["high"]
+                fav = b["high"] if s_ > 0 else b["low"]
+                guard.mark_equity((adverse - pos["entry"]) * s_ * pos["qty"] * inst.point_value)
                 exit_px, reason = None, ""
                 if guard.blown:
                     exit_px, reason = adverse, "BLOWN"
-                elif (adverse - pos["stop"]) * s <= 0:
-                    exit_px, reason = pos["stop"] - s * slip, "stop"   # stop first (conservative)
-                elif (fav - pos["target"]) * s >= 0:
+                elif (adverse - pos["stop"]) * s_ <= 0:
+                    exit_px, reason = pos["stop"] - s_ * slip, "stop"   # stop first (conservative)
+                elif (fav - pos["target"]) * s_ >= 0:
                     exit_px, reason = pos["target"], "target"
                 elif t >= (fh, fm):
-                    exit_px, reason = b["close"] - s * slip, "eod"
+                    exit_px, reason = b["close"] - s_ * slip, "eod"
                 if exit_px is None and p.be_after_r and not pos["be"] \
-                        and (fav - pos["entry"]) * s >= p.be_after_r * pos["risk"]:
+                        and (fav - pos["entry"]) * s_ >= p.be_after_r * pos["risk"]:
                     pos["stop"], pos["be"] = pos["entry"], True
                 if exit_px is not None:
-                    gross = (exit_px - pos["entry"]) * s * pos["qty"] * inst.point_value
+                    gross = (exit_px - pos["entry"]) * s_ * pos["qty"] * inst.point_value
                     pnl = gross - 2 * inst.fee_per_side * pos["qty"]
                     guard.realize(pnl)
-                    res.trades.append(Trade(day, s, pos["entry"], exit_px, pos["qty"], pnl, reason))
+                    res.trades.append(Trade(day, s_, pos["entry"], exit_px, pos["qty"], pnl, reason))
                     pos = None
                     if guard.blown:
                         break
                 continue
-            # flat: look for signal on bar close
-            if (trades_today < p.max_trades_per_day and guard.can_trade() and t < (ch, cm)):
-                c = b["close"]
-                v = vw.loc[ts]
-                if c > hi + p.entry_buffer_pts and (not p.use_vwap_filter or c > v):
-                    pending = 1
-                elif c < lo - p.entry_buffer_pts and (not p.use_vwap_filter or c < v):
-                    pending = -1
-        if pos:  # safety: data ended before flatten
+            if trades_today < p.max_trades_per_day and guard.can_trade() and t < (ch, cm):
+                pending = p.signal(0, ts, b, ctx, g)
+        if pos:
             last = rest.iloc[-1]["close"]
             pnl = (last - pos["entry"]) * pos["side"] * pos["qty"] * inst.point_value \
                 - 2 * inst.fee_per_side * pos["qty"]

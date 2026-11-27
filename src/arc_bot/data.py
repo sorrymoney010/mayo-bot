@@ -24,8 +24,12 @@ def rth(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def synthetic(days: int = 120, seed: int = 7, start_price: float = 5000.0,
-              trend_day_prob: float = 0.25) -> pd.DataFrame:
-    """Random-walk 1m RTH bars; a fraction of days get an intraday drift (trend days)."""
+              trend_day_prob: float = 0.25, mode: str = "walk") -> pd.DataFrame:
+    """Synthetic 1m RTH bars. mode: walk (random walk + some trend days),
+    revert (price pulled back to a slow anchor: mean-reverting regime),
+    trend (most days drift hard). For plumbing/regime-sensitivity tests only."""
+    if mode == "trend":
+        trend_day_prob = 0.8
     rng = np.random.default_rng(seed)
     idx_days = pd.bdate_range("2024-01-02", periods=days, tz=TZ)
     frames, px = [], start_price
@@ -36,8 +40,14 @@ def synthetic(days: int = 120, seed: int = 7, start_price: float = 5000.0,
         drift = 0.0
         if rng.random() < trend_day_prob:
             drift = rng.choice([-1, 1]) * 0.05
-        rets = rng.normal(drift, vol)
-        close = px + np.cumsum(rets)
+        if mode == "revert":
+            dev, close = 0.0, np.empty(390)
+            for k in range(390):   # Ornstein-Uhlenbeck around the day's opening anchor
+                dev += -0.04 * dev + rng.normal(0, vol[k])
+                close[k] = px + dev
+        else:
+            rets = rng.normal(drift, vol)
+            close = px + np.cumsum(rets)
         open_ = np.concatenate([[px], close[:-1]])
         hi = np.maximum(open_, close) + np.abs(rng.normal(0, vol * 0.4))
         lo = np.minimum(open_, close) - np.abs(rng.normal(0, vol * 0.4))
