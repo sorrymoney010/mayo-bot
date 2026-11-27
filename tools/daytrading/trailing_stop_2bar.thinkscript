@@ -1,0 +1,42 @@
+# 2-bar trailing stop strategy for ThinkorSwim (long only).
+# Entry: 50 SMA crosses above 200 SMA. Initial stop = lowest low of the N bars before entry.
+# Trail: on a new N-bar high, stop = max(stop, lowest low of the last N bars). Never moves down.
+# Exit when price trades through the stop.
+
+input enabled  = yes;
+input lookback = 2;
+
+def fast = Average(close, 50);
+def slow = Average(close, 200);
+def entrySig = enabled and Crosses(fast, slow, CrossingDirection.ABOVE);
+
+rec pos = if IsNaN(pos[1]) then 0
+          else if pos[1] == 0 and entrySig then 1
+          else if pos[1] == 1 and low <= stop[1] then 0
+          else pos[1];
+
+def newHigh = high > Highest(high[1], lookback);
+def ll = Lowest(low, lookback);
+
+rec stop = if IsNaN(stop[1]) or pos[1] == 0 then (if entrySig then Lowest(low, lookback) else Double.NaN)
+           else if low <= stop[1] then Double.NaN
+           else if newHigh then Max(stop[1], ll)
+           else stop[1];
+
+rec trailedFlag = if pos == 0 then 0
+                  else if pos[1] == 0 then 0
+                  else if stop > stop[1] then 1
+                  else trailedFlag[1];
+
+plot StopLine = stop;
+StopLine.AssignValueColor(if trailedFlag then Color.GREEN else Color.RED);
+StopLine.SetLineWeight(2);
+
+def entered = pos == 1 and pos[1] == 0;
+def exited  = pos == 0 and pos[1] == 1;
+AddChartBubble(entered, low, "Entry", Color.GREEN, no);
+AddChartBubble(exited, high, "Exit", Color.RED, yes);
+AddLabel(pos == 1, "Stop: " + Round(stop, 2), if trailedFlag then Color.GREEN else Color.RED);
+
+AddOrder(OrderType.BUY_AUTO, entrySig and pos[1] == 0, open[-1], 100, Color.GREEN, Color.GREEN, "Buy");
+AddOrder(OrderType.SELL_TO_CLOSE, pos[1] == 1 and low <= stop[1], Min(open, stop[1]), 100, Color.RED, Color.RED, "Stop");

@@ -1,0 +1,49 @@
+# ORB 30-minute breakout alert for ThinkorSwim (works on 1m / 5m / 15m intraday charts).
+# ALL must be true on the bar:
+#  1. Close above the opening-range high (first 30 min: 9:30-10:00 Eastern)
+#  2. Bar volume >= volMult x the AVERAGE bar volume of the opening range
+#  3. Close above VWAP
+#  4. Before 11:30 (first 2 hours of the session)
+# Chart time zone should be US Eastern (ThinkorSwim default).
+
+input orStart  = 0930;
+input orEnd    = 1000;
+input cutoff   = 1130;
+input volMult  = 1.5;
+input topHalfOnly = yes;     # require the breakout bar to close in the top 50% of its range
+
+def newDay = GetDay() != GetDay()[1];
+def inOR   = SecondsFromTime(orStart) >= 0 and SecondsTillTime(orEnd) > 0;
+def inWin  = SecondsFromTime(orEnd) >= 0 and SecondsTillTime(cutoff) > 0;
+
+# Opening-range high / volume sum / bar count, reset each day.
+rec orHighR = if newDay then (if inOR then high else Double.NaN)
+              else if inOR then (if IsNaN(orHighR[1]) then high else Max(orHighR[1], high))
+              else orHighR[1];
+rec volSum  = if newDay then (if inOR then volume else 0)
+              else if inOR then volSum[1] + volume
+              else volSum[1];
+rec barCnt  = if newDay then (if inOR then 1 else 0)
+              else if inOR then barCnt[1] + 1
+              else barCnt[1];
+def orAvgVol = if barCnt > 0 then volSum / barCnt else Double.NaN;
+
+def vw = reference VWAP();
+def rng = high - low;
+def strongClose = rng > 0 and close >= low + rng * 0.5;
+
+def c1 = !IsNaN(orHighR) and close > orHighR;
+def c2 = !IsNaN(orAvgVol) and volume >= volMult * orAvgVol;
+def c3 = close > vw;
+def c4 = inWin;
+def c5 = !topHalfOnly or strongClose;
+def signal = c1 and c2 and c3 and c4 and c5;
+
+plot ORHigh = if inOR or inWin then orHighR else Double.NaN;
+ORHigh.SetDefaultColor(Color.ORANGE);
+ORHigh.SetLineWeight(2);
+
+AddChartBubble(signal, high, "ORB", Color.GREEN, yes);
+AddLabel(signal, "ORB BREAKOUT: all conditions met", Color.GREEN);
+AssignBackgroundColor(if signal then Color.DARK_GREEN else Color.CURRENT);
+Alert(signal, "ORB Breakout " + GetSymbol() + " @ " + close, Alert.BAR, Sound.Ding);

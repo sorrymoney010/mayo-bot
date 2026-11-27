@@ -1,0 +1,73 @@
+//@version=5
+indicator("ORB 30m Breakout Alert", overlay=true, max_labels_count=500)
+
+// ─────────────────────────────────────────────────────────────
+// Opening Range Breakout alert.  ALL conditions must be true:
+//  1. Close breaks above the 30-minute opening-range high (9:30-10:00 New York time)
+//  2. Bar volume >= 1.5x the AVERAGE bar volume of the opening range
+//  3. Close is above the session VWAP
+//  4. Bar is before 11:30 (first 2 hours of the regular session)
+//  5. (refinement) the breakout bar closes in the top 50% of its own range
+// Use on intraday charts (1m / 5m / 15m). Times use the exchange zone America/New_York (handles DST).
+// ─────────────────────────────────────────────────────────────
+
+// ── Inputs ──
+volMult      = input.float(1.5, "Min volume vs opening-range avg (x)", minval=0.1, step=0.1)
+cutoffHHMM   = input.string("1130", "No signals at/after (HHMM, NY)")
+topHalfOnly  = input.bool(true, "Require close in top 50% of bar range")
+topFrac      = input.float(0.5, "Top-of-range fraction", minval=0.0, maxval=1.0, step=0.05)
+firstOnly    = input.bool(false, "Only the first signal each day")
+
+tz = "America/New_York"
+
+// ── Session windows ──
+inOR      = not na(time(timeframe.period, "0930-1000", tz))                       // opening range bars
+inWindow  = not na(time(timeframe.period, "1000-" + cutoffHHMM, tz))             // after OR, before cutoff
+newDay    = ta.change(dayofmonth(time, tz)) != 0
+
+// ── Build the opening range (resets every new day) ──
+var float orHigh   = na
+var float orLow    = na
+var float orVolSum = 0.0
+var int   orBars   = 0
+var bool  fired    = false
+
+if newDay
+    orHigh := na
+    orLow := na
+    orVolSum := 0.0
+    orBars := 0
+    fired := false
+
+if inOR
+    orHigh := na(orHigh) ? high : math.max(orHigh, high)
+    orLow := na(orLow) ? low : math.min(orLow, low)
+    orVolSum += nz(volume)
+    orBars += 1
+
+orAvgVol = orBars > 0 ? orVolSum / orBars : na
+
+// ── Conditions ──
+vwapVal   = ta.vwap(hlc3)                                       // anchored to the session start
+barRange  = high - low
+strongClose = barRange > 0 and close >= low + barRange * (1.0 - topFrac)
+
+c1 = not na(orHigh) and close > orHigh
+c2 = not na(orAvgVol) and volume >= volMult * orAvgVol
+c3 = close > vwapVal
+c4 = inWindow
+c5 = not topHalfOnly or strongClose
+raw    = c1 and c2 and c3 and c4 and c5 and not inOR and barstate.isconfirmed
+signal = raw and (not firstOnly or not fired)
+if signal
+    fired := true
+
+// ── Visuals ──
+plot(not na(orHigh) and (inOR or inWindow) ? orHigh : na, "OR High", color=color.orange, linewidth=2, style=plot.style_linebr)
+plot(ta.vwap(hlc3), "VWAP", color=color.new(color.blue, 30))
+plotshape(signal, "ORB Breakout", shape.triangleup, location.abovebar, color.green, size=size.small)
+bgcolor(signal ? color.new(color.green, 85) : na)
+
+// ── Alert (create it with "Once Per Bar Close") ──
+alertcondition(signal, title="ORB Breakout",
+     message="ORB Breakout: {{ticker}} | Price {{close}} | Time {{time}}")
