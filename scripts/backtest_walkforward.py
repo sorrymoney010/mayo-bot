@@ -45,6 +45,7 @@ from dublin_bot.backtest_core import (  # noqa: E402
 DATA = ROOT / "data"
 CACHE_DIR = DATA        # --cache-dir overrides
 PREFIX = "kraken_"      # --prefix overrides ("" for data/binance_us/BTCUSD_60m.csv)
+MAX_GAP_BARS = 6        # a longer gap truncates history to the last contiguous run (--max-gap-bars)
 SYMBOLS = ["BTC/USD", "ETH/USD", "SOL/USD"]  # pipeline universe (3 coins only)
 
 
@@ -65,7 +66,7 @@ def load(symbol: str, tf: int) -> tuple[pd.DataFrame, str]:
           .sort_values("time").reset_index(drop=True))
     # Keep only the most recent CONTIGUOUS run (a gap > 6 bars would corrupt
     # indicators / fake a breakout), e.g. an unfinished trades backfill.
-    gaps = df["time"].diff().fillna(tf * 60) > tf * 60 * 6
+    gaps = df["time"].diff().fillna(tf * 60) > tf * 60 * MAX_GAP_BARS
     if gaps.any():
         last_gap = int(gaps[gaps].index[-1])
         df = df.iloc[last_gap:].reset_index(drop=True)
@@ -94,11 +95,13 @@ def main() -> None:
     ap.add_argument("--equity", type=float, default=500.0)
     ap.add_argument("--out", default=str(DATA / "walkforward_results.json"))
     ap.add_argument("--source", choices=["cache", "pipeline"], default="cache")
+    ap.add_argument("--max-gap-bars", type=int, default=6, help="tolerated gap (bars) before history is truncated")
     ap.add_argument("--cache-dir", default=None, help="folder of OHLC CSVs for --source cache")
     ap.add_argument("--prefix", default="kraken_", help="CSV filename prefix (\"\" for Binance files)")
     ap.add_argument("--data-dir", default=str(DATA), help="tick store root for --source pipeline")
     a = ap.parse_args()
-    global CACHE_DIR, PREFIX
+    global CACHE_DIR, PREFIX, MAX_GAP_BARS
+    MAX_GAP_BARS = a.max_gap_bars
     if a.cache_dir:
         CACHE_DIR = Path(a.cache_dir)
     PREFIX = a.prefix
