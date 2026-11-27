@@ -112,11 +112,15 @@ class BinanceGateway:
         except requests.RequestException as exc:
             raise BrokerError(f"Binance signed {method} {path} failed: {exc}") from exc
 
-    @staticmethod
-    def _to_binance(symbol: str) -> str:
-        """'BTC/USD' -> 'BTCUSDT'."""
+    @property
+    def _quote(self) -> str:
+        q = (getattr(self.settings, "binance_quote", "USDT") or "USDT").upper()
+        return q if q in ("USDT", "USD", "USDC") else "USDT"
+
+    def _to_binance(self, symbol: str) -> str:
+        """'BTC/USD' -> 'BTC' + the configured quote (BINANCE_QUOTE: USDT default, or USD / USDC)."""
         base, _, quote = symbol.partition("/")
-        quote = "USDT" if quote.upper() in ("USD", "USDT", "USDC") else quote.upper()
+        quote = self._quote if quote.upper() in ("USD", "USDT", "USDC") else quote.upper()
         return f"{base.upper()}{quote}"
 
     @staticmethod
@@ -235,7 +239,7 @@ class BinanceGateway:
             qty = free + locked
             if qty <= 0 or asset in ("USDT", "USDC", "USD"):
                 continue
-            pair = f"{asset}USDT"
+            pair = f"{asset}{self._quote}"
             if pair in price_map:
                 usdt += qty * price_map[pair]
         return round(usdt, 2)
@@ -275,7 +279,7 @@ class BinanceGateway:
             qty = free + locked
             if qty <= 0 or asset in ("USDT", "USDC", "USD") or asset in self._FEE_ASSETS:
                 continue
-            pair = f"{asset}USDT"
+            pair = f"{asset}{self._quote}"
             price = price_map.get(pair, 0.0)
             value = qty * price
             if value < self._DUST_USD:

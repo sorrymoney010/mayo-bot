@@ -8,6 +8,7 @@ from dublin_bot.golive import FAIL, PASS, WARN, preflight, render
 class FakeGw:
     def __init__(self, restr=None, bal=100.0, pos=None, restr_err=False):
         self.restr, self.bal, self._pos, self.restr_err = restr or {}, bal, pos or [], restr_err
+    _quote = "USDT"
     def health(self): return {"reachable": True, "latency_ms": 10, "error": None}
     def _public(self, path, params=None):
         import time; return {"serverTime": int(time.time() * 1000)}

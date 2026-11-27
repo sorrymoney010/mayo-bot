@@ -133,3 +133,12 @@ def test_balances_maps_free_plus_locked():
     g = gw({("GET", "/api/v3/account"): {"balances": [
         {"asset": "BTC", "free": "0.1", "locked": "0.05"}, {"asset": "ETH", "free": "0", "locked": "0"}]}})
     assert g.balances() == {"BTC": pytest.approx(0.15)}
+
+
+def test_quote_setting_maps_symbols_and_prices():
+    from dublin_bot.config import Settings
+    for q, want in (("USDT", "BTCUSDT"), ("USD", "BTCUSD"), ("USDC", "BTCUSDC")):
+        g = BinanceGateway(Settings(_env_file=None, binance_quote=q))
+        assert g._to_binance("BTC/USD") == want
+        assert g._from_binance(want) == "BTC/USD"
+    assert BinanceGateway(Settings(_env_file=None, binance_quote="junk"))._quote == "USDT"

@@ -108,9 +108,14 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
         acct = gateway._signed("/api/v3/account")
         if acct.get("canTrade") is False:
             add("account canTrade", FAIL, "Binance reports canTrade=false")
-        free_usd = sum(float(b["free"]) for b in acct.get("balances", []) if b["asset"] in ("USDT", "USD", "USDC"))
+        quote = gateway._quote
+        free_usd = sum(float(b["free"]) for b in acct.get("balances", []) if b["asset"] == quote)
+        others = {b["asset"]: float(b["free"]) for b in acct.get("balances", [])
+                  if b["asset"] in ("USDT", "USD", "USDC") and b["asset"] != quote and float(b["free"]) > 0}
         need = settings.strategy_equity_usd
-        add("funds", PASS if free_usd >= need else FAIL, f"free stable balance ${free_usd:.2f}, budget ${need:.2f}")
+        hint = f"; you hold {others} - set BINANCE_QUOTE to that asset or convert" if others and free_usd < need else ""
+        add("funds", PASS if free_usd >= need else FAIL,
+            f"free {quote} ${free_usd:.2f}, budget ${need:.2f} (the bot trades BTC/{quote}){hint}")
         pos = gateway.positions()
         add("flat at start", PASS if not pos else WARN, "no open positions" if not pos else f"holding {[p['symbol'] for p in pos]}")
         oo = gateway.orders()

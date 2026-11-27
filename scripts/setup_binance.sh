@@ -64,7 +64,7 @@ pip install -q -e .
 echo
 echo "=== golive-check (places no orders) ==="
 set +e
-python -m dublin_bot.cli golive-check
+MAYO_LEDGER_OWNER=1 python -m dublin_bot.cli golive-check
 CODE=$?
 echo
 echo "Exit code $CODE (0 = no FAIL). Copy everything above back to Claude. Your keys are not shown in it."
