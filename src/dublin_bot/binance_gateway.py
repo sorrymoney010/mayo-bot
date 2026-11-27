@@ -47,6 +47,12 @@ def _host_for(settings: Settings) -> str:
     return _BINANCE_DEFAULT_HOST
 
 
+def _decimals(q: Decimal) -> int:
+    """Decimal places of a Binance step/tick size ('0.00100000' -> 3, '1.00000000' -> 0)."""
+    exp = q.normalize().as_tuple().exponent
+    return max(0, -int(exp))
+
+
 class BinanceGateway:
     """Binance Spot adapter implementing the broker-agnostic protocol."""
 
@@ -68,6 +74,7 @@ class BinanceGateway:
         self._allow_order_submission = bool(allow_order_submission)
         self._sleep_fn = sleep_fn or (lambda _s: None)
         self._ticker_cache: dict[str, dict] = {}
+        self._step: dict[str, Decimal] = {}
 
     # ── helpers ────────────────────────────────────────────
     def _public(self, path: str, params: dict | None = None) -> dict:
@@ -93,6 +100,8 @@ class BinanceGateway:
         try:
             if method == "GET":
                 r = self._session.get(url + "?" + q, headers=headers, timeout=self.settings.http_timeout_seconds)
+            elif method == "DELETE":
+                r = self._session.delete(url + "?" + q, headers=headers, timeout=self.settings.http_timeout_seconds)
             else:
                 r = self._session.post(url, data=q, headers=headers, timeout=self.settings.http_timeout_seconds)
             data = r.json()
@@ -131,16 +140,19 @@ class BinanceGateway:
         notional_f = filt.get("NOTIONAL", filt.get("MIN_NOTIONAL", {}))
         base = s["baseAsset"]
         quote = s["quoteAsset"]
+        step = Decimal(str(lot.get("stepSize", "1")))
+        tick = Decimal(str(price_f.get("tickSize", "0.01")))
+        self._step[pair] = step
         return SymbolMeta(
             key=pair,
             altname=pair,
             wsname=pair,
             base=base,
             quote=quote,
-            lot_decimals=int(str(lot.get("stepSize", "1")).rstrip("0").split(".")[-1][:1] or 0) if "." in lot.get("stepSize", "1") else 0,
-            pair_decimals=int(str(price_f.get("tickSize", "0.01")).rstrip("0").split(".")[-1][:1] or 0) if "." in str(price_f.get("tickSize", "0.01")) else 0,
-            order_min=__import__("decimal").Decimal(str(lot.get("minQty", 0))),
-            cost_min=__import__("decimal").Decimal(str(notional_f.get("minNotional", 0) or 0)),
+            lot_decimals=_decimals(step),
+            pair_decimals=_decimals(tick),
+            order_min=Decimal(str(lot.get("minQty", 0))),
+            cost_min=Decimal(str(notional_f.get("minNotional", 0) or 0)),
             status="online",
         )
 
@@ -226,6 +238,29 @@ class BinanceGateway:
                 usdt += qty * price_map[pair]
         return round(usdt, 2)
 
+    _FEE_ASSETS = {"BNB"}
+    _DUST_USD = 1.0
+
+    def _average_entry(self, pair: str, qty: float) -> float:
+        """Weighted average cost of the most recent buys that make up ``qty``."""
+        try:
+            trades = self._signed("/api/v3/myTrades", {"symbol": pair, "limit": 500})
+        except BrokerError:
+            return 0.0
+        need, cost = qty, 0.0
+        for t in sorted(trades, key=lambda x: x["time"], reverse=True):
+            q = float(t["qty"])
+            if t.get("isBuyer"):
+                take = min(q, need)
+                cost += take * float(t["price"])
+                need -= take
+            else:
+                need += q  # a later sell means older buys are not part of the open position
+            if need <= 1e-12:
+                break
+        filled = qty - max(need, 0.0)
+        return round(cost / filled, 8) if filled > 0 else 0.0
+
     def positions(self) -> list[dict]:
         if not (self._key and self._secret):
             return []
@@ -236,15 +271,18 @@ class BinanceGateway:
         for b in bal.get("balances", []):
             asset, free, locked = b["asset"], float(b["free"]), float(b["locked"])
             qty = free + locked
-            if qty <= 0 or asset in ("USDT", "USDC", "USD"):
+            if qty <= 0 or asset in ("USDT", "USDC", "USD") or asset in self._FEE_ASSETS:
                 continue
             pair = f"{asset}USDT"
             price = price_map.get(pair, 0.0)
+            value = qty * price
+            if value < self._DUST_USD:
+                continue  # dust never counts as an open position
             out.append({
                 "symbol": self._from_binance(pair),
                 "quantity": qty,
-                "market_value": round(qty * price, 2),
-                "average_entry": 0.0,
+                "market_value": round(value, 2),
+                "average_entry": self._average_entry(pair, qty),
             })
         return out
 
@@ -261,13 +299,14 @@ class BinanceGateway:
             "symbol": self._from_binance(x["symbol"]),
             "side": x["side"].lower(),
             "status": x["status"].lower(),
+            "client_order_id": x.get("clientOrderId", ""),
         } for x in o]
 
     def find_order_by_userref(self, userref: int) -> dict | None:
-        # Binance has no userref concept; mirror by our local idempotency key.
-        # Best-effort: look among open orders for a matching client id tag.
+        """Match our ``dublin-<userref>`` newClientOrderId among open orders."""
+        cid = f"dublin-{userref}"
         for o in self.orders():
-            if str(userref) in str(o.get("order_id", "")):
+            if o.get("client_order_id") == cid:
                 return o
         return None
 
@@ -278,8 +317,10 @@ class BinanceGateway:
         if last <= 0:
             raise BrokerError("invalid price for sizing")
         raw_vol = Decimal(str(notional_usd)) / last
-        step = meta.order_min or Decimal("1e-8")
+        step = self._step.get(meta.key) or meta.order_min or Decimal("1e-8")
         vol = (raw_vol // step) * step
+        if vol < meta.order_min:
+            raise BrokerError("notional too small for minimum lot")
         if vol <= Decimal("0"):
             raise BrokerError("notional too small for minimum lot")
         return _SizedOrder(

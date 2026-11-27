@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     # ── Binance Spot ───────────────────────────────────────
     binance_api_key: str = ""
     binance_api_secret: str = ""
+    binance_host: str = ""  # "binance.us" (default) | "binance.com" | full URL
 
     # ── Coinbase Advanced Trade ────────────────────────────
     coinbase_api_key: str = ""
