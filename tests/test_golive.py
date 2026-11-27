@@ -80,3 +80,8 @@ def test_exchange_stop_disabled_fails(monkeypatch):
     monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
     r = by(preflight(S(binance_exchange_stop=False), FakeGw({"enableWithdrawals": False})))
     assert r["exchange stop"].status == FAIL
+
+
+def test_placeholder_keys_fail():
+    r = by(preflight(S(binance_api_key="PASTE_KEY_HERE", binance_api_secret="PASTE_SECRET_HERE"), FakeGw()))
+    assert r["credentials"].status == FAIL

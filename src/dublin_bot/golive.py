@@ -26,9 +26,12 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
     add = lambda n, s, d: c.append(Check(n, s, d))  # noqa: E731
 
     add("broker", PASS if settings.broker == "binance" else FAIL, f"BROKER={settings.broker}")
-    has_keys = bool(settings.binance_api_key and settings.binance_api_secret)
+    placeholder = "PASTE" in (settings.binance_api_key + settings.binance_api_secret).upper()
+    has_keys = bool(settings.binance_api_key and settings.binance_api_secret) and not placeholder
     add("credentials", PASS if has_keys else FAIL,
-        "key+secret present" if has_keys else "BINANCE_API_KEY / BINANCE_API_SECRET missing")
+        "key+secret present" if has_keys else
+        ("key/secret are still the PASTE_ placeholders" if placeholder
+         else "BINANCE_API_KEY / BINANCE_API_SECRET missing"))
     add("budget", PASS if settings.strategy_equity_usd <= FIRST_BUDGET_USD else WARN,
         f"STRATEGY_EQUITY_USD={settings.strategy_equity_usd} (first live run should be {FIRST_BUDGET_USD})")
     add("daily order cap", PASS if settings.max_orders_per_day > 0 else FAIL,

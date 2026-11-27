@@ -6,6 +6,8 @@ Everything here is done **on your server**. Keys never go in chat or in git.
 Enable: *Read* and *Spot trading*. **Disable withdrawals.** Restrict to your server's IP if you can.
 
 ## 2. `.env`
+Copy the ready-made template: `cp .env.binance.example .env`, then paste the two KEY lines.
+It is already set for the first run and keeps every live lock ON. Reference values:
     BROKER=binance
     BINANCE_API_KEY=...            BINANCE_API_SECRET=...
     STRATEGY=regime_trend          TIMEFRAME_MINUTES=60
