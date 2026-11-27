@@ -49,3 +49,6 @@ data/bars1m/
 !.env.test
 !.env.binance.example
 logs-*-backup*/
+
+# raw downloaded market history (re-fetch with scripts/fetch_binance_history.py)
+data/binance_us/

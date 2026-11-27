@@ -43,6 +43,8 @@ from dublin_bot.backtest_core import (  # noqa: E402
 )
 
 DATA = ROOT / "data"
+CACHE_DIR = DATA        # --cache-dir overrides
+PREFIX = "kraken_"      # --prefix overrides ("" for data/binance_us/BTCUSD_60m.csv)
 SYMBOLS = ["BTC/USD", "ETH/USD", "SOL/USD"]  # pipeline universe (3 coins only)
 
 
@@ -51,7 +53,7 @@ def load(symbol: str, tf: int) -> tuple[pd.DataFrame, str]:
     base = symbol.replace("/", "")
     parts, srcs = [], []
     for suffix, src in (("_trades", "trades"), ("", "ohlc")):
-        p = DATA / f"kraken_{base}_{tf}m{suffix}.csv"
+        p = CACHE_DIR / f"{PREFIX}{base}_{tf}m{suffix}.csv"
         if p.exists():
             df = pd.read_csv(p)
             if len(df):
@@ -92,8 +94,14 @@ def main() -> None:
     ap.add_argument("--equity", type=float, default=500.0)
     ap.add_argument("--out", default=str(DATA / "walkforward_results.json"))
     ap.add_argument("--source", choices=["cache", "pipeline"], default="cache")
+    ap.add_argument("--cache-dir", default=None, help="folder of OHLC CSVs for --source cache")
+    ap.add_argument("--prefix", default="kraken_", help="CSV filename prefix (\"\" for Binance files)")
     ap.add_argument("--data-dir", default=str(DATA), help="tick store root for --source pipeline")
     a = ap.parse_args()
+    global CACHE_DIR, PREFIX
+    if a.cache_dir:
+        CACHE_DIR = Path(a.cache_dir)
+    PREFIX = a.prefix
 
     costs = Costs(fee_bps=a.fee_bps, slippage_bps=a.slip_bps, maker_bps=a.maker_bps)
     grid = default_grid()
