@@ -111,8 +111,13 @@ def test_no_withdrawal_or_transfer_endpoint_is_referenced():
     forbidden = ("Withdraw", "WithdrawFunds", "WalletTransfer",
                  "WithdrawCancel", "WithdrawStatus")
     src = REPO_ROOT / "src"
+    # The ONLY allowed mention: golive.py reads the key's read-only ``enableWithdrawals`` permission
+    # flag to verify withdrawals are switched OFF. It never calls any withdrawal endpoint.
+    allowed_flag = {"golive.py": "enableWithdrawals"}
     for path in src.rglob("*.py"):
         text = path.read_text()
+        if path.name in allowed_flag:
+            text = text.replace(allowed_flag[path.name], "")
         for token in forbidden:
             assert token not in text, f"{path.name} references {token}"
 
