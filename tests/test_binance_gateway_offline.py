@@ -100,3 +100,36 @@ def test_size_buy_uses_step_size():
     assert sized.volume == Decimal("0.0016")      # 0.001666.. rounded DOWN to step
     meta = gw(routes).resolve_symbol()
     assert (meta.lot_decimals, meta.pair_decimals) == (4, 2)
+
+
+def test_live_add_order_refuses_kraken_format_bracket():
+    from dublin_bot.errors import BrokerError
+    g = gw({}, live=True)
+    with pytest.raises(BrokerError, match="USE_BRACKET=false"):
+        g.add_order({"pair": "BTCUSDT", "type": "buy", "ordertype": "market", "volume": "0.001"},
+                    signal_price=60000.0)
+
+
+def test_dry_add_order_records_intent_and_accepts_signal_price():
+    g = gw({})
+    assert g.add_order({"pair": "BTCUSDT", "type": "buy"}, signal_price=1.0).startswith("binance-dry-")
+
+
+def test_buy_and_close_accept_signal_price_in_dry_run():
+    g = gw({})
+    assert g.buy_notional(25.0, userref=1, signal_price=60000.0).startswith("binance-dry-buy")
+    assert g.close_position(userref=2, quantity=0.001, signal_price=60000.0).startswith("binance-dry-sell")
+
+
+def test_cancel_orders_true_only_when_gone():
+    open_orders = [{"orderId": 5, "symbol": "BTCUSDT", "side": "SELL", "status": "NEW", "clientOrderId": "x"}]
+    g = gw({("DELETE", "/api/v3/order"): {}, ("GET", "/api/v3/openOrders"): open_orders}, live=True)
+    assert g.cancel_orders(["5"]) is False      # still resting -> not confirmed
+    assert g.cancel_orders(["9"]) is True       # a different id that is not on the book
+    assert g.cancel_orders([]) is False
+
+
+def test_balances_maps_free_plus_locked():
+    g = gw({("GET", "/api/v3/account"): {"balances": [
+        {"asset": "BTC", "free": "0.1", "locked": "0.05"}, {"asset": "ETH", "free": "0", "locked": "0"}]}})
+    assert g.balances() == {"BTC": pytest.approx(0.15)}

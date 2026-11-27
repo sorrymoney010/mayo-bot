@@ -331,7 +331,7 @@ class BinanceGateway:
         )
 
     def buy_notional(self, notional_usd: float, *, userref: int | None = None,
-                     leverage: float | None = None) -> str:
+                     leverage: float | None = None, signal_price: float | None = None) -> str:
         if not self.order_submission_enabled:
             self.audit.record(AuditEvent.ORDER_INTENT, {
                 "broker": "binance", "side": "buy", "notional_usd": notional_usd,
@@ -355,7 +355,8 @@ class BinanceGateway:
             self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "error": str(exc)}, severity="error")
             raise
 
-    def close_position(self, *, userref: int | None = None, quantity: float | None = None) -> str:
+    def close_position(self, *, userref: int | None = None, quantity: float | None = None,
+                       signal_price: float | None = None) -> str:
         pair = self._to_binance(self.settings.symbol)
         if not self.order_submission_enabled:
             self.audit.record(AuditEvent.ORDER_INTENT, {"broker": "binance", "side": "sell", "userref": userref})
@@ -383,11 +384,20 @@ class BinanceGateway:
             self.audit.record(AuditEvent.ORDER_REJECTED, {"broker": "binance", "error": str(exc)}, severity="error")
             raise
 
-    def add_order(self, params: dict) -> str:
-        """Raw advanced order (limit / bracket). Mirrors KrakenGateway.add_order."""
+    def add_order(self, params: dict, *, signal_price: float | None = None) -> str:
+        """Raw advanced order (limit / bracket). Mirrors KrakenGateway.add_order.
+
+        The engine builds Kraken-format AddOrder params (``pair``/``ordertype``/``volume``).
+        Binance has no equivalent bracket block, so live submission of those is refused
+        loudly instead of sending a malformed order. Use USE_BRACKET=false + ORDER_TYPE=market.
+        """
         if not self.order_submission_enabled:
             self.audit.record(AuditEvent.ORDER_INTENT, {"broker": "binance", **params})
             return "binance-dry-" + str(params.get("type", "order"))
+        if "ordertype" in params or "pair" in params:
+            raise BrokerError(
+                "Kraken-format bracket/limit order is not supported on Binance; "
+                "set USE_BRACKET=false and ORDER_TYPE=market")
         payload = {"symbol": self._to_binance(self.settings.symbol)}
         payload.update(params)
         try:
@@ -429,6 +439,29 @@ class BinanceGateway:
             return cancelled
         except BrokerError:
             return 0
+
+    def cancel_orders(self, order_ids: list[str]) -> bool:
+        """Cancel exactly the given orders; True only if none of them still rest on the book."""
+        expected = {str(o) for o in order_ids if str(o)}
+        if not expected:
+            return False
+        if not self.order_submission_enabled:
+            return True
+        for oid in expected:
+            self.cancel_order(oid)
+        try:
+            still = {str(o["order_id"]) for o in self.orders()}
+        except BrokerError:
+            return False
+        return not (expected & still)
+
+    def balances(self) -> dict[str, float]:
+        """Asset -> free+locked quantity (empty without credentials)."""
+        if not (self._key and self._secret):
+            return {}
+        acct = self._signed("/api/v3/account")
+        return {b["asset"]: float(b["free"]) + float(b["locked"]) for b in acct.get("balances", [])
+                if float(b["free"]) + float(b["locked"]) > 0}
 
     def margin_positions(self) -> list[dict]:
         """Spot adapter: no margin positions. Returns empty (feature-detected)."""

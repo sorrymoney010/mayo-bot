@@ -33,6 +33,12 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
         f"STRATEGY_EQUITY_USD={settings.strategy_equity_usd} (first live run should be {FIRST_BUDGET_USD})")
     add("daily order cap", PASS if settings.max_orders_per_day > 0 else FAIL,
         f"MAX_ORDERS_PER_DAY={settings.max_orders_per_day} (0 = unlimited; set 3 for the first run)")
+    if settings.broker == "binance":
+        unsup = settings.use_bracket or settings.order_type != "market"
+        add("order style", FAIL if unsup else PASS,
+            f"USE_BRACKET={settings.use_bracket}, ORDER_TYPE={settings.order_type} "
+            + ("(Binance adapter has no bracket/limit support: set USE_BRACKET=false ORDER_TYPE=market)" if unsup
+               else "(market entries; stops are software-side, run under a supervisor)"))
     add("no leverage", PASS if settings.max_leverage <= 1.0 and settings.margin_exposure_fraction == 0 else FAIL,
         f"MAX_LEVERAGE={settings.max_leverage}, MARGIN_EXPOSURE_FRACTION={settings.margin_exposure_fraction}")
 

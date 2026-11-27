@@ -26,7 +26,8 @@ class FakeGw:
 
 def S(**kw):
     base = dict(_env_file=None, broker="binance", binance_api_key="k", binance_api_secret="s",
-                strategy_equity_usd=25.0, max_orders_per_day=3, timeframe_minutes=60)
+                strategy_equity_usd=25.0, max_orders_per_day=3, timeframe_minutes=60,
+                use_bracket=False, order_type="market")
     base.update(kw); return Settings(**base)
 
 
@@ -67,3 +68,9 @@ def test_subhour_timeframe_is_blocked_for_live(monkeypatch):
     monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
     r = by(preflight(S(timeframe_minutes=15), FakeGw({"enableWithdrawals": False})))
     assert r["strategy allowed live"].status == FAIL
+
+
+def test_bracket_or_limit_style_fails_for_binance(monkeypatch):
+    monkeypatch.setenv("MAYO_LEDGER_OWNER", "1")
+    assert by(preflight(S(use_bracket=True), FakeGw({"enableWithdrawals": False})))["order style"].status == FAIL
+    assert by(preflight(S(order_type="limit"), FakeGw({"enableWithdrawals": False})))["order style"].status == FAIL
