@@ -62,7 +62,7 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
     ok_choice, why_choice = paper_live_choice_ok(settings)
     add("strategy allowed live", PASS if ok_choice else FAIL, f"{settings.strategy}: {why_choice}")
     add("ledger owner", PASS if ledger_owner_ok() else FAIL,
-        "this host owns the ledger" if ledger_owner_ok() else "MAYO_LEDGER_OWNER!=1 on this host; the run loop will refuse to start")
+        "this host owns the ledger" if ledger_owner_ok() else "MAYO_LEDGER_OWNER is not 1 in THIS shell: run `export MAYO_LEDGER_OWNER=1` first (read from the environment, not .env)")
 
     if audit is not None:
         ok, why = audit.verify_chain()
@@ -86,12 +86,20 @@ def preflight(settings: Settings, gateway: Any, audit: AuditLog | None = None) -
     # Key permissions: withdrawals must be OFF (best effort - endpoint availability differs on .us)
     try:
         r = gateway._signed("/sapi/v1/account/apiRestrictions")
-        if r.get("enableWithdrawals"):
+        fields = sorted(r.keys()) if isinstance(r, dict) else []
+        if "enableWithdrawals" not in (r or {}):
+            add("key: withdrawals", WARN,
+                f"exchange response had fields {fields} but no withdrawal flag: NOT verified. "
+                "Open Binance.us API Management and confirm withdrawals are OFF for this key")
+        elif r["enableWithdrawals"]:
             add("key: withdrawals", FAIL, "WITHDRAWALS ENABLED on this key - create a new key without it")
         else:
-            add("key: withdrawals", PASS, "withdrawals disabled")
-        add("key: trading", PASS if r.get("enableSpotAndMarginTrading") else WARN,
-            f"spot trading enabled={r.get('enableSpotAndMarginTrading')}")
+            add("key: withdrawals", PASS, "withdrawals disabled (explicit flag from exchange)")
+        if "enableSpotAndMarginTrading" in (r or {}):
+            add("key: trading", PASS if r["enableSpotAndMarginTrading"] else WARN,
+                f"spot trading enabled={r['enableSpotAndMarginTrading']}")
+        else:
+            add("key: trading", WARN, "trading permission not reported by the exchange; confirm Spot trading is ON")
     except BrokerError as e:
         add("key: withdrawals", WARN, f"could not verify ({e}); confirm in Binance.us API settings that withdrawals are OFF")
 

@@ -85,3 +85,14 @@ def test_exchange_stop_disabled_fails(monkeypatch):
 def test_placeholder_keys_fail():
     r = by(preflight(S(binance_api_key="PASTE_KEY_HERE", binance_api_secret="PASTE_SECRET_HERE"), FakeGw()))
     assert r["credentials"].status == FAIL
+
+
+def test_missing_withdrawal_flag_is_not_a_pass():
+    r = by(preflight(S(), FakeGw({"somethingElse": True})))
+    assert r["key: withdrawals"].status == WARN
+    assert "somethingElse" in r["key: withdrawals"].detail
+
+
+def test_explicit_false_withdrawal_flag_passes():
+    r = by(preflight(S(), FakeGw({"enableWithdrawals": False, "enableSpotAndMarginTrading": True})))
+    assert r["key: withdrawals"].status == PASS and r["key: trading"].status == PASS
